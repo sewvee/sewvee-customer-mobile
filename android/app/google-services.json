@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "978939195860",
+    "project_id": "sewvee-react",
+    "storage_bucket": "sewvee-react.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:978939195860:android:0d2fbd979762a1268d6641",
+        "android_client_info": {
+          "package_name": "com.sewvee"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7s-8Q8q-Qup6SX3qoT1ZBhIVzZT269cw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

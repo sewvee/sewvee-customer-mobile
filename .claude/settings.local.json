@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const pkg=require\\('D:/SabariRahul/sewvee/Backup/sewvee-mobile-app/node_modules/@react-native/gradle-plugin/package.json'\\); console.log\\('gradle-plugin version:', pkg.version\\)\")",
+      "Bash(node -e \"try{const pkg=require\\('D:/SabariRahul/sewvee/Backup/sewvee-mobile-app/node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml'\\); console.log\\(pkg\\)}catch\\(e\\){console.log\\('not found as json'\\)}\")",
+      "Bash(node node_modules/@react-native-community/cli/build/bin.js config)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const cfg=JSON.parse\\(d\\); Object.keys\\(cfg.dependencies\\).slice\\(0,3\\).forEach\\(k => console.log\\(k, ':', cfg.dependencies[k].platforms?.android?.sourceDir\\)\\)\")",
+      "Bash(dir \"D:\\\\SabariRahul\\\\sewvee\\\\Backup\\\\sewvee-mobile-app\\\\node_modules\\\\@react-native\\\\gradle-plugin\" /b)",
+      "Bash(./gradlew --stop)"
+    ]
+  }
+}

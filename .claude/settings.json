@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const fs=require\\('fs'\\); const data=JSON.parse\\(fs.readFileSync\\('D:/SabariRahul/sewvee/Backup/sewvee-mobile-app/android/build/generated/autolinking/autolinking.json'\\)\\); const deps=Object.entries\\(data.dependencies||{}\\); console.log\\('First dep path:', deps[0]?.[1]?.platforms?.android?.sourceDir\\); console.log\\('Total deps:', deps.length\\);\")"
+    ]
+  }
+}
