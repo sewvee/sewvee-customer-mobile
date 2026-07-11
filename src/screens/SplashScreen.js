@@ -6,11 +6,7 @@ import {
   Image,
   StyleSheet,
   StatusBar,
-  Modal,
-  Text,
   TouchableOpacity,
-  Linking,
-  AppState,
 } from 'react-native';
 import { Colors, Spacing, Shadow } from '../constants/theme';
 import { fetchSubscriptionCurrentAction } from '../store/subscriptionSlice';
@@ -21,7 +17,6 @@ import axios from 'axios';
 
 const SplashScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const [updateModalVisible, setUpdateModalVisible] = useState(false);
   const [storeUrl, setStoreUrl] = useState('');
 
   useEffect(() => {
@@ -42,48 +37,13 @@ const SplashScreen = ({ navigation }) => {
 
     run();
 
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (nextAppState === 'active' && updateModalVisible) {
-        console.log('SplashScreen: App came to foreground, re-checking version...');
-        checkAppVersion();
-      }
-    });
-
     return () => {
       if (timer) clearTimeout(timer);
-      subscription.remove();
     };
-  }, [updateModalVisible]);
+  }, []);
 
   const checkAppVersion = async () => {
-    try {
-      console.log('SplashScreen: Fetching app version from:', URL_APP_VERSION);
-      const response = await axios.get(URL_APP_VERSION);
-      
-      if (response.data && response.data.success && response.data.data.length > 0) {
-        const remoteVersion = response.data.data[0].version;
-        const remoteStoreUrl = response.data.data[0].store_url;
-        
-        console.log(`SplashScreen: Current Version: ${APP_VERSION}, Remote Version: ${remoteVersion}`);
-        
-        if (APP_VERSION !== remoteVersion) {
-          setStoreUrl(remoteStoreUrl);
-          setUpdateModalVisible(true);
-          return false;
-        } else {
-          setUpdateModalVisible(false);
-          if (updateModalVisible) {
-            // If it was visible and now it's not, it means user updated and came back
-            await fetchSubscriptionCurrent();
-          }
-          return true;
-        }
-      }
-      return true;
-    } catch (error) {
-      console.log('SplashScreen: Error checking app version:', error);
-      return true; 
-    }
+    return true; // Bypassed permanently
   };
 
   const fetchSubscriptionCurrent = async () => {
@@ -113,11 +73,7 @@ const SplashScreen = ({ navigation }) => {
     }
   };
 
-  const handleUpdate = () => {
-    if (storeUrl) {
-      Linking.openURL(storeUrl).catch(err => console.error("Couldn't load page", err));
-    }
-  };
+
 
   return (
     <View style={styles.container}>
@@ -128,30 +84,7 @@ const SplashScreen = ({ navigation }) => {
         resizeMode="contain"
       />
 
-      <Modal
-        visible={updateModalVisible}
-        transparent={true}
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.iconContainer}>
-              <Image 
-                source={require('../assets/splash_logo.png')} 
-                style={styles.modalLogo}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={styles.modalTitle}>Update Available</Text>
-            <Text style={styles.modalMessage}>
-              A new version of Sewvee is available. Please update to continue using the app.
-            </Text>
-            <TouchableOpacity style={styles.updateButton} onPress={handleUpdate}>
-              <Text style={styles.updateButtonText}>Update Now</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Update Available Modal removed */}
     </View>
   );
 };
