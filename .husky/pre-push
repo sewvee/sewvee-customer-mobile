@@ -1,0 +1,7 @@
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$BRANCH" = "main" ]; then
+  echo "❌ ERROR: Direct pushes to main are forbidden."
+  echo "Please create a Pull Request from 'staging' to 'main' on GitHub."
+  exit 1
+fi
