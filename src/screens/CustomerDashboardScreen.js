@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
-  SafeAreaView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Spacing, Shadow } from '../constants/theme';
 import { 
@@ -28,7 +28,8 @@ import {
   ArrowRight,
   Package,
   Check,
-  Camera
+  Camera,
+  Scissors
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -176,7 +177,6 @@ const CustomerDashboardScreen = ({ navigation }) => {
   ];
 
   const renderOrderItem = ({ item }) => {
-    const statusInfo = getStatusColor(item.status);
     const orderNum = item.billNo || item.id;
     const outfitsText = (item.outfits || item.items || [])
       .map(o => o.name || o.type || 'Outfit')
@@ -191,78 +191,43 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
     return (
       <TouchableOpacity
-        style={styles.orderCard}
-        activeOpacity={0.85}
+        style={styles.orderCardRevamped}
+        activeOpacity={0.7}
         onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: item.id })}
       >
-        <View style={styles.cardHeader}>
-          <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.orderNumberText}>Order #{orderNum}</Text>
-              {hasPendingPhotoRequest && (
-                <Camera size={14} color="#F97316" style={{ marginLeft: 6 }} />
-              )}
+        {/* Top Info: Boutique, Date and Status */}
+        <View style={styles.cardTopRow}>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            {item.boutiqueName ? (
+              <View style={[styles.boutiquePill, { marginRight: 8 }]}>
+                <Text style={styles.boutiquePillText} numberOfLines={1}>{item.boutiqueName}</Text>
+              </View>
+            ) : <View />}
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status).bg }]}>
+              <Text style={[styles.statusBadgeText, { color: getStatusColor(item.status).color }]}>
+                {getStatusDisplayText(item.status)}
+              </Text>
             </View>
+          </View>
+          <View style={styles.dateBadge}>
+            <Clock size={12} color={Colors.textSecondary} style={{ marginRight: 4 }} />
             <Text style={styles.orderDateText}>{formatDate(item.date)}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-            <Text style={[styles.statusBadgeText, { color: statusInfo.color }]}>
-              {getStatusDisplayText(item.status)}
-            </Text>
-          </View>
         </View>
 
-        <View style={styles.cardBody}>
-          <Text style={styles.outfitTitleLabel}>Items</Text>
-          <Text style={styles.outfitsText} numberOfLines={1}>
-            {outfitsText || 'No items listed'}
-          </Text>
-        </View>
-
-        {/* STEPPER PROGRESS */}
-        <View style={styles.stepperContainer}>
-          <View style={styles.stepperLine}>
-            <View 
-              style={[
-                styles.stepperProgressLine, 
-                { width: `${((statusInfo.step - 1) / 3) * 100}%` }
-              ]} 
-            />
-          </View>
-          <View style={styles.stepWrapper}>
-            <View style={[styles.stepDot, statusInfo.step >= 1 && styles.stepDotActive]}>
-              {statusInfo.step > 1 ? <Check size={10} color="white" /> : null}
+        {/* Order Number */}
+        <View style={[styles.orderNumberRow, { borderBottomWidth: 0, paddingBottom: 0, marginBottom: 0 }]}>
+          <Text style={styles.orderNumberTitle}>Order #{orderNum}</Text>
+          {hasPendingPhotoRequest ? (
+            <View style={styles.photoRequestAlert}>
+              <Camera size={12} color="#FFFFFF" />
+              <Text style={styles.photoRequestText}>Photo Needed</Text>
             </View>
-            <Text style={[styles.stepLabel, statusInfo.step >= 1 && styles.stepLabelActive]}>Placed</Text>
-          </View>
-          <View style={styles.stepWrapper}>
-            <View style={[styles.stepDot, statusInfo.step >= 2 && styles.stepDotActive]}>
-              {statusInfo.step > 2 ? <Check size={10} color="white" /> : null}
+          ) : (
+            <View style={styles.actionFooterIcon}>
+              <ChevronRight size={16} color={Colors.primary} />
             </View>
-            <Text style={[styles.stepLabel, statusInfo.step >= 2 && styles.stepLabelActive]}>Stitching</Text>
-          </View>
-          <View style={styles.stepWrapper}>
-            <View style={[styles.stepDot, statusInfo.step >= 3 && styles.stepDotActive]}>
-              {statusInfo.step > 3 ? <Check size={10} color="white" /> : null}
-            </View>
-            <Text style={[styles.stepLabel, statusInfo.step >= 3 && styles.stepLabelActive]}>Ready</Text>
-          </View>
-          <View style={styles.stepWrapper}>
-            <View style={[styles.stepDot, statusInfo.step >= 4 && styles.stepDotActive]}>
-              {statusInfo.step >= 4 ? <Check size={10} color="white" /> : null}
-            </View>
-            <Text style={[styles.stepLabel, statusInfo.step >= 4 && styles.stepLabelActive]}>Delivered</Text>
-          </View>
-        </View>
-
-        <View style={styles.cardFooter}>
-          <Text style={styles.footerBalanceText}>
-            {item.balance > 0 ? `Pending: ₹${item.balance}` : 'Fully Paid'}
-          </Text>
-          <View style={styles.viewDetailsRow}>
-            <Text style={styles.viewDetailsText}>View Tracker</Text>
-            <ChevronRight size={16} color={Colors.primary} />
-          </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -290,21 +255,6 @@ const CustomerDashboardScreen = ({ navigation }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
         }
       >
-        {/* STATS OVERVIEW */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{metrics.active}</Text>
-            <Text style={styles.statLabel}>Active Orders</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#F3F4F6' }]}>
-            <Text style={[styles.statNumber, { color: '#10B981' }]}>{metrics.ready}</Text>
-            <Text style={styles.statLabel}>Ready for Trial</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: '#8B5CF6' }]}>{metrics.completed}</Text>
-            <Text style={styles.statLabel}>Delivered</Text>
-          </View>
-        </View>
 
         {/* ACTIVE REQUESTS ALERT */}
         {pendingRequests.map((req, idx) => (
@@ -519,54 +469,142 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     alignItems: 'center',
   },
-  orderCard: {
+  orderCardRevamped: {
     backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
-    ...Shadow.subtle,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#EEF2FF',
   },
-  cardHeader: {
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
-  orderNumberText: {
-    fontSize: 16,
+  boutiquePill: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  boutiquePillText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#334155',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusBadgeText: {
+    fontSize: 10,
     fontFamily: 'Inter-Bold',
-    color: Colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  dateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   orderDateText: {
     fontSize: 12,
     color: Colors.textSecondary,
-    fontFamily: 'Inter-Medium',
-    marginTop: 2,
+    fontFamily: 'Inter-SemiBold',
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  orderNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
-  statusBadgeText: {
-    fontSize: 12,
+  orderNumberTitle: {
+    fontSize: 22,
     fontFamily: 'Inter-Bold',
+    color: Colors.textPrimary,
+    letterSpacing: -0.5,
   },
-  cardBody: {
-    marginVertical: 14,
+  photoRequestAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F97316',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
   },
-  outfitTitleLabel: {
+  photoRequestText: {
+    color: '#FFFFFF',
     fontSize: 11,
-    color: Colors.textSecondary,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter-Bold',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  outfitsText: {
-    fontSize: 14,
+  itemsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+  },
+  itemsIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  itemsContent: {
+    flex: 1,
+  },
+  itemsLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontFamily: 'Inter-Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  itemsValue: {
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
     color: Colors.textPrimary,
-    marginTop: 4,
+  },
+  cardActionFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  actionFooterText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    marginRight: 8,
+  },
+  actionFooterIcon: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   stepperContainer: {
     flexDirection: 'row',
