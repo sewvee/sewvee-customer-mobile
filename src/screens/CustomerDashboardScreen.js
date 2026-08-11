@@ -136,23 +136,20 @@ const CustomerDashboardScreen = ({ navigation }) => {
     if (normalized === 'COMPLETED' || normalized === 'READY') return 'Ready';
     if (normalized === 'DELIVERED') return 'Delivered';
     if (normalized === 'CANCELLED') return 'Cancelled';
-    return statusValue;
+    return String(statusValue)
+      .split('_')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
   };
 
   const getStatusColor = (status) => {
     const text = getStatusDisplayText(status);
-    switch (text) {
-      case 'Pending':
-        return { color: '#F97316', bg: '#FFF7ED', step: 1 };
-      case 'Stitching':
-        return { color: '#3B82F6', bg: '#EFF6FF', step: 2 };
-      case 'Ready':
-        return { color: '#10B981', bg: '#F0FDF4', step: 3 };
-      case 'Delivered':
-        return { color: '#8B5CF6', bg: '#F5F3FF', step: 4 };
-      default:
-        return { color: '#6B7280', bg: '#F3F4F6', step: 1 };
-    }
+    if (text.includes('Pending') || text.includes('Yet To Start')) return { color: '#F97316', bg: '#FFF7ED', step: 1 };
+    if (text.includes('Stitching') || text.includes('Progress')) return { color: '#3B82F6', bg: '#EFF6FF', step: 2 };
+    if (text.includes('Quality') || text.includes('Check')) return { color: '#8B5CF6', bg: '#F5F3FF', step: 3 };
+    if (text.includes('Ready') || text.includes('Completed')) return { color: '#10B981', bg: '#F0FDF4', step: 3 };
+    if (text.includes('Delivered')) return { color: '#14B8A6', bg: '#F0FDFA', step: 4 };
+    return { color: '#6B7280', bg: '#F3F4F6', step: 1 };
   };
 
   const introSlides = [
@@ -178,10 +175,6 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
   const renderOrderItem = ({ item }) => {
     const orderNum = item.billNo || item.id;
-    const outfitsText = (item.outfits || item.items || [])
-      .map(o => o.name || o.type || 'Outfit')
-      .join(', ');
-
     const outfits = item.outfits || item.items || [];
     const hasPendingPhotoRequest = outfits.some(
       (outfit) => 
@@ -195,39 +188,41 @@ const CustomerDashboardScreen = ({ navigation }) => {
         activeOpacity={0.7}
         onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: item.id })}
       >
-        {/* Top Info: Boutique, Date and Status */}
+        {/* Top Info: Boutique and Date */}
         <View style={styles.cardTopRow}>
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            {item.boutiqueName ? (
-              <View style={[styles.boutiquePill, { marginRight: 8 }]}>
-                <Text style={styles.boutiquePillText} numberOfLines={1}>{item.boutiqueName}</Text>
-              </View>
-            ) : <View />}
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status).bg }]}>
-              <Text style={[styles.statusBadgeText, { color: getStatusColor(item.status).color }]}>
-                {getStatusDisplayText(item.status)}
-              </Text>
+          {item.boutiqueName ? (
+            <View style={styles.boutiquePill}>
+              <Text style={styles.boutiquePillText} numberOfLines={1}>{item.boutiqueName}</Text>
             </View>
-          </View>
+          ) : <View />}
           <View style={styles.dateBadge}>
             <Clock size={12} color={Colors.textSecondary} style={{ marginRight: 4 }} />
             <Text style={styles.orderDateText}>{formatDate(item.date)}</Text>
           </View>
         </View>
 
-        {/* Order Number */}
-        <View style={[styles.orderNumberRow, { borderBottomWidth: 0, paddingBottom: 0, marginBottom: 0 }]}>
-          <Text style={styles.orderNumberTitle}>Order #{orderNum}</Text>
-          {hasPendingPhotoRequest ? (
-            <View style={styles.photoRequestAlert}>
-              <Camera size={12} color="#FFFFFF" />
-              <Text style={styles.photoRequestText}>Photo Needed</Text>
+        {/* Order Info */}
+        <View style={styles.orderInfoRow}>
+          <View>
+            <Text style={styles.orderNumberTitle}>Order #{orderNum}</Text>
+            <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center' }}>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status).bg }]}>
+                <Text style={[styles.statusBadgeText, { color: getStatusColor(item.status).color }]}>
+                  {getStatusDisplayText(item.status)}
+                </Text>
+              </View>
+              {hasPendingPhotoRequest && (
+                <View style={styles.photoRequestAlert}>
+                  <Camera size={10} color="#FFFFFF" />
+                  <Text style={styles.photoRequestText}>Photo Needed</Text>
+                </View>
+              )}
             </View>
-          ) : (
-            <View style={styles.actionFooterIcon}>
-              <ChevronRight size={16} color={Colors.primary} />
-            </View>
-          )}
+          </View>
+          
+          <View style={styles.actionFooterIcon}>
+            <ChevronRight size={18} color={Colors.primary} />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -524,14 +519,14 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontFamily: 'Inter-SemiBold',
   },
-  orderNumberRow: {
+  orderInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginTop: 8,
   },
   orderNumberTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontFamily: 'Inter-Bold',
     color: Colors.textPrimary,
     letterSpacing: -0.5,
@@ -540,14 +535,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F97316',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     gap: 4,
+    marginLeft: 8,
   },
   photoRequestText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'Inter-Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
