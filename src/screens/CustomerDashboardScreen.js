@@ -182,6 +182,9 @@ const CustomerDashboardScreen = ({ navigation }) => {
         (!outfit.photos || outfit.photos.filter(p => p.category === 'REFERENCE').length === 0)
     );
 
+    const deliveryDate = outfits.find(o => o.deliveryDate)?.deliveryDate;
+    const outfitTypes = outfits.map(o => o.orderType || 'Stitching').filter((v, i, a) => a.indexOf(v) === i).join(' • ').toUpperCase();
+
     return (
       <TouchableOpacity
         style={styles.orderCardRevamped}
@@ -197,32 +200,41 @@ const CustomerDashboardScreen = ({ navigation }) => {
           ) : <View />}
           <View style={styles.dateBadge}>
             <Clock size={12} color={Colors.textSecondary} style={{ marginRight: 4 }} />
-            <Text style={styles.orderDateText}>{formatDate(item.date)}</Text>
+            <Text style={styles.orderDateText}>{deliveryDate ? `Del: ${formatDate(deliveryDate)}` : formatDate(item.date)}</Text>
           </View>
         </View>
 
         {/* Order Info */}
         <View style={styles.orderInfoRow}>
           <View>
+            <Text style={{fontSize: 12, color: Colors.primary, fontFamily: 'Inter-Bold', marginBottom: 2, letterSpacing: 0.5}}>
+              {outfitTypes || 'OUTFIT'}
+            </Text>
             <Text style={styles.orderNumberTitle}>Order #{orderNum}</Text>
-            <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center' }}>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status).bg }]}>
-                <Text style={[styles.statusBadgeText, { color: getStatusColor(item.status).color }]}>
-                  {getStatusDisplayText(item.status)}
-                </Text>
-              </View>
-              {hasPendingPhotoRequest && (
-                <View style={styles.photoRequestAlert}>
-                  <Camera size={10} color="#FFFFFF" />
-                  <Text style={styles.photoRequestText}>Photo Needed</Text>
-                </View>
-              )}
-            </View>
           </View>
           
           <View style={styles.actionFooterIcon}>
             <ChevronRight size={18} color={Colors.primary} />
           </View>
+        </View>
+
+        {/* Financials & Alerts */}
+        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9'}}>
+          <View style={{flex: 1}}>
+             <Text style={{fontSize: 11, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 2}}>Paid</Text>
+             <Text style={{fontSize: 15, color: '#10B981', fontFamily: 'Inter-Bold'}}>₹{item.advance || item.paid || 0}</Text>
+          </View>
+          <View style={{flex: 1}}>
+             <Text style={{fontSize: 11, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 2}}>Due Balance</Text>
+             <Text style={{fontSize: 15, color: '#EF4444', fontFamily: 'Inter-Bold'}}>₹{item.balance || 0}</Text>
+          </View>
+          
+          {hasPendingPhotoRequest && (
+            <View style={[styles.photoRequestAlert, { marginLeft: 0 }]}>
+              <Camera size={12} color="#FFFFFF" />
+              <Text style={styles.photoRequestText}>Photo Needed</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );

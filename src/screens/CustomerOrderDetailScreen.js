@@ -216,7 +216,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           const isUploading = uploadingOutfitId === outfit.id;
           const refPhotos = (outfit.photos || []).filter(p => p.category === 'REFERENCE');
           const hasStitching = outfit.stitching && outfit.stitching.length > 0;
-          const outfitName = (outfit.name || outfit.type || 'Custom Outfit').toUpperCase();
+          const outfitName = (outfit.name || outfit.orderType || 'OUTFIT').toUpperCase();
 
           return (
             <View key={outfit.id || index} style={styles.outfitBlock}>
@@ -275,20 +275,9 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                       </View>
                     </View>
                   )) : (
-                    <>
-                      <View style={styles.tableRow}>
-                        <View style={styles.tableColLeft}><Text style={styles.tableColLeftText}>PRINCESSCUT</Text></View>
-                        <View style={styles.tableColRight}><Text style={styles.tableColRightText}>Hook {'>'} Front hook</Text></View>
-                      </View>
-                      <View style={styles.tableRow}>
-                        <View style={styles.tableColLeft}><Text style={styles.tableColLeftText}>PRINCESSCUT</Text></View>
-                        <View style={styles.tableColRight}><Text style={styles.tableColRightText}>Sleeve {'>'} Elbow</Text></View>
-                      </View>
-                      <View style={[styles.tableRow, styles.tableRowLast]}>
-                        <View style={styles.tableColLeft}><Text style={styles.tableColLeftText}>PRINCESSCUT</Text></View>
-                        <View style={styles.tableColRight}><Text style={styles.tableColRightText}>Front neck {'>'} Normal neck</Text></View>
-                      </View>
-                    </>
+                    <View style={[styles.tableRow, styles.tableRowLast, { justifyContent: 'center', paddingVertical: 12 }]}>
+                       <Text style={{ fontSize: 13, color: '#94A3B8', fontStyle: 'italic' }}>No stitching specifications provided.</Text>
+                    </View>
                   )}
                 </View>
               </View>
@@ -315,10 +304,12 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
               </View>
 
               {/* BOUTIQUE NOTES */}
-              <View style={styles.notesCard}>
-                <Text style={styles.notesTitle}>BOUTIQUE NOTES</Text>
-                <Text style={styles.notesText}>{outfit.notes || 'Add piping in al place replace plain and designer cloths and balls also same sweet heart front neck 18000'}</Text>
-              </View>
+              {outfit.notes ? (
+                <View style={styles.notesCard}>
+                  <Text style={styles.notesTitle}>BOUTIQUE NOTES</Text>
+                  <Text style={styles.notesText}>{outfit.notes}</Text>
+                </View>
+              ) : null}
 
             </View>
           );
