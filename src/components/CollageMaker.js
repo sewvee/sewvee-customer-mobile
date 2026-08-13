@@ -24,6 +24,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
   const { showToast } = useToast();
   const [selectedLayout, setSelectedLayout] = useState(LAYOUTS[0]);
   const [images, setImages] = useState({});
+  const [originalImages, setOriginalImages] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
   const viewShotRef = useRef(null);
 
@@ -46,25 +47,34 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
     }
   };
 
-  // Option 1: From Phone Gallery (with cropping)
+  // Option 1: From Phone Gallery (pick original, then crop)
   const handlePickFromPhone = () => {
     setSourcePickerVisible(false);
     ImageCropPicker.openPicker({
-      cropping: true,
-      freeStyleCropEnabled: true,
+      cropping: false,
       mediaType: 'photo',
-    }).then(image => {
-      setImages(prev => ({ ...prev, [activeSlot]: image.path }));
+    }).then(originalImage => {
+      // Store the original uncropped image
+      setOriginalImages(prev => ({ ...prev, [activeSlot]: originalImage.path }));
+      
+      // Immediately open cropper on the original image
+      return ImageCropPicker.openCropper({
+        path: originalImage.path,
+        freeStyleCropEnabled: true,
+      });
+    }).then(croppedImage => {
+      setImages(prev => ({ ...prev, [activeSlot]: croppedImage.path }));
     }).catch(e => {
-      console.log('Image pick cancelled', e);
+      console.log('Image pick/crop cancelled', e);
     });
   };
 
-  // Crop existing photo
+  // Crop existing photo (from the original)
   const handleCropExisting = () => {
     setSlotActionVisible(false);
+    const sourcePath = originalImages[activeSlot] || images[activeSlot];
     ImageCropPicker.openCropper({
-      path: images[activeSlot],
+      path: sourcePath,
       freeStyleCropEnabled: true,
     }).then(image => {
       setImages(prev => ({ ...prev, [activeSlot]: image.path }));
@@ -76,6 +86,11 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
   // Remove existing photo
   const handleRemovePhoto = () => {
     setImages(prev => {
+      const newImgs = { ...prev };
+      delete newImgs[activeSlot];
+      return newImgs;
+    });
+    setOriginalImages(prev => {
       const newImgs = { ...prev };
       delete newImgs[activeSlot];
       return newImgs;
@@ -93,6 +108,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
   // Select an image from gallery
   const handleGalleryImageSelect = (imgUri) => {
     setImages(prev => ({ ...prev, [activeSlot]: imgUri }));
+    setOriginalImages(prev => ({ ...prev, [activeSlot]: imgUri }));
     setGalleryBrowserVisible(false);
     setSelectedFolder(null);
   };
@@ -271,7 +287,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
                   <TouchableOpacity
                     key={l.id}
                     style={[styles.layoutBtn, selectedLayout.id === l.id && styles.layoutBtnActive]}
-                    onPress={() => { setSelectedLayout(l); setImages({}); }}
+                    onPress={() => { setSelectedLayout(l); setImages({}); setOriginalImages({}); }}
                   >
                     <Text style={[styles.layoutBtnText, selectedLayout.id === l.id && styles.layoutBtnTextActive]}>
                       {l.label}
