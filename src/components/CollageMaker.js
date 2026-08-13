@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
-  Dimensions, ScrollView, Modal, FlatList, ActivityIndicator,
+  Dimensions, ScrollView, Modal, FlatList, ActivityIndicator, Platform,
 } from 'react-native';
 import { Colors, Shadow } from '../constants/theme';
 import { X, ImagePlus, Download, Share2, Check, Folder, ChevronRight, ArrowLeft, Crop, Trash2 } from 'lucide-react-native';
@@ -135,11 +135,25 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
     const uri = await captureCollage();
     if (!uri) return;
     try {
-      const fileName = `collage_${Date.now()}.jpg`;
-      const fallbackPath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
-      await RNFS.copyFile(uri, fallbackPath);
-      showToast('Collage saved to device!', 'success');
+      if (Platform.OS === 'android') {
+        const fileName = `collage_${Date.now()}.jpg`;
+        const destPath = `${RNFS.PicturesDirectoryPath}/${fileName}`;
+        await RNFS.copyFile(uri, destPath);
+        await RNFS.scanFile(destPath); // Tells Android to scan for new image to show in Gallery
+        showToast('Collage saved to your Gallery!', 'success');
+      } else {
+        // On iOS, saving directly to Camera Roll requires a native package not currently installed.
+        // We fallback to the Share sheet which natively includes a "Save Image" option.
+        await Share.open({
+          url: uri,
+          title: 'Save Collage',
+          failOnCancel: false,
+        });
+      }
     } catch (err) {
+      if (err && err.message && err.message.includes('User did not share')) {
+        return; // User cancelled, ignore
+      }
       showToast('Failed to save collage', 'error');
     }
   };
