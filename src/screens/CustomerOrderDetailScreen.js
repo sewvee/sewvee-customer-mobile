@@ -63,7 +63,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
 
   // Find target order
   const order = React.useMemo(() => {
-    return orders.find(o => o.id === orderId);
+    return orders.find(o => String(o.id) === String(orderId));
   }, [orders, orderId]);
 
   useEffect(() => {
@@ -216,7 +216,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           const isUploading = uploadingOutfitId === outfit.id;
           const refPhotos = (outfit.photos || []).filter(p => p.category === 'REFERENCE');
           const hasStitching = outfit.stitching && outfit.stitching.length > 0;
-          const outfitName = (outfit.name || outfit.orderType || 'OUTFIT').toUpperCase();
+          const outfitName = outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`;
 
           return (
             <View key={outfit.id || index} style={styles.outfitBlock}>

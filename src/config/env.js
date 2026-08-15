@@ -1,4 +1,6 @@
-const BASE_URL = "https://api.sewvee.com/mobile/";
+import { Platform } from 'react-native';
+
+export const BASE_URL = Platform.OS === 'android' ? "http://10.0.2.2:3021/mobile/" : "http://localhost:3021/mobile/";
 export const APP_VERSION = "1.41";
 
 export const RAZORPAY_KEY = "rzp_live_SuH9oa1pqTO6qx";
@@ -92,5 +94,5 @@ export const URL_NOTIFICATIONS_READ_ALL = `${URL_NOTIFICATIONS}/read-all`;
 export const URL_NOTIFICATION_READ = (id) => `${URL_NOTIFICATIONS}/${id}/read`;
 export const URL_NOTIFICATIONS_UNREAD_COUNT = `${URL_NOTIFICATIONS}/unread-count`;
 
-
-
+export const URL_CUSTOMER_PORTAL_ORDERS = `${BASE_URL}customer-portal/orders`;
+export const URL_CUSTOMER_PORTAL_SHOP = `${BASE_URL}customer-portal/shop`;

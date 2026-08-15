@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  Dimensions,
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  FlatList, 
+  TouchableOpacity, 
+  Image, 
+  Dimensions, 
   Linking,
   Modal,
   ScrollView,
-  SafeAreaView
+  TextInput,
+  ActivityIndicator,
+  Platform,
+  RefreshControl
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Shadow } from '../constants/theme';
 import { 
   ShoppingBag, 
@@ -20,92 +24,252 @@ import {
   ChevronRight, 
   Star,
   Sparkles,
-  Heart
+  Heart,
+  Check,
+  MapPin,
+  Store,
+  ChevronDown
 } from 'lucide-react-native';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
+import { URL_ORDERS, URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
+import axios from 'axios';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const PRODUCTS_DATA = [
-  {
-    id: 'p1',
-    name: 'Zari Work Bridal Blouse',
-    category: 'Blouses',
-    price: '₹3,500',
-    description: 'Made of pure banarasi silk, this exquisite bridal blouse showcases traditional gold zari and zardozi threadwork custom stitched to your exact measurements.',
-    image: require('../assets/bridal_blouse.png'),
-    rating: 4.9,
-    reviews: 24,
-    features: ['100% Pure Silk', 'Intricate Zardozi Work', 'Custom Fitted Padding', 'Lining Included']
-  },
-  {
-    id: 'p2',
-    name: 'Vibrant Kids Lehenga Choli',
-    category: 'Kids Wear',
-    price: '₹4,200',
-    description: 'A rich and elegant silk lehenga choli for kids in pink and green, finished with gold laces, custom tassels, and a lightweight net dupatta.',
-    image: require('../assets/silk_lehenga.png'),
-    rating: 4.8,
-    reviews: 16,
-    features: ['Premium Art Silk', 'Comfort Lining', 'Adjustable Skirt Waist', 'Lightweight Net Dupatta']
-  },
-  {
-    id: 'p3',
-    name: 'Teal Silk Salwar Dress Material',
-    category: 'Chudiyars',
-    price: '₹2,800',
-    description: 'A premium deep teal dress material set with fine hand-embroidered neckline patterns. Comes with a matching dupatta and solid color bottom fabric.',
-    image: require('../assets/chudi_material.png'),
-    rating: 4.7,
-    reviews: 12,
-    features: ['Teal Silk Fabric', 'Fine Neck Embroidery', 'Matching Dupatta Included', '2.5 Meters Fabric Length']
-  }
-];
-
 const CustomerShopScreen = () => {
   const { showToast } = useToast();
+  const navigation = useNavigation();
+  const { user } = useAuth();
+  const { orders, refreshData } = useData();
+
+  const [selectedBoutique, setSelectedBoutique] = useState(null);
+  const [boutiques, setBoutiques] = useState([]);
+  
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  
+  const [cart, setCart] = useState([]);
+  const [isCartVisible, setIsCartVisible] = useState(false);
+  const [isDeliveryModalVisible, setIsDeliveryModalVisible] = useState(false);
+  const [isBoutiqueModalVisible, setIsBoutiqueModalVisible] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState('COURIER');
+  
+  const [shippingAddress, setShippingAddress] = useState({
+    name: user?.name || '',
+    address_line_1: user?.address?.line_1 || '',
+    address_line_2: user?.address?.line_2 || '',
+    city: user?.address?.city || '',
+    state: user?.address?.state || '',
+    zipcode: user?.address?.zip || '',
+    phone: user?.mobile || user?.phone || ''
+  });
+
+  useEffect(() => {
+    if (orders && orders.length > 0) {
+      const uniqueBoutiques = [];
+      const map = new Map();
+      orders.forEach(o => {
+        if (o.boutiqueId && !map.has(o.boutiqueId)) {
+          map.set(o.boutiqueId, true);
+          uniqueBoutiques.push({ id: o.boutiqueId, name: o.boutiqueName, mobile: o.boutiqueMobile || '' });
+        }
+      });
+      setBoutiques(uniqueBoutiques);
+      if (uniqueBoutiques.length > 0 && !selectedBoutique) {
+        setSelectedBoutique(uniqueBoutiques[0]);
+      }
+    }
+  }, [orders]);
+
+  useEffect(() => {
+    if (selectedBoutique) {
+      fetchProducts(selectedBoutique.id);
+    } else {
+      setProducts([]);
+    }
+  }, [selectedBoutique]);
+
+  const fetchProducts = async (companyId) => {
+    try {
+      setLoadingProducts(true);
+      const res = await axios.get(`${URL_CUSTOMER_PORTAL_SHOP}?companyId=${companyId}`);
+      if (res.data && res.data.success) {
+        const rootUrl = BASE_URL.replace('/mobile/', '/');
+        const formatImageUrl = (url) => {
+          if (!url) return null;
+          let firstUrl = url.split(',')[0].trim();
+          if (Platform.OS === 'android' && firstUrl.includes('localhost')) {
+            firstUrl = firstUrl.replace('localhost', '10.0.2.2');
+          }
+          if (firstUrl.startsWith('http')) {
+            return encodeURI(firstUrl);
+          }
+          if (firstUrl.startsWith('/')) {
+            return encodeURI(rootUrl + firstUrl.substring(1));
+          }
+          return encodeURI(rootUrl + firstUrl);
+        };
+
+        const mapped = res.data.data.map(p => {
+          const validImg = formatImageUrl(p.image_url);
+          return {
+            id: p.id,
+            name: p.name,
+            category: p.readymade_category?.name || 'Uncategorized',
+            price: p.selling_price || 0,
+            formattedPrice: `₹${Number(p.selling_price || 0).toLocaleString('en-IN')}`,
+            rating: '4.5',
+            reviews: 120,
+            stock: Number(p.current_stock || 0),
+            description: p.description || 'No description available',
+            features: p.quality_specifications ? p.quality_specifications.split('\n') : ['Premium Quality'],
+            image: validImg ? { uri: validImg } : require('../assets/bridal_blouse.png')
+          };
+        });
+        setProducts(mapped);
+      } else {
+        setProducts([]);
+      }
+    } catch (err) {
+      console.log('Error fetching shop products:', err);
+      showToast('Failed to load products', 'error');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (selectedBoutique) {
+        fetchProducts(selectedBoutique.id);
+      }
+    }, [selectedBoutique])
+  );
+
+  const onRefresh = async () => {
+    if (selectedBoutique) {
+      setRefreshing(true);
+      await fetchProducts(selectedBoutique.id);
+      setRefreshing(false);
+    }
+  };
+
+  const categories = ['All', ...new Set(products.map(p => p.category))];
 
   const filteredProducts = React.useMemo(() => {
-    if (selectedCategory === 'All') return PRODUCTS_DATA;
-    return PRODUCTS_DATA.filter(p => p.category === selectedCategory);
-  }, [selectedCategory]);
+    if (selectedCategory === 'All') return products;
+    return products.filter(p => p.category === selectedCategory);
+  }, [selectedCategory, products]);
 
   const handleToggleFavorite = (id, event) => {
     event?.stopPropagation?.();
     if (favorites.includes(id)) {
-      setFavorites(prev => prev.filter(x => x !== id));
-      showToast('Removed from wishlist', 'success');
+      setFavorites(favorites.filter(favId => favId !== id));
     } else {
-      setFavorites(prev => [...prev, id]);
-      showToast('Added to wishlist!', 'success');
+      setFavorites([...favorites, id]);
     }
   };
 
   const handleWhatsAppInquiry = (product) => {
-    const boutiqueMobile = "+919876543210"; // Boutique Owner registered phone
-    const message = `Hi Sewvee Boutique, I am interested in inquiring about the "${product.name}" priced at ${product.price}. Please let me know how I can send my measurements!`;
-    const url = `whatsapp://send?phone=${boutiqueMobile}&text=${encodeURIComponent(message)}`;
+    if (!selectedBoutique) return;
+    const message = `Hi, I am interested in this design from your catalog:\n\n*${product.name}*\nCategory: ${product.category}\nPrice: ${product.formattedPrice}\n\nCould you share more details?`;
     
-    Linking.canOpenURL(url)
+    Linking.canOpenURL(`whatsapp://send?text=${message}`)
       .then(supported => {
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          // Fallback to web link
-          Linking.openURL(`https://wa.me/${boutiqueMobile.replace('+', '')}?text=${encodeURIComponent(message)}`);
+        if (supported && selectedBoutique.mobile) {
+          return Linking.openURL(`whatsapp://send?phone=${selectedBoutique.mobile}&text=${encodeURIComponent(message)}`);
         }
-      })
-      .catch(() => {
-        showToast('Could not open WhatsApp. Opening browser link...', 'warning');
-        Linking.openURL(`https://wa.me/${boutiqueMobile.replace('+', '')}?text=${encodeURIComponent(message)}`);
+        Linking.openURL(`https://wa.me/${(selectedBoutique.mobile||'').replace('+', '')}?text=${encodeURIComponent(message)}`);
       });
   };
 
+  const handleAddToCart = (item) => {
+    if (!cart.find(c => c.id === item.id)) {
+      setCart([...cart, { ...item, quantity: 1 }]);
+      showToast('Added to cart!', 'success');
+    }
+  };
+
+  const handleIncrement = (item) => {
+    setCart(cart.map(c => c.id === item.id ? { ...c, quantity: (c.quantity || 1) + 1 } : c));
+  };
+
+  const handleDecrement = (item) => {
+    setCart(cart.map(c => c.id === item.id ? { ...c, quantity: (c.quantity || 1) - 1 } : c).filter(c => c.quantity > 0));
+  };
+
+  const handleProceedToDelivery = () => {
+    if (cart.length === 0) return;
+    setIsCartVisible(false);
+    setIsDeliveryModalVisible(true);
+  };
+
+  const handleSendOrderRequest = async () => {
+    if (cart.length === 0) return;
+    if (!selectedBoutique) {
+      showToast('Please select a boutique', 'error');
+      return;
+    }
+    
+    const total = cart.reduce((acc, c) => acc + (Number(c.price) * (c.quantity || 1)), 0);
+    
+    try {
+      if (user && (user.id || user.mobile)) {
+        const token = await AsyncStorage.getItem('sewvee_token');
+        await axios.post(URL_ORDERS, {
+          customer_id: user.customer_id || user.id,
+          customer_mobile: user.mobile,
+          customer_name: user.name || 'App Customer',
+          company_id: selectedBoutique.id,
+          order_type: 'SALE_ORDER',
+          order_date: new Date().toISOString(),
+          final_amount: total,
+          total_amount: total,
+          total_outfits: cart.length,
+          order_notes: 'Online App Order',
+          delivery_method: deliveryMethod,
+          shipping_address: deliveryMethod === 'COURIER' ? shippingAddress : null,
+          outfits: cart.map(c => ({
+            name: c.name,
+            quantity: c.quantity || 1,
+            total_amount: Number(c.price) * (c.quantity || 1),
+            items: [{
+              item_type: 'READYMADE',
+              readymade_id: c.id,
+              qty: c.quantity || 1,
+              price: Number(c.price),
+              total_price: Number(c.price) * (c.quantity || 1)
+            }]
+          }))
+        }, {
+          headers: { Authorization: token, 'Content-Type': 'application/json' }
+        });
+        showToast('Order Request Sent Successfully!', 'success');
+        await refreshData();
+        setIsDeliveryModalVisible(false);
+        setCart([]);
+        navigation.navigate('CustomerRequestedOrders');
+      } else {
+        showToast('Please set up your profile first.', 'error');
+      }
+    } catch(err) {
+      console.log('Order sync failed', err?.response?.data || err?.message);
+      showToast('Failed to send order request.', 'error');
+    }
+  };
+
   const renderProductItem = ({ item }) => {
-    const isFav = favorites.includes(item.id);
+    const cartItem = cart.find(c => c.id === item.id);
+    const isOut = item.stock <= 0;
 
     return (
       <TouchableOpacity 
@@ -114,23 +278,37 @@ const CustomerShopScreen = () => {
         onPress={() => setSelectedProduct(item)}
       >
         <View style={styles.imageContainer}>
-          <Image source={item.image} style={styles.productImage} />
-          <TouchableOpacity 
-            style={styles.favoriteBtn}
-            onPress={(e) => handleToggleFavorite(item.id, e)}
-          >
-            <Heart size={18} color={isFav ? '#EF4444' : '#64748B'} fill={isFav ? '#EF4444' : 'transparent'} />
-          </TouchableOpacity>
+          <Image source={item.image} style={[styles.productImage, isOut && { opacity: 0.5 }]} />
+          {isOut && (
+            <View style={styles.outOfStockBadge}>
+              <Text style={styles.outOfStockText}>OUT OF STOCK</Text>
+            </View>
+          )}
         </View>
         <View style={styles.cardDetails}>
           <Text style={styles.productCategory}>{item.category}</Text>
           <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.productPrice}>{item.price}</Text>
-            <View style={styles.ratingBox}>
-              <Star size={12} color="#F59E0B" fill="#F59E0B" />
-              <Text style={styles.ratingText}>{item.rating}</Text>
-            </View>
+            <Text style={styles.productPrice}>{item.formattedPrice}</Text>
+            {cartItem ? (
+              <View style={styles.stepperContainer}>
+                <TouchableOpacity style={styles.stepperBtn} onPress={(e) => { e.stopPropagation(); handleDecrement(item); }}>
+                  <Text style={styles.stepperBtnText}>-</Text>
+                </TouchableOpacity>
+                <Text style={styles.stepperValue}>{cartItem.quantity || 1}</Text>
+                <TouchableOpacity style={styles.stepperBtn} onPress={(e) => { e.stopPropagation(); handleIncrement(item); }}>
+                  <Text style={styles.stepperBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={[styles.addToCartBtnCard, isOut && { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' }]}
+                disabled={isOut}
+                onPress={(e) => { e.stopPropagation(); handleAddToCart(item); }}
+              >
+                <Text style={[styles.addToCartBtnCardText, isOut && { color: '#94A3B8' }]}>{isOut ? 'Out' : 'Add'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -138,20 +316,38 @@ const CustomerShopScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.navbar}>
-        <View style={{ width: 24 }} />
-        <Text style={styles.navbarTitle}>Design Catalog</Text>
-        <TouchableOpacity style={styles.cartIconBtn}>
-          <ShoppingBag size={22} color={Colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: '#F5F3FF' }}>
+        <View style={styles.navbar}>
+          <Text style={styles.headerTitle}>Shopping</Text>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            {boutiques.length > 0 && selectedBoutique && (
+              <TouchableOpacity 
+                style={styles.headerBoutiqueSelector}
+                onPress={() => setIsBoutiqueModalVisible(true)}
+              >
+                <Store size={14} color={Colors.primary} style={{ marginRight: 4 }} />
+                <Text style={styles.headerBoutiqueText} numberOfLines={1}>{selectedBoutique.name}</Text>
+                <ChevronDown size={14} color={Colors.textSecondary} style={{ marginLeft: 2 }} />
+              </TouchableOpacity>
+            )}
 
-      {/* Category Tabs */}
+            <TouchableOpacity style={styles.cartIconBtn} onPress={() => setIsCartVisible(true)}>
+              <ShoppingBag size={22} color={Colors.textPrimary} />
+              {cart.length > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cart.reduce((a, c) => a + (c.quantity || 1), 0)}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+
       <View style={styles.categoriesWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {['All', 'Blouses', 'Lehengas', 'Chudiyars', 'Kids Wear'].map(cat => {
+          {categories.map(cat => {
             const isActive = selectedCategory === cat;
             return (
               <TouchableOpacity
@@ -168,24 +364,70 @@ const CustomerShopScreen = () => {
         </ScrollView>
       </View>
 
-      {/* Feed List */}
-      <FlatList
-        data={filteredProducts}
-        renderItem={renderProductItem}
-        keyExtractor={item => item.id}
-        numColumns={2}
-        contentContainerStyle={styles.listContent}
-        columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <ShoppingBag size={48} color={Colors.textSecondary} />
-            <Text style={styles.emptyTitle}>Coming Soon</Text>
-            <Text style={styles.emptySubtitle}>We are currently preparing gorgeous collections in this category.</Text>
-          </View>
-        }
-      />
+      {loadingProducts ? (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.emptySubtitle}>Loading catalog...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredProducts}
+          renderItem={renderProductItem}
+          keyExtractor={item => item.id.toString()}
+          numColumns={2}
+          contentContainerStyle={styles.listContent}
+          columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <ShoppingBag size={48} color={Colors.textSecondary} />
+              <Text style={styles.emptyTitle}>Coming Soon</Text>
+              <Text style={styles.emptySubtitle}>
+                {selectedBoutique ? 'This boutique has not added any products yet.' : 'Please select a boutique first.'}
+              </Text>
+            </View>
+          }
+        />
+      )}
 
-      {/* PRODUCT DETAIL MODAL */}
+      {/* BOUTIQUE SELECTOR MODAL */}
+      <Modal visible={isBoutiqueModalVisible} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsBoutiqueModalVisible(false)}
+        >
+          <View style={[styles.modalCard, { height: 'auto', maxHeight: '50%', marginTop: 'auto', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Boutique</Text>
+              <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(false)} style={{ padding: 4 }}>
+                <X size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 20 }}>
+              {boutiques.map(b => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={[styles.boutiqueOption, selectedBoutique?.id === b.id && styles.boutiqueOptionActive]}
+                  onPress={() => {
+                    setSelectedBoutique(b);
+                    setIsBoutiqueModalVisible(false);
+                  }}
+                >
+                  <Store size={20} color={selectedBoutique?.id === b.id ? Colors.primary : Colors.textSecondary} />
+                  <Text style={[styles.boutiqueOptionText, selectedBoutique?.id === b.id && { color: Colors.primary, fontFamily: 'Inter-Bold' }]}>
+                    {b.name}
+                  </Text>
+                  {selectedBoutique?.id === b.id && <Check size={18} color={Colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Modal visible={!!selectedProduct} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -206,13 +448,10 @@ const CustomerShopScreen = () => {
                 <View style={styles.modalBody}>
                   <View style={styles.modalPriceRow}>
                     <Text style={styles.modalName}>{selectedProduct.name}</Text>
-                    <Text style={styles.modalPrice}>{selectedProduct.price}</Text>
+                    <Text style={styles.modalPrice}>{selectedProduct.formattedPrice}</Text>
                   </View>
 
-                  <View style={styles.modalRatingRow}>
-                    <Star size={16} color="#F59E0B" fill="#F59E0B" />
-                    <Text style={styles.modalRatingText}>{selectedProduct.rating} ({selectedProduct.reviews} reviews)</Text>
-                  </View>
+
 
                   <Text style={styles.modalDescriptionTitle}>Description</Text>
                   <Text style={styles.modalDescriptionText}>{selectedProduct.description}</Text>
@@ -229,18 +468,178 @@ const CustomerShopScreen = () => {
             )}
 
             <View style={styles.modalFooter}>
+              {selectedProduct && selectedProduct.stock <= 0 ? (
+                <View style={[styles.inquireBtn, { backgroundColor: '#F1F5F9' }]}>
+                  <Text style={[styles.inquireBtnText, { color: '#94A3B8' }]}>Out of Stock</Text>
+                </View>
+              ) : (
+                selectedProduct && cart.find(c => c.id === selectedProduct.id) ? (
+                  <View style={[styles.stepperContainer, { height: 52, flex: 1, backgroundColor: '#F8FAFC' }]}>
+                    <TouchableOpacity style={[styles.stepperBtn, { flex: 1 }]} onPress={() => handleDecrement(selectedProduct)}>
+                      <Text style={[styles.stepperBtnText, { fontSize: 24 }]}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={[styles.stepperValue, { fontSize: 18 }]}>{cart.find(c => c.id === selectedProduct.id).quantity || 1}</Text>
+                    <TouchableOpacity style={[styles.stepperBtn, { flex: 1 }]} onPress={() => handleIncrement(selectedProduct)}>
+                      <Text style={[styles.stepperBtnText, { fontSize: 24 }]}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.inquireBtn}
+                    onPress={() => handleAddToCart(selectedProduct)}
+                  >
+                    <ShoppingBag size={20} color="white" style={{ marginRight: 8 }} />
+                    <Text style={styles.inquireBtnText}>Add to Cart</Text>
+                  </TouchableOpacity>
+                )
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={isCartVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { height: '70%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary }}>Your Cart</Text>
+              <TouchableOpacity onPress={() => setIsCartVisible(false)} style={{ padding: 4 }}>
+                <X size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+              {cart.length === 0 ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <ShoppingBag size={40} color="#94A3B8" />
+                  <Text style={{ marginTop: 12, color: '#64748B', fontFamily: 'Inter-Medium' }}>Your cart is empty.</Text>
+                </View>
+              ) : (
+                cart.map((item, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 12, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                    <View style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12, overflow: 'hidden', backgroundColor: '#E2E8F0' }}>
+                      <Image source={item.image} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 4 }}>{item.name}</Text>
+                      <Text style={{ fontSize: 14, color: Colors.primary, fontWeight: 'bold' }}>{item.formattedPrice}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
+                      <TouchableOpacity onPress={() => setCart(cart.filter(c => c.id !== item.id))} style={{ padding: 4, marginBottom: 8 }}>
+                        <X size={20} color="#EF4444" />
+                      </TouchableOpacity>
+                      <View style={styles.stepperContainer}>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => handleDecrement(item)}>
+                          <Text style={styles.stepperBtnText}>-</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.stepperValue}>{item.quantity || 1}</Text>
+                        <TouchableOpacity style={styles.stepperBtn} onPress={() => handleIncrement(item)}>
+                          <Text style={styles.stepperBtnText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+            <View style={styles.modalFooter}>
               <TouchableOpacity 
-                style={styles.inquireBtn}
-                onPress={() => handleWhatsAppInquiry(selectedProduct)}
+                style={[styles.inquireBtn, cart.length === 0 && { backgroundColor: '#CBD5E1' }]}
+                disabled={cart.length === 0}
+                onPress={handleProceedToDelivery}
               >
-                <MessageCircle size={20} color="white" style={{ marginRight: 8 }} />
-                <Text style={styles.inquireBtnText}>Inquire on WhatsApp</Text>
+                <Text style={styles.inquireBtnText}>Proceed to Delivery</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+
+      <Modal visible={isDeliveryModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary }}>Delivery Options</Text>
+              <TouchableOpacity onPress={() => setIsDeliveryModalVisible(false)} style={{ padding: 4 }}>
+                <X size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, padding: 20 }}>
+              <View style={{ flexDirection: 'row', marginBottom: 20, backgroundColor: '#F1F5F9', borderRadius: 12, padding: 4 }}>
+                <TouchableOpacity 
+                  style={{ flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', backgroundColor: deliveryMethod === 'COURIER' ? 'white' : 'transparent', shadowColor: deliveryMethod === 'COURIER' ? '#000' : 'transparent', shadowOpacity: 0.05, shadowRadius: 2 }}
+                  onPress={() => setDeliveryMethod('COURIER')}
+                >
+                  <Text style={{ fontWeight: '600', color: deliveryMethod === 'COURIER' ? Colors.primary : Colors.textSecondary }}>Courier</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={{ flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', backgroundColor: deliveryMethod === 'IN_PERSON' ? 'white' : 'transparent', shadowColor: deliveryMethod === 'IN_PERSON' ? '#000' : 'transparent', shadowOpacity: 0.05, shadowRadius: 2 }}
+                  onPress={() => setDeliveryMethod('IN_PERSON')}
+                >
+                  <Text style={{ fontWeight: '600', color: deliveryMethod === 'IN_PERSON' ? Colors.primary : Colors.textSecondary }}>Store Pickup</Text>
+                </TouchableOpacity>
+              </View>
+
+              {deliveryMethod === 'COURIER' && (
+                <View style={{ gap: 12 }}>
+                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: Colors.textPrimary, marginBottom: 4 }}>Shipping Address</Text>
+                  
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Name</Text>
+                    <TextInput style={styles.inputField} value={shippingAddress.name} onChangeText={(t) => setShippingAddress({...shippingAddress, name: t})} />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Phone Number</Text>
+                    <TextInput style={styles.inputField} keyboardType="phone-pad" value={shippingAddress.phone} onChangeText={(t) => setShippingAddress({...shippingAddress, phone: t})} />
+                  </View>
+                  
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Address Line 1</Text>
+                    <TextInput style={styles.inputField} value={shippingAddress.address_line_1} onChangeText={(t) => setShippingAddress({...shippingAddress, address_line_1: t})} />
+                  </View>
+                  
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Address Line 2 (Optional)</Text>
+                    <TextInput style={styles.inputField} value={shippingAddress.address_line_2} onChangeText={(t) => setShippingAddress({...shippingAddress, address_line_2: t})} />
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={[styles.inputContainer, { flex: 1 }]}>
+                      <Text style={styles.inputLabel}>City</Text>
+                      <TextInput style={styles.inputField} value={shippingAddress.city} onChangeText={(t) => setShippingAddress({...shippingAddress, city: t})} />
+                    </View>
+                    <View style={[styles.inputContainer, { flex: 1 }]}>
+                      <Text style={styles.inputLabel}>State</Text>
+                      <TextInput style={styles.inputField} value={shippingAddress.state} onChangeText={(t) => setShippingAddress({...shippingAddress, state: t})} />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Zipcode</Text>
+                    <TextInput style={styles.inputField} keyboardType="number-pad" value={shippingAddress.zipcode} onChangeText={(t) => setShippingAddress({...shippingAddress, zipcode: t})} />
+                  </View>
+                </View>
+              )}
+
+              {deliveryMethod === 'IN_PERSON' && (
+                <View style={{ padding: 20, alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, marginTop: 10 }}>
+                  <MapPin size={32} color={Colors.primary} style={{ marginBottom: 12 }} />
+                  <Text style={{ textAlign: 'center', color: Colors.textSecondary, fontSize: 14, lineHeight: 20 }}>
+                    You will need to visit the boutique directly to pick up your order once it is ready.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.inquireBtn} onPress={handleSendOrderRequest}>
+                <Check size={20} color="white" style={{ marginRight: 8 }} />
+                <Text style={styles.inquireBtnText}>Confirm Order</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
@@ -257,17 +656,103 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     height: 56,
+    backgroundColor: '#F5F3FF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    backgroundColor: Colors.white,
   },
-  navbarTitle: {
+  headerTitle: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
     color: Colors.textPrimary,
   },
+  headerBoutiqueSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    maxWidth: 120,
+  },
+  headerBoutiqueText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: Colors.textPrimary,
+    flexShrink: 1,
+  },
+  boutiqueOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    marginBottom: 8,
+    gap: 12,
+  },
+  boutiqueOptionActive: {
+    backgroundColor: '#F5F3FF',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  boutiqueOptionText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: 'Inter-Medium',
+    color: Colors.textPrimary,
+  },
   cartIconBtn: {
     padding: 6,
+    position: 'relative'
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: Colors.primary,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  boutiqueWrapper: {
+    backgroundColor: Colors.white,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  boutiqueScroll: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  boutiqueTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  boutiqueTabActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  boutiqueTabText: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: Colors.textSecondary,
+  },
+  boutiqueTabTextActive: {
+    color: Colors.white,
   },
   categoriesWrapper: {
     backgroundColor: Colors.white,
@@ -320,6 +805,21 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
+  outOfStockBadge: {
+    position: 'absolute',
+    top: '45%',
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  outOfStockText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontFamily: 'Inter-Bold',
+    letterSpacing: 1,
+  },
   favoriteBtn: {
     position: 'absolute',
     top: 8,
@@ -358,16 +858,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     color: Colors.primary,
   },
-  ratingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Bold',
-    color: Colors.textPrimary,
-  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -386,8 +876,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingHorizontal: 20,
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.4)',
@@ -511,5 +999,65 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Inter-Bold',
     color: Colors.white,
+  },
+  addToCartBtnCard: {
+    backgroundColor: '#F5F3FF',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
+  },
+  addToCartBtnCardText: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontFamily: 'Inter-Bold',
+  },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  stepperBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperBtnText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.primary,
+  },
+  stepperValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  inputField: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: Colors.textPrimary,
   },
 });

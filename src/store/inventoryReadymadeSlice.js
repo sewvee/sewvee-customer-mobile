@@ -83,9 +83,14 @@ export const getReadymadesAction = createAsyncThunk(
   async (params = {}, { getState, rejectWithValue }) => {
     try {
       const token = await getAuthToken(getState);
+      const companyId = getState().profile?.profileData?.company?.id;
       const requestParams = normalizeListParams(params);
       const res = await axios.get(URL_INVENTORY_READYMADE, {
-        headers: { accept: '*/*', Authorization: token },
+        headers: { 
+          accept: '*/*', 
+          Authorization: token,
+          ...(companyId && { 'company-id': companyId })
+        },
         params: requestParams,
         paramsSerializer: params => serializeListParams(params),
       });

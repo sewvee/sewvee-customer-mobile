@@ -1,25 +1,9 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { COLLECTIONS, IS_STAGING } from '../config/firebase';
-// import {
-//     getFirestore,
-//     collection,
-//     query,
-//     where,
-//     onSnapshot,
-//     doc,
-//     getDoc,
-//     getDocs,
-//     updateDoc,
-//     setDoc,
-//     addDoc,
-//     deleteDoc,
-//     writeBatch,
-//     increment
-// } from '@react-native-firebase/firestore';
 import { getCurrentDate } from '../utils/dateUtils';
 import { useAuth } from './AuthContext';
 import { formatOrderNumber, formatPaymentBillId } from '../utils/orderIdFormatter';
+import { URL_CUSTOMER_PORTAL_ORDERS } from '../config/env';
 
 /* -------------------- CONTEXT -------------------- */
 
@@ -147,8 +131,28 @@ export const DataProvider = ({ children }) => {
     const [outfits, setOutfits] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const { userToken } = useAuth();
+    const { userToken, user, saveUser } = useAuth();
     const persistTimeoutRef = useRef(null);
+
+    /* -------------------- FETCH LIVE ORDERS FROM BACKEND -------------------- */
+
+    const fetchOrdersFromBackend = useCallback(async () => {
+        try {
+            const mobile = user?.mobile;
+            if (!mobile) return [];
+            const cleanPhone = String(mobile).replace(/[^0-9]/g, '').slice(-10);
+            if (!cleanPhone || cleanPhone.length < 10) return [];
+
+            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
+            if (!response.ok) return [];
+            const json = await response.json();
+            if (!json.success || !Array.isArray(json.data)) return [];
+            return json.data;
+        } catch (err) {
+            console.log('fetchOrdersFromBackend error:', err?.message || err);
+            return [];
+        }
+    }, [user]);
 
     /* -------------------- LOAD FROM STORAGE -------------------- */
 
@@ -161,7 +165,6 @@ export const DataProvider = ({ children }) => {
                 AsyncStorage.getItem(STORAGE_KEYS.DATA_SEED_VERSION),
             ]);
 
-            const needsReSeed = seedVersion !== FORCE_SEED_VERSION;
             let loadedOrders = [];
             let loadedCustomers = [];
             let loadedPayments = [];
@@ -177,11 +180,27 @@ export const DataProvider = ({ children }) => {
             }
 
             setCustomers(Array.isArray(loadedCustomers) ? loadedCustomers : []);
-            setOrders(Array.isArray(loadedOrders) ? loadedOrders : []);
             setPayments(Array.isArray(loadedPayments) ? loadedPayments : []);
 
+            const needsReSeed = seedVersion !== FORCE_SEED_VERSION;
             if (needsReSeed) {
                 await AsyncStorage.setItem(STORAGE_KEYS.DATA_SEED_VERSION, FORCE_SEED_VERSION);
+            }
+
+            // Fetch live orders from backend by phone number
+            const liveOrders = await fetchOrdersFromBackend();
+            if (liveOrders.length > 0) {
+                setOrders(liveOrders);
+                // Cache them locally for offline access
+                await AsyncStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(liveOrders));
+                
+                // Update Guest Customer name from backend
+                const realName = liveOrders[0].customerName;
+                if (realName && realName !== 'Customer' && user?.name === 'Guest Customer') {
+                    saveUser({ ...user, name: realName });
+                }
+            } else {
+                setOrders(Array.isArray(loadedOrders) ? loadedOrders : []);
             }
         } catch (e) {
             console.log('DataContext load error', e);
@@ -191,7 +210,7 @@ export const DataProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [fetchOrdersFromBackend]);
 
 
     useEffect(() => {

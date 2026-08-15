@@ -44,7 +44,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 
 import CreateOrderScreen from '../screens/CreateOrderScreen';
 import SalesOrderScreen from '../screens/SalesOrderScreen';
-import CreateOrderFlowScreen from '../screens/CreateOrderFlowScreen';
+// import CreateOrderFlowScreen from '../screens/CreateOrderFlowScreen';
 import PaymentsScreen from '../screens/PaymentsScreen';
 import PaymentDetailScreen from '../screens/PaymentDetailScreen';
 
@@ -65,6 +65,7 @@ import TailorDashboardScreen from '../screens/TailorDashboardScreen';
 
 import CustomerDashboardScreen from '../screens/CustomerDashboardScreen';
 import CustomerOrderDetailScreen from '../screens/CustomerOrderDetailScreen';
+import CustomerRequestedOrdersScreen from '../screens/CustomerRequestedOrdersScreen';
 import CustomerGalleryScreen from '../screens/CustomerGalleryScreen';
 import CustomerShopScreen from '../screens/CustomerShopScreen';
 import CustomerProfileScreen from '../screens/CustomerProfileScreen';
@@ -411,13 +412,14 @@ export default function RootNavigator() {
           {/* <Stack.Screen name="InventoryScreen" component={InventoryScreen} options={{ headerShown: false }} /> */}
 
           <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="CustomerRequestedOrders" component={CustomerRequestedOrdersScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CustomerOrderDetail" component={CustomerOrderDetailScreen} options={{ headerShown: false }} />
           {/* <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} options={{ headerShown: true, title: 'Client Details' }} /> */}
           <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false, }} />
           <Stack.Screen name="InvoicePreview" component={InvoicePreviewScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CreateOrder" component={CreateOrderScreen} options={{ headerShown: true, title: 'New Order' }} />
           <Stack.Screen name="SalesOrder" component={SalesOrderScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="CreateOrderFlow" component={CreateOrderFlowScreen} options={{ headerShown: false, title: 'Create New Order' }} />
+          {/* <Stack.Screen name="CreateOrderFlow" component={CreateOrderFlowScreen} options={{ headerShown: false, title: 'Create New Order' }} /> */}
           <Stack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ headerShown: false }} />
           {/* <Stack.Screen name="EditCategory" component={EditCategoryScreen} options={{ headerShown: false }} /> */}
 

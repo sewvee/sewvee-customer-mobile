@@ -105,7 +105,8 @@ import SignatureScreen from 'react-native-signature-canvas';
 import ImageView from 'react-native-image-viewing';
 import { generateInvoicePDF, generateTailorCopyPDF, generateCustomerCopyPDF, getCustomerCopyHTML, printHTML } from '../services/pdfService';
 import PDFPreviewModal from '../components/PDFPreviewModal';
-import { transcribeAudioWithWhisper } from '../services/openaiService';
+// import { transcribeAudioWithWhisper } from '../services/openaiService';
+const transcribeAudioWithWhisper = async () => 'Transcription temporarily unavailable';
 import { uploadImage } from '../utils/storageUtils';
 import { CommonActions } from '@react-navigation/native';
 // Skia drawing temporarily disabled due to version compatibility

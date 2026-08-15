@@ -51,10 +51,11 @@ const CustomerDashboardScreen = ({ navigation }) => {
   const customerOrders = React.useMemo(() => {
     if (!user || !user.mobile) return [];
     const targetMobile = user.mobile.replace(/[^0-9]/g, '').slice(-10);
-    return orders.filter(order => {
-      const orderMobile = (order.customerMobile || order.customer?.whatsappNumber || order.customer?.mobile_number || '').replace(/[^0-9]/g, '').slice(-10);
+    const filtered = orders.filter(order => {
+      const orderMobile = (order.customerMobile || order.customer?.whatsappNumber || order.customer?.mobile || order.customer?.mobile_number || '').replace(/[^0-9]/g, '').slice(-10);
       return orderMobile === targetMobile;
     });
+    return filtered.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
   }, [orders, user]);
 
   // Check if there are any active upload requests
@@ -174,7 +175,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
   ];
 
   const renderOrderItem = ({ item }) => {
-    const orderNum = item.billNo || item.id;
+    const orderNum = item.billNo || formatOrderNumber(item.id);
     const outfits = item.outfits || item.items || [];
     const hasPendingPhotoRequest = outfits.some(
       (outfit) => 
@@ -207,10 +208,10 @@ const CustomerDashboardScreen = ({ navigation }) => {
         {/* Order Info */}
         <View style={styles.orderInfoRow}>
           <View>
-            <Text style={{fontSize: 12, color: Colors.primary, fontFamily: 'Inter-Bold', marginBottom: 2, letterSpacing: 0.5}}>
+            <Text style={styles.orderNumberTitle}>Order #{orderNum}</Text>
+            <Text style={{fontSize: 10, color: '#8B5CF6', fontFamily: 'Inter-Bold', marginTop: 4, letterSpacing: 0.5}}>
               {outfitTypes || 'OUTFIT'}
             </Text>
-            <Text style={styles.orderNumberTitle}>Order #{orderNum}</Text>
           </View>
           
           <View style={styles.actionFooterIcon}>
@@ -219,14 +220,14 @@ const CustomerDashboardScreen = ({ navigation }) => {
         </View>
 
         {/* Financials & Alerts */}
-        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9'}}>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9'}}>
           <View style={{flex: 1}}>
              <Text style={{fontSize: 11, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 2}}>Paid</Text>
-             <Text style={{fontSize: 15, color: '#10B981', fontFamily: 'Inter-Bold'}}>₹{item.advance || item.paid || 0}</Text>
+             <Text style={{fontSize: 14, color: '#10B981', fontFamily: 'Inter-Bold'}}>₹{item.advance || item.paid || 0}</Text>
           </View>
           <View style={{flex: 1}}>
              <Text style={{fontSize: 11, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 2}}>Due Balance</Text>
-             <Text style={{fontSize: 15, color: '#EF4444', fontFamily: 'Inter-Bold'}}>₹{item.balance || 0}</Text>
+             <Text style={{fontSize: 14, color: '#EF4444', fontFamily: 'Inter-Bold'}}>₹{item.balance || 0}</Text>
           </View>
           
           {hasPendingPhotoRequest && (
@@ -255,8 +256,9 @@ const CustomerDashboardScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
@@ -310,6 +312,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
           </View>
         )}
       </ScrollView>
+      </View>
 
       {/* WELCOME INTRODUCTION CAROUSEL */}
       <Modal visible={showIntro} transparent animationType="fade">
@@ -380,7 +383,7 @@ export default CustomerDashboardScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#F5F3FF',
   },
   header: {
     flexDirection: 'row',
@@ -478,16 +481,16 @@ const styles = StyleSheet.create({
   },
   orderCardRevamped: {
     backgroundColor: Colors.white,
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: '#EEF2FF',
+    borderColor: '#F1F5F9',
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -538,10 +541,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   orderNumberTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontFamily: 'Inter-Bold',
     color: Colors.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.2,
   },
   photoRequestAlert: {
     flexDirection: 'row',

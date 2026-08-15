@@ -5,27 +5,24 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Clipboard,
   LayoutAnimation,
   Platform,
   UIManager,
-  SafeAreaView
 } from 'react-native';
-import { Colors, Spacing, Shadow } from '../constants/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors, Shadow } from '../constants/theme';
 import { 
-  User, 
-  MapPin, 
-  Copy, 
   HelpCircle, 
   ChevronDown, 
   ChevronUp, 
   LogOut, 
-  Info,
-  PhoneCall,
-  Scissors
+  ShoppingBag,
+  ChevronRight
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useNavigation } from '@react-navigation/native';
+import { useData } from '../context/DataContext';
 
 if (Platform.OS === 'android') {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -36,41 +33,36 @@ if (Platform.OS === 'android') {
 const FAQ_DATA = [
   {
     question: "How do I upload reference design photos?",
-    answer: "Go to your Orders tab on the home dashboard, select your order, and look for outfits showing the 'Reference Design Needed' notification. Tap '+ Upload Photo' to select neckline, embroidery, or style ideas directly from your gallery."
+    answer: "Go to your Home tab, tap on any active order, and look for outfits showing the 'Reference Design Needed' badge. Tap '+ Upload Photo' to select neckline, embroidery, or style ideas directly from your gallery."
+  },
+  {
+    question: "How do I use the Gallery and Collage Maker?",
+    answer: "Use the 'Gallery' tab to create design folders like 'Neck Designs' or 'Bridal Inspiration'. Tap 'Collage Maker' in the gallery header to combine multiple reference images into a single collage for your boutique."
   },
   {
     question: "How do I send my measurement sample garments?",
-    answer: "You can ship your best-fitting blouse or salwar suit as a measurement sample garment to the boutique. Copy the boutique's courier address from the Profile or Order screen, ship it, and record the tracking details to lock your measurement history."
-  },
-  {
-    question: "How do I organize my styling inspirations?",
-    answer: "Use the 'My Gallery' tab to create custom folders like 'Neck Designs' or 'Bridal Inspiration'. You can upload images from your library and manage your style folder list entirely in one offline-persisted place."
+    answer: "You can ship your best-fitting blouse or salwar suit as a measurement sample to the boutique. Contact your boutique directly — their details appear on each order card on your home screen."
   },
   {
     question: "Who can I contact for orders support?",
-    answer: "For design revisions, date alterations, or pricing inquiries, tap on the phone number or WhatsApp links inside the boutique info card on this page to chat with the boutique owners directly."
+    answer: "For design revisions, delivery date changes, or pricing questions, open any active order from the Home tab. The boutique contact details are shown directly in the order for quick access."
   }
 ];
 
 const CustomerProfileScreen = () => {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
-  const [expandedIndex, setExpandedIndex] = useState(null);
+  const navigation = useNavigation();
+  const { orders } = useData();
 
-  const handleCopyBoutiqueAddress = () => {
-    const address = "Sewvee Premium Boutique, Block C, 4th Cross Road, Indira Nagar, Bengaluru, Karnataka 560038";
-    Clipboard.setString(address);
-    showToast('Boutique address copied!', 'success');
-  };
+  // Calculate order stats
+  const stitchingOrders = (orders || []).filter(o => o.order_type !== 'SALE_ORDER' && o.source !== 'send order request');
+  const readymadeOrders = (orders || []).filter(o => o.order_type === 'SALE_ORDER' || o.source === 'send order request');
 
-  const handleToggleFaq = (index) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpandedIndex(expandedIndex === index ? null : index);
-  };
-
-  const handleCallBoutique = () => {
-    showToast('Calling Boutique: +91 98765 43210', 'success');
-  };
+  const stitchingCompleted = stitchingOrders.filter(o => o.status === 'Completed' || o.status === 'Delivered').length;
+  const stitchingPending = stitchingOrders.filter(o => o.status !== 'Completed' && o.status !== 'Delivered' && o.status !== 'Cancelled').length;
+  
+  const readymadePending = readymadeOrders.filter(o => o.status !== 'Cancelled' && o.status !== 'Delivered').length;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -81,6 +73,7 @@ const CustomerProfileScreen = () => {
         <View style={{ width: 24 }} />
       </View>
 
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* User Card */}
         <View style={styles.profileCard}>
@@ -96,74 +89,50 @@ const CustomerProfileScreen = () => {
           </View>
         </View>
 
-        {/* Boutique Info Card */}
-        <View style={styles.boutiqueCard}>
-          <View style={styles.boutiqueHeader}>
-            <Scissors size={20} color={Colors.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.boutiqueTitle}>Boutique Information</Text>
-          </View>
-          
-          <Text style={styles.boutiqueName}>Sewvee Premium Boutique</Text>
-          
-          <View style={styles.boutiqueDetailRow}>
-            <MapPin size={16} color={Colors.textSecondary} style={{ marginRight: 8, marginTop: 2 }} />
-            <Text style={styles.boutiqueDetailText}>
-              Block C, 4th Cross Road, Indira Nagar, Bengaluru, Karnataka 560038
-            </Text>
-            <TouchableOpacity style={styles.copyBtn} onPress={handleCopyBoutiqueAddress}>
-              <Copy size={16} color={Colors.primary} />
-            </TouchableOpacity>
+        {/* Order Statistics Widget */}
+        <View style={styles.statsContainer}>
+          <Text style={styles.statsSectionTitle}>Custom Stitching</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{stitchingOrders.length}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{stitchingPending}</Text>
+              <Text style={styles.statLabel}>Pending</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{stitchingCompleted}</Text>
+              <Text style={styles.statLabel}>Finished</Text>
+            </View>
           </View>
 
-          <TouchableOpacity 
-            style={styles.boutiqueDetailRow}
-            onPress={handleCallBoutique}
-          >
-            <PhoneCall size={16} color={Colors.textSecondary} style={{ marginRight: 8 }} />
-            <Text style={[styles.boutiqueDetailText, { color: Colors.primary, fontFamily: 'Inter-SemiBold' }]}>
-              +91 98765 43210
-            </Text>
-          </TouchableOpacity>
+          <Text style={[styles.statsSectionTitle, { marginTop: 16 }]}>Online Readymade</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{readymadeOrders.length}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{readymadePending}</Text>
+              <Text style={styles.statLabel}>Pending</Text>
+            </View>
+          </View>
         </View>
 
-        {/* FAQs Section */}
-        <View style={styles.faqHeader}>
-          <HelpCircle size={20} color={Colors.textPrimary} style={{ marginRight: 8 }} />
-          <Text style={styles.faqTitle}>Help & FAQs</Text>
-        </View>
-
-        {FAQ_DATA.map((faq, index) => {
-          const isExpanded = expandedIndex === index;
-          return (
-            <TouchableOpacity
-              key={index}
-              style={styles.faqCard}
-              activeOpacity={0.8}
-              onPress={() => handleToggleFaq(index)}
-            >
-              <View style={styles.faqQuestionRow}>
-                <Text style={styles.faqQuestionText}>{faq.question}</Text>
-                {isExpanded ? (
-                  <ChevronUp size={18} color={Colors.textSecondary} />
-                ) : (
-                  <ChevronDown size={18} color={Colors.textSecondary} />
-                )}
-              </View>
-              {isExpanded && (
-                <View style={styles.faqAnswerWrapper}>
-                  <Text style={styles.faqAnswerText}>{faq.answer}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('CustomerRequestedOrders')}>
+          <ShoppingBag size={20} color={Colors.primary} style={{ marginRight: 12 }} />
+          <Text style={styles.menuItemText}>My Orders</Text>
+          <ChevronRight size={20} color={Colors.textSecondary} style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-          <LogOut size={20} color="white" style={{ marginRight: 8 }} />
-          <Text style={styles.logoutBtnText}>Logout Session</Text>
+          <LogOut size={20} color={Colors.danger} style={{ marginRight: 8 }} />
+          <Text style={styles.logoutBtnText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
@@ -173,7 +142,7 @@ export default CustomerProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#F5F3FF',
   },
   navbar: {
     flexDirection: 'row',
@@ -181,9 +150,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     height: 56,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: Colors.white,
+    backgroundColor: '#F5F3FF',
   },
   navbarTitle: {
     fontSize: 18,
@@ -242,94 +209,65 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     textTransform: 'uppercase',
   },
-  boutiqueCard: {
+  statsContainer: {
     backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 24,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
     ...Shadow.subtle,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
   },
-  boutiqueHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  boutiqueTitle: {
-    fontSize: 14,
+  statsSectionTitle: {
+    fontSize: 13,
     fontFamily: 'Inter-Bold',
-    color: Colors.textPrimary,
+    color: Colors.textSecondary,
     textTransform: 'uppercase',
+    marginBottom: 12,
     letterSpacing: 0.5,
   },
-  boutiqueName: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: Colors.textPrimary,
-    marginBottom: 12,
-  },
-  boutiqueDetailRow: {
+  statsRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
+    gap: 12,
   },
-  boutiqueDetailText: {
+  statBox: {
     flex: 1,
-    fontSize: 13,
-    color: Colors.textSecondary,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  statValue: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 11,
     fontFamily: 'Inter-Medium',
-    lineHeight: 18,
+    color: Colors.textSecondary,
   },
-  copyBtn: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  faqHeader: {
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
-  },
-  faqTitle: {
-    fontSize: 15,
-    fontFamily: 'Inter-Bold',
-    color: Colors.textPrimary,
-  },
-  faqCard: {
     backgroundColor: Colors.white,
-    borderRadius: 14,
     padding: 16,
-    marginBottom: 10,
+    borderRadius: 12,
+    marginBottom: 16,
     ...Shadow.subtle,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  faqQuestionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  faqQuestionText: {
-    flex: 1,
-    fontSize: 14,
+  menuItemText: {
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
     color: Colors.textPrimary,
-    paddingRight: 8,
-  },
-  faqAnswerWrapper: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  faqAnswerText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'Inter-Medium',
-    lineHeight: 18,
   },
   logoutBtn: {
-    backgroundColor: Colors.danger,
+    backgroundColor: 'transparent',
     height: 52,
     borderRadius: 14,
     flexDirection: 'row',
@@ -337,11 +275,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
     marginBottom: 12,
-    ...Shadow.subtle,
+    borderWidth: 1,
+    borderColor: Colors.danger,
   },
   logoutBtnText: {
     fontSize: 15,
     fontFamily: 'Inter-Bold',
-    color: Colors.white,
+    color: Colors.danger,
   },
 });
