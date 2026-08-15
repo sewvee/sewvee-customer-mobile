@@ -26,6 +26,7 @@ import {
   Sparkles,
   Heart,
   Check,
+  CheckCircle2,
   MapPin,
   Store,
   ChevronDown
@@ -33,7 +34,7 @@ import {
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { URL_ORDERS, URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
+import { URL_CUSTOMER_PORTAL_ORDERS, URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
 import axios from 'axios';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -61,6 +62,8 @@ const CustomerShopScreen = () => {
   const [isCartVisible, setIsCartVisible] = useState(false);
   const [isDeliveryModalVisible, setIsDeliveryModalVisible] = useState(false);
   const [isBoutiqueModalVisible, setIsBoutiqueModalVisible] = useState(false);
+  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [placedOrderRef, setPlacedOrderRef] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState('COURIER');
   
   const [shippingAddress, setShippingAddress] = useState({
@@ -225,41 +228,48 @@ const CustomerShopScreen = () => {
     try {
       if (user && (user.id || user.mobile)) {
         const token = await AsyncStorage.getItem('sewvee_token');
-        await axios.post(URL_ORDERS, {
+        const res = await axios.post(URL_CUSTOMER_PORTAL_ORDERS, {
           customer_id: user.customer_id || user.id,
           customer_mobile: user.mobile,
           customer_name: user.name || 'App Customer',
           company_id: selectedBoutique.id,
           order_type: 'SALE_ORDER',
           order_date: new Date().toISOString(),
-          final_amount: total,
           total_amount: total,
-          total_outfits: cart.length,
-          order_notes: 'Online App Order',
+          status: 'YET_TO_START',
+          payment_status: 'UNPAID',
+          order_source: 'Mobile App',
           delivery_method: deliveryMethod,
           shipping_address: deliveryMethod === 'COURIER' ? shippingAddress : null,
-          outfits: cart.map(c => ({
-            name: c.name,
-            quantity: c.quantity || 1,
-            total_amount: Number(c.price) * (c.quantity || 1),
-            items: [{
-              item_type: 'READYMADE',
-              readymade_id: c.id,
-              qty: c.quantity || 1,
-              price: Number(c.price),
-              total_price: Number(c.price) * (c.quantity || 1)
-            }]
+          items: cart.map(c => ({
+            item_type: 'READYMADE',
+            readymade_id: c.id,
+            qty: c.quantity || 1,
+            price: c.price,
+            total_price: Number(c.price) * (c.quantity || 1)
           }))
         }, {
-          headers: { Authorization: token, 'Content-Type': 'application/json' }
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         });
-        showToast('Order Request Sent Successfully!', 'success');
-        await refreshData();
-        setIsDeliveryModalVisible(false);
-        setCart([]);
-        navigation.navigate('CustomerRequestedOrders');
+        
+        if (res.data && res.data.success) {
+          const newOrderId = res.data.data?.id;
+          if (newOrderId) {
+            setPlacedOrderRef(`INV-${String(newOrderId).padStart(3, '0')}`);
+          } else {
+            setPlacedOrderRef('INV-SUCCESS');
+          }
+          setCart([]);
+          setIsDeliveryModalVisible(false);
+          setIsSuccessModalVisible(true);
+          refreshData();
+        } else {
+          showToast('Failed to place order.');
+        }
       } else {
-        showToast('Please set up your profile first.', 'error');
+        showToast('Please complete your profile to order.');
       }
     } catch(err) {
       console.log('Order sync failed', err?.response?.data || err?.message);
@@ -636,6 +646,33 @@ const CustomerShopScreen = () => {
                 <Text style={styles.inquireBtnText}>Confirm Order</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* SUCCESS MODAL */}
+      <Modal visible={isSuccessModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { alignItems: 'center', padding: 32, paddingBottom: 24 }]}>
+            <View style={styles.successIconWrapper}>
+              <CheckCircle2 size={64} color="#10B981" />
+            </View>
+            <Text style={styles.successTitle}>Order Placed Successfully!</Text>
+            
+            <View style={styles.invoiceTag}>
+              <Text style={styles.invoiceTagText}>Invoice ID: {placedOrderRef}</Text>
+            </View>
+            
+            <Text style={styles.successMessage}>
+              Your order has been sent to the boutique. The team will connect with you shortly to confirm details.
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.successBtn}
+              onPress={() => setIsSuccessModalVisible(false)}
+            >
+              <Text style={styles.successBtnText}>Continue Shopping</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
