@@ -10,6 +10,8 @@ import ImageCropPicker from 'react-native-image-crop-picker';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import { useToast } from '../context/ToastContext';
+import PhotoAnnotationEditor from './PhotoAnnotationEditor';
+import { Type } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,6 +38,8 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
   // My Gallery browser state
   const [galleryBrowserVisible, setGalleryBrowserVisible] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(null); // null = folder list
+
+  const [annotateVisible, setAnnotateVisible] = useState(false);
 
   // Open source picker when user taps a slot
   const handleSlotPress = (slotIndex) => {
@@ -265,6 +269,17 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
               <ChevronRight size={18} color={Colors.textSecondary} />
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.pickerOption} onPress={() => { setSlotActionVisible(false); setAnnotateVisible(true); }}>
+              <View style={styles.pickerOptionIcon}>
+                <Type size={24} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pickerOptionTitle}>Add Text & Draw</Text>
+                <Text style={styles.pickerOptionSub}>Annotate the photo with text and markers</Text>
+              </View>
+              <ChevronRight size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+
             <TouchableOpacity style={[styles.pickerOption, { borderColor: '#FEE2E2', backgroundColor: '#FEF2F2' }]} onPress={handleRemovePhoto}>
               <View style={[styles.pickerOptionIcon, { backgroundColor: '#FEE2E2' }]}>
                 <Trash2 size={24} color="#EF4444" />
@@ -447,6 +462,16 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
           )}
         </View>
       </Modal>
+
+      <PhotoAnnotationEditor
+        visible={annotateVisible}
+        photoUri={images[activeSlot]}
+        onClose={() => setAnnotateVisible(false)}
+        onDone={(annotatedUri) => {
+          setImages(prev => ({ ...prev, [activeSlot]: annotatedUri }));
+          setAnnotateVisible(false);
+        }}
+      />
     </>
   );
 };
