@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
-import { Type, PenTool, Trash2, RotateCcw, Check, X, Minus, Plus } from 'lucide-react-native';
+import ImageCropPicker from 'react-native-image-crop-picker';
+import { Type, PenTool, Trash2, RotateCcw, Check, X, Minus, Plus, Crop } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
 
 const MARKER_COLORS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#FFFFFF', '#000000'];
@@ -26,6 +27,20 @@ export default function PhotoAnnotationEditor({ visible, photoUri, onClose, onDo
   const viewShotRef = useRef(null);
 
   const [activeTool, setActiveTool] = useState('text');
+  const [internalPhotoUri, setInternalPhotoUri] = useState(photoUri);
+  const [editingTextId, setEditingTextId] = useState(null);
+  const [imgDims, setImgDims] = useState(null);
+  const [canvasLayout, setCanvasLayout] = useState({ width: 0, height: 0 });
+
+  React.useEffect(() => {
+    if (photoUri) setInternalPhotoUri(photoUri);
+  }, [photoUri]);
+
+  React.useEffect(() => {
+    if (internalPhotoUri) {
+      Image.getSize(internalPhotoUri, (w, h) => setImgDims({ w, h }), () => setImgDims(null));
+    }
+  }, [internalPhotoUri]);
 
   // --- Text annotations ---
   const [textItems, setTextItems] = useState([]);
@@ -106,20 +121,40 @@ export default function PhotoAnnotationEditor({ visible, photoUri, onClose, onDo
             prev.map(t => t.id === id ? { ...t, x: ox + g.dx, y: oy + g.dy } : t)
           );
         },
-        onPanResponderRelease: () => {},
+        onPanResponderRelease: (e, g) => {
+          if (Math.abs(g.dx) < 5 && Math.abs(g.dy) < 5) {
+            setTextItems(prev => {
+              const item = prev.find(t => t.id === id);
+              if (item) {
+                setDraftText(item.text);
+                setTextColor(item.color);
+                setFontSize(item.fontSize);
+                setEditingTextId(id);
+                setAddingText(true);
+              }
+              return prev;
+            });
+          }
+        },
       });
     }
     return panRefs.current[id].panHandlers;
   }, []);
 
   const confirmText = () => {
-    if (!draftText.trim()) { setAddingText(false); return; }
-    const id = Date.now().toString();
-    setTextItems(prev => [...prev, {
-      id, text: draftText.trim(),
-      x: pendingPos.x, y: pendingPos.y,
-      color: textColor, fontSize,
-    }]);
+    if (!draftText.trim()) { setAddingText(false); setEditingTextId(null); return; }
+    
+    if (editingTextId) {
+      setTextItems(prev => prev.map(t => t.id === editingTextId ? { ...t, text: draftText.trim(), color: textColor, fontSize } : t));
+    } else {
+      const id = Date.now().toString();
+      setTextItems(prev => [...prev, {
+        id, text: draftText.trim(),
+        x: pendingPos ? pendingPos.x : 50, y: pendingPos ? pendingPos.y : 50,
+        color: textColor, fontSize
+      }]);
+    }
+    setEditingTextId(null);
     setAddingText(false);
     setDraftText('');
   };
@@ -172,16 +207,45 @@ export default function PhotoAnnotationEditor({ visible, photoUri, onClose, onDo
             <X size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={s.topTitle}>Annotate Photo</Text>
-          <TouchableOpacity onPress={handleDone} style={[s.iconBtn, { backgroundColor: Colors.primary, borderRadius: 8, paddingHorizontal: 12 }]}>
-            <Check size={18} color="#fff" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity 
+              style={[s.iconBtn, { backgroundColor: '#334155', borderRadius: 8, paddingHorizontal: 12 }]}
+              onPress={() => {
+                ImageCropPicker.openCropper({
+                  path: internalPhotoUri,
+                  freeStyleCropEnabled: true,
+                }).then(img => setInternalPhotoUri(img.path)).catch(e => console.log('Crop cancelled'));
+              }}
+            >
+              <Crop size={18} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDone} style={[s.iconBtn, { backgroundColor: Colors.primary, borderRadius: 8, paddingHorizontal: 12 }]}>
+              <Check size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Canvas */}
-        <View style={s.canvasWrap}>
-          <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.95 }} style={s.canvasInner}>
-            {photoUri ? <Image source={{ uri: photoUri }} style={s.photo} resizeMode="contain" /> : null}
-            <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={s.canvasWrap} onLayout={e => setCanvasLayout(e.nativeEvent.layout)}>
+          {(() => {
+            let scaledW = canvasLayout.width;
+            let scaledH = canvasLayout.height;
+            if (imgDims && canvasLayout.width > 0 && canvasLayout.height > 0) {
+              const imgRatio = imgDims.w / imgDims.h;
+              const canvasRatio = canvasLayout.width / canvasLayout.height;
+              if (imgRatio > canvasRatio) {
+                scaledW = canvasLayout.width;
+                scaledH = canvasLayout.width / imgRatio;
+              } else {
+                scaledH = canvasLayout.height;
+                scaledW = canvasLayout.height * imgRatio;
+              }
+            }
+            return (
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.95 }} style={{ width: scaledW || '100%', height: scaledH || '100%', overflow: 'hidden' }}>
+                  {internalPhotoUri ? <Image source={{ uri: internalPhotoUri }} style={s.photo} resizeMode="contain" /> : null}
+                  <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
               {paths.map((p, i) => (
                 <Path key={i} d={p.d} stroke={p.color} strokeWidth={p.width} fill="none" strokeLinecap="round" strokeLinejoin="round" />
               ))}
@@ -204,6 +268,9 @@ export default function PhotoAnnotationEditor({ visible, photoUri, onClose, onDo
               </View>
             ))}
           </ViewShot>
+              </View>
+            );
+          })()}
 
           {/* Touch interceptor */}
           <View
@@ -233,15 +300,8 @@ export default function PhotoAnnotationEditor({ visible, photoUri, onClose, onDo
             </TouchableOpacity>
           </View>
 
-          {/* Color palette + size */}
-          <View style={s.colorRow}>
-            {(activeTool === 'marker' ? MARKER_COLORS : TEXT_COLORS).map(c => (
-              <TouchableOpacity
-                key={c}
-                style={[s.colorDot, { backgroundColor: c }, (activeTool === 'marker' ? c === markerColor : c === textColor) && s.colorDotActive]}
-                onPress={() => activeTool === 'marker' ? setMarkerColor(c) : setTextColor(c)}
-              />
-            ))}
+          {/* Size */}
+          <View style={[s.colorRow, { justifyContent: 'center' }]}>
             <View style={s.sizeRow}>
               <TouchableOpacity style={s.sizeBtn} onPress={() => activeTool === 'marker' ? setMarkerWidth(w => Math.max(1, w - 1)) : setFontSize(f => Math.max(12, f - 2))}>
                 <Minus size={13} color="#fff" />

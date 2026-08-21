@@ -29,7 +29,8 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   const fetchRequests = async () => {
     try {
       if (!order?.id) return;
-      const res = await fetch(`${API_DOMAIN}/mobile/customer-portal/orders/${order.id}/requests`, {
+      const API_BASE = API_DOMAIN.includes('api-stage') ? 'http://10.0.2.2:3021' : API_DOMAIN;
+      const res = await fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/requests`, {
         headers: { 'Authorization': getToken() },
       });
       const json = await res.json();
@@ -52,7 +53,8 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
     
     setSending(true);
     try {
-      const res = await fetch(`${API_DOMAIN}/mobile/customer-portal/orders/${order.id}/outfits/${activeOutfit.id}/requests`, {
+      const API_BASE = API_DOMAIN.includes('api-stage') ? 'http://10.0.2.2:3021' : API_DOMAIN;
+      const res = await fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/outfits/${activeOutfit.id}/requests`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -113,25 +115,44 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   
   if (!activeOutfit) {
     return (
-      <View style={{ flex: 1, padding: 16 }}>
-        <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#1E293B', marginBottom: 16 }}>
-          Which outfit do you want to request changes for?
-        </Text>
+      <View style={{ flex: 1, padding: 16, backgroundColor: '#F8FAFC' }}>
+        <View style={{ marginBottom: 20, paddingHorizontal: 4 }}>
+          <Text style={{ fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 6 }}>
+            Boutique Support Chat
+          </Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Inter-Regular', color: '#64748B' }}>
+            Select an outfit below to message the boutique or request changes.
+          </Text>
+        </View>
+
         {outfits.map((outfit, index) => (
           <TouchableOpacity
             key={outfit.id}
-            style={styles.outfitCard}
+            style={[styles.outfitCard, { 
+              backgroundColor: '#fff', 
+              borderWidth: 0, 
+              borderLeftWidth: 4, 
+              borderLeftColor: Colors.primary,
+              shadowColor: '#000',
+              shadowOpacity: 0.05,
+              shadowRadius: 5,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 2,
+              paddingVertical: 16
+            }]}
             onPress={() => setActiveOutfit(outfit)}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: Colors.primary }}>
+              <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#1E293B' }}>
                 {outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`}
               </Text>
-              <Text style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: '#64748B', marginTop: 6 }}>
                 {outfit.orderType || 'Stitching'} • {outfit.urgency || 'NORMAL'}
               </Text>
             </View>
-            <ChevronRight size={20} color="#94A3B8" />
+            <View style={{ backgroundColor: '#EEF2FF', padding: 8, borderRadius: 12 }}>
+              <MessageSquare size={18} color={Colors.primary} />
+            </View>
           </TouchableOpacity>
         ))}
       </View>

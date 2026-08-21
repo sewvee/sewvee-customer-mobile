@@ -51,25 +51,17 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
     }
   };
 
-  // Option 1: From Phone Gallery (pick original, then crop)
-  const handlePickFromPhone = () => {
+  // Option 1: From Phone Gallery
+  const handleGalleryPick = () => {
     setSourcePickerVisible(false);
     ImageCropPicker.openPicker({
       cropping: false,
       mediaType: 'photo',
     }).then(originalImage => {
-      // Store the original uncropped image
       setOriginalImages(prev => ({ ...prev, [activeSlot]: originalImage.path }));
-      
-      // Immediately open cropper on the original image
-      return ImageCropPicker.openCropper({
-        path: originalImage.path,
-        freeStyleCropEnabled: true,
-      });
-    }).then(croppedImage => {
-      setImages(prev => ({ ...prev, [activeSlot]: croppedImage.path }));
+      setImages(prev => ({ ...prev, [activeSlot]: originalImage.path }));
     }).catch(e => {
-      console.log('Image pick/crop cancelled', e);
+      console.log('Image pick cancelled', e);
     });
   };
 
@@ -254,17 +246,6 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
               <View style={{ flex: 1 }}>
                 <Text style={styles.pickerOptionTitle}>Change Photo</Text>
                 <Text style={styles.pickerOptionSub}>Replace with a new image</Text>
-              </View>
-              <ChevronRight size={18} color={Colors.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.pickerOption} onPress={handleCropExisting}>
-              <View style={styles.pickerOptionIcon}>
-                <Crop size={24} color={Colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.pickerOptionTitle}>Crop Photo</Text>
-                <Text style={styles.pickerOptionSub}>Adjust framing and dimensions</Text>
               </View>
               <ChevronRight size={18} color={Colors.textSecondary} />
             </TouchableOpacity>
