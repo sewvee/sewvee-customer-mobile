@@ -195,53 +195,66 @@ const CustomerDashboardScreen = ({ navigation }) => {
         activeOpacity={0.7}
         onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: item.id })}
       >
-        {/* Top Info: Boutique and Date */}
-        <View style={styles.cardTopRow}>
+        {/* Row 1: Boutique name (left), Date (right) */}
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
           {item.boutiqueName ? (
-            <View style={[styles.boutiquePill, { flexShrink: 1, marginRight: 8 }]}>
-              <Text style={styles.boutiquePillText} numberOfLines={1} ellipsizeMode="tail">{item.boutiqueName}</Text>
-            </View>
-          ) : <View style={{ flexShrink: 1 }} />}
-          <View style={styles.dateBadge}>
-            <Clock size={10} color={Colors.textSecondary} style={{ marginRight: 4 }} />
-            <Text style={styles.orderDateText}>{deliveryDate ? `Del: ${formatDate(deliveryDate)}` : formatDate(item.date)}</Text>
+            <Text style={{fontSize: 15, fontFamily: 'Inter-Bold', color: '#1E293B', flex: 1}} numberOfLines={1}>
+              {item.boutiqueName}
+            </Text>
+          ) : <View style={{ flex: 1 }} />}
+          <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#F1F5F9'}}>
+            <Clock size={12} color="#64748B" style={{ marginRight: 4 }} />
+            <Text style={{fontSize: 11, fontFamily: 'Inter-Medium', color: '#475569'}}>
+              {deliveryDate ? formatDate(deliveryDate) : formatDate(item.date)}
+            </Text>
           </View>
         </View>
 
-        {/* Order Info */}
-        <View style={styles.orderInfoRow}>
-          <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
-            <Text style={styles.orderNumberTitle}>{orderLabel}</Text>
-            <View style={{backgroundColor: isSale ? '#E0E7FF' : '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8}}>
-               <Text style={{fontSize: 9, color: isSale ? '#4338CA' : '#D97706', fontFamily: 'Inter-Bold', letterSpacing: 0.5}}>
-                 {typeLabel}
-               </Text>
-            </View>
+        {/* Horizontal Divider */}
+        <View style={{height: 1, backgroundColor: '#E2E8F0', marginBottom: 12}} />
+
+        {/* Row 2: 4 columns with vertical dividers */}
+        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+          {/* Col 1: Order No */}
+          <View style={{flex: 1, alignItems: 'flex-start'}}>
+            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 4}}>Order No</Text>
+            <Text style={{fontSize: 13, color: '#1E293B', fontFamily: 'Inter-Bold'}}>{orderLabel}</Text>
           </View>
           
-          <View style={styles.actionFooterIcon}>
-            <ChevronRight size={16} color={Colors.primary} />
+          <View style={{width: 1, height: '100%', backgroundColor: '#E2E8F0', marginHorizontal: 6}} />
+          
+          {/* Col 2: Type */}
+          <View style={{flex: 1, alignItems: 'center'}}>
+            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 4}}>Type</Text>
+            <Text style={{fontSize: 11, color: isSale ? '#4338CA' : '#D97706', fontFamily: 'Inter-Bold'}}>{typeLabel}</Text>
+          </View>
+
+          <View style={{width: 1, height: '100%', backgroundColor: '#E2E8F0', marginHorizontal: 6}} />
+
+          {/* Col 3: Total Amount */}
+          <View style={{flex: 1, alignItems: 'center'}}>
+            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 4}}>Total Amount</Text>
+            <Text style={{fontSize: 13, color: '#1E293B', fontFamily: 'Inter-Bold'}}>
+              ₹{item.totalAmount || item.total || (Number(item.advance || item.paid || 0) + Number(item.balance || 0))}
+            </Text>
+          </View>
+
+          <View style={{width: 1, height: '100%', backgroundColor: '#E2E8F0', marginHorizontal: 6}} />
+
+          {/* Col 4: Due */}
+          <View style={{flex: 1, alignItems: 'flex-end'}}>
+            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 4}}>Due</Text>
+            <Text style={{fontSize: 13, color: '#EF4444', fontFamily: 'Inter-Bold'}}>₹{item.balance || 0}</Text>
           </View>
         </View>
 
-        {/* Financials & Alerts */}
-        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F8FAFC'}}>
-          <View style={{flex: 1}}>
-             <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 1}}>Paid</Text>
-             <Text style={{fontSize: 13, color: '#10B981', fontFamily: 'Inter-Bold'}}>₹{item.advance || item.paid || 0}</Text>
+        {/* PHOTO NEEDED Alert (Full Width below) */}
+        {hasPendingPhotoRequest && (
+          <View style={[styles.photoRequestAlert, { marginTop: 14, alignSelf: 'stretch', justifyContent: 'center', marginLeft: 0 }]}>
+            <Camera size={14} color="#FFFFFF" style={{marginRight: 6}} />
+            <Text style={[styles.photoRequestText, {fontSize: 12}]}>PHOTO NEEDED</Text>
           </View>
-          <View style={{flex: 1}}>
-             <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 1}}>Due Balance</Text>
-             <Text style={{fontSize: 13, color: '#EF4444', fontFamily: 'Inter-Bold'}}>₹{item.balance || 0}</Text>
-          </View>
-          
-          {hasPendingPhotoRequest && (
-            <View style={[styles.photoRequestAlert, { marginLeft: 0 }]}>
-              <Camera size={12} color="#FFFFFF" />
-              <Text style={styles.photoRequestText}>Photo Needed</Text>
-            </View>
-          )}
-        </View>
+        )}
       </TouchableOpacity>
     );
   };

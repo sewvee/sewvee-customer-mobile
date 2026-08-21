@@ -69,6 +69,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [uploadingOutfitId, setUploadingOutfitId] = useState(null);
   const [showCollageMaker, setShowCollageMaker] = useState(false);
+  const [pendingPhotos, setPendingPhotos] = useState({});
   const [collageOutfitId, setCollageOutfitId] = useState(null);
   const [courierName, setCourierName] = useState('');
   const [trackingId, setTrackingId] = useState('');
@@ -77,6 +78,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const [editDrawerVisible, setEditDrawerVisible] = useState(false);
   const [annotateVisible, setAnnotateVisible] = useState(false);
   const [annotatePhotoUri, setAnnotatePhotoUri] = useState(null);
+  const [customerAddedRefPhotos, setCustomerAddedRefPhotos] = useState([]);
 
   // Find target order
   const order = React.useMemo(() => {
@@ -169,27 +171,68 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         throw new Error('No image URL returned from upload server');
       }
 
-      const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${collageOutfitId}/requests`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          attachment_url: fileUrl,
-          message: 'Uploaded via Customer App',
-          phone: '9090909090'
-        })
-      });
+      setPendingPhotos(prev => ({
+        ...prev,
+        [collageOutfitId]: [...(prev[collageOutfitId] || []), fileUrl]
+      }));
 
-      if (!response.ok) {
-         throw new Error('Failed to notify backend');
-      }
-
-      refreshData();
-      showToast('Photo uploaded successfully', 'success');
     } catch (err) {
       console.log('Upload error:', err);
       showToast(err?.message || 'Failed to upload photo', 'error');
+    } finally {
+      setUploadingOutfitId(null);
+      setLoading(false);
+    }
+  };
+
+  const removePendingPhoto = (outfitId, index) => {
+    setPendingPhotos(prev => {
+      const list = [...(prev[outfitId] || [])];
+      list.splice(index, 1);
+      return { ...prev, [outfitId]: list };
+    });
+  };
+
+  const handleConfirmPhotos = async (outfitId) => {
+    const urls = pendingPhotos[outfitId] || [];
+    if (urls.length === 0) return;
+
+    setUploadingOutfitId(outfitId);
+    setLoading(true);
+    try {
+      // NOTE: Using a local fallback URL if the staging backend isn't updated yet!
+      const API_BASE = URL_CUSTOMER_PORTAL_ORDERS.includes('api-stage') ? 'http://10.0.2.2:3021/mobile/customer-portal/orders' : URL_CUSTOMER_PORTAL_ORDERS;
+
+      for (const fileUrl of urls) {
+        const response = await fetch(`${API_BASE}/${order.id}/outfits/${outfitId}/requests`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            attachment_url: fileUrl,
+            message: 'Uploaded via Customer App',
+            phone: '9090909090'
+          })
+        });
+
+        if (!response.ok) {
+           const errText = await response.text();
+           throw new Error(`API Error: ${errText}`);
+        }
+      }
+
+      setPendingPhotos(prev => {
+        const copy = { ...prev };
+        delete copy[outfitId];
+        return copy;
+      });
+
+      refreshData();
+      showToast('Photos submitted successfully!', 'success');
+    } catch (err) {
+      console.log('Confirm error:', err);
+      showToast(err?.message || 'Failed to notify backend', 'error');
     } finally {
       setUploadingOutfitId(null);
       setLoading(false);
@@ -210,7 +253,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         uri: cropped.path,
         type: cropped.mime || 'image/jpeg',
         name: `cropped_${Date.now()}.jpg`,
-        key_name: 'reference_images',
+        key_name: 'order_photos',
       })).unwrap();
       const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
       if (!fileUrl) throw new Error('Upload failed');
@@ -240,7 +283,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           uri: asset.uri,
           type: asset.type || 'image/jpeg',
           name: asset.fileName || `ref_${Date.now()}.jpg`,
-          key_name: 'reference_images',
+          key_name: 'order_photos',
         })).unwrap();
         const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
         if (!fileUrl) throw new Error('Upload failed');
@@ -269,7 +312,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         uri,
         type: 'image/jpeg',
         name: `annotated_${Date.now()}.jpg`,
-        key_name: 'reference_images',
+        key_name: 'order_photos',
       })).unwrap();
       const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
       if (!fileUrl) throw new Error('Upload failed');
@@ -346,8 +389,10 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         ) : (
           outfits.map((outfit, index) => {
             const isUploading = uploadingOutfitId === outfit.id;
-          const refPhotos = (outfit.photos || []).filter(p => p.category === 'REFERENCE');
-          const hasStitching = outfit.stitching && outfit.stitching.length > 0;
+            const apiRefPhotos = (outfit.photos || []).filter(p => p.category === 'REFERENCE');
+            const localRefPhotos = customerAddedRefPhotos.filter(p => p.outfitId === outfit.id);
+            const refPhotos = [...apiRefPhotos, ...localRefPhotos];
+            const hasStitching = outfit.stitching && outfit.stitching.length > 0;
           const outfitName = outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`;
 
           return (
@@ -459,20 +504,52 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                     <Text style={{ fontSize: 13, color: '#C2410C', marginBottom: 14, lineHeight: 18 }}>
                       Boutique has requested you to upload reference photos or sketches for this outfit.
                     </Text>
-                    <TouchableOpacity 
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F97316', paddingVertical: 12, borderRadius: 8 }}
-                      onPress={() => handleUploadReferencePhoto(outfit.id)}
-                      disabled={uploadingOutfitId === outfit.id}
-                    >
-                      {uploadingOutfitId === outfit.id ? (
-                        <ActivityIndicator size="small" color="#FFF" />
-                      ) : (
-                        <>
-                          <Upload size={18} color="#FFF" style={{ marginRight: 8 }} />
-                          <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 14 }}>Upload Photo</Text>
-                        </>
+                    {(pendingPhotos[outfit.id] || []).length > 0 && (
+                      <View style={{ marginBottom: 12 }}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+                          {pendingPhotos[outfit.id].map((url, idx) => (
+                            <View key={idx} style={{ marginRight: 10, position: 'relative' }}>
+                              <Image source={{ uri: url }} style={{ width: 60, height: 60, borderRadius: 8, backgroundColor: '#FFEDD5' }} />
+                              <TouchableOpacity
+                                style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}
+                                onPress={() => removePendingPhoto(outfit.id, idx)}
+                              >
+                                <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>X</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <TouchableOpacity 
+                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F97316', paddingVertical: 12, borderRadius: 8 }}
+                        onPress={() => handleUploadReferencePhoto(outfit.id)}
+                        disabled={uploadingOutfitId === outfit.id}
+                      >
+                        {uploadingOutfitId === outfit.id ? (
+                          <ActivityIndicator size="small" color="#FFF" />
+                        ) : (
+                          <>
+                            <Upload size={18} color="#FFF" style={{ marginRight: 8 }} />
+                            <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 14 }}>
+                              {(pendingPhotos[outfit.id] || []).length > 0 ? 'Add More' : 'Upload Photo'}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+
+                      {(pendingPhotos[outfit.id] || []).length > 0 && (
+                        <TouchableOpacity 
+                          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#10B981', paddingVertical: 12, borderRadius: 8 }}
+                          onPress={() => handleConfirmPhotos(outfit.id)}
+                          disabled={uploadingOutfitId === outfit.id}
+                        >
+                          <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 14 }}>Confirm Photos</Text>
+                        </TouchableOpacity>
                       )}
-                    </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               </View>

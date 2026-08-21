@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
-import { Camera, Send, MessageCircle, ChevronLeft } from 'lucide-react-native';
+import { Camera, Send, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useDispatch, useSelector } from 'react-redux';
@@ -92,7 +92,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
           uri: asset.uri,
           type: asset.type || 'image/jpeg',
           name: asset.fileName || `req_${Date.now()}.jpg`,
-          key_name: 'reference_images',
+          key_name: 'order_photos',
         })).unwrap();
 
         const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
@@ -131,7 +131,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
                 {outfit.orderType || 'Stitching'} • {outfit.urgency || 'NORMAL'}
               </Text>
             </View>
-            <ChevronLeft size={20} color="#94A3B8" style={{ transform: [{ rotate: '180deg' }] }} />
+            <ChevronRight size={20} color="#94A3B8" />
           </TouchableOpacity>
         ))}
       </View>
