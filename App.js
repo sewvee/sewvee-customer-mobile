@@ -11,6 +11,7 @@ import OfflineNotice from './src/components/OfflineNotice';
 import Toast from './src/components/Toast';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar, StyleSheet, View } from 'react-native';
+import OTABlocker from './src/components/OTABlocker';
 
 import { Provider } from 'react-redux';
 import { store } from './src/store';
@@ -41,7 +42,7 @@ function App() {
 
             <StatusBar
               translucent
-              backgroundColor="#ffffff"
+              backgroundColor="transparent"
               barStyle="dark-content"
             />
 
@@ -52,6 +53,7 @@ function App() {
                     <TeamProvider>
                       <NavigationContainer ref={navigationRef}>
                         <OfflineNotice />
+                        <OTABlocker />
                         <RootNavigator />
                       </NavigationContainer>
                     </TeamProvider>

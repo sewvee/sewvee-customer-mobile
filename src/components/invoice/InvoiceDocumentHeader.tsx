@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 14,
-    backgroundColor: '#0E9F8A',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   companyName: {
-    color: '#0E9F8A',
+    color: Colors.primary,
     fontFamily: 'Inter-Bold',
     fontSize: 20,
     textTransform: 'uppercase',

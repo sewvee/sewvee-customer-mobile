@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadow } from '../constants/theme';
 import { useData } from '../context/DataContext';
@@ -35,38 +35,57 @@ const CustomerRequestedOrdersScreen = () => {
     setRefreshing(false);
   };
 
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+
   const handleCancelOrder = (order) => {
-    Alert.alert(
-      'Cancel Order',
-      'Are you sure you want to cancel this order request?',
-      [
-        { text: 'No', style: 'cancel' },
-        { 
-          text: 'Yes, Cancel', 
-          style: 'destructive',
-          onPress: async () => {
-            setCancelling(order.id);
-            try {
-              const token = await AsyncStorage.getItem('sewvee_token');
-              await axios.patch(`${URL_ORDERS}/${order.id}/status`, { status_id: 4 }, {
-                headers: { Authorization: token, 'Content-Type': 'application/json' }
-              });
-              showToast('Order cancelled successfully', 'success');
-              await refreshData();
-            } catch (err) {
-              showToast('Failed to cancel order. Try again.', 'error');
-            } finally {
-              setCancelling(null);
-            }
-          }
-        }
-      ]
-    );
+    setOrderToCancel(order);
+    setCancelModalVisible(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!orderToCancel) return;
+    setCancelModalVisible(false);
+    setCancelling(orderToCancel.id);
+    try {
+      const token = await AsyncStorage.getItem('sewvee_token');
+      await axios.patch(`${URL_ORDERS}/${orderToCancel.id}/status`, { status_id: 4 }, {
+        headers: { Authorization: token, 'Content-Type': 'application/json' }
+      });
+      showToast('Order cancelled successfully', 'success');
+      await refreshData();
+    } catch (err) {
+      showToast('Failed to cancel order. Try again.', 'error');
+    } finally {
+      setCancelling(null);
+      setOrderToCancel(null);
+    }
   };
 
   const renderOrderItem = ({ item }) => {
-    const isCancelled = item.status === 'Cancelled' || String(item.status_id) === '4';
-    const isDelivered = item.status === 'Delivered' || String(item.status_id) === '5';
+    const statusStr = (item.status || '').toUpperCase();
+    const isCancelled = statusStr === 'CANCELLED' || String(item.status_id) === '4';
+    const isDelivered = statusStr === 'DELIVERED' || String(item.status_id) === '5';
+    const isProcessing = statusStr === 'IN_PROGRESS' || statusStr === 'PROCESSING' || String(item.status_id) === '2';
+    
+    let displayStatus = 'Pending';
+    let badgeColor = '#FEF3C7';
+    let textColor = '#D97706';
+    
+    if (isCancelled) {
+      displayStatus = 'Cancelled';
+      badgeColor = '#FEE2E2';
+      textColor = '#EF4444';
+    } else if (isDelivered) {
+      displayStatus = 'Delivered';
+      badgeColor = '#DCFCE7';
+      textColor = '#22C55E';
+    } else if (isProcessing) {
+      displayStatus = 'Processing';
+      badgeColor = '#DBEAFE';
+      textColor = '#2563EB';
+    }
+
     const canCancel = !isCancelled && !isDelivered;
 
     return (
@@ -74,21 +93,33 @@ const CustomerRequestedOrdersScreen = () => {
         <View style={styles.cardHeader}>
           <View>
             <Text style={styles.boutiqueName}>{item.boutiqueName || 'Boutique'}</Text>
-            <Text style={styles.orderDate}>{new Date(item.date || item.createdAt).toLocaleDateString()}</Text>
+            <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
+              <Text style={{ fontFamily: 'Inter-Medium', fontSize: 13, color: Colors.primary }}>
+                {item.billNo || item.order_number || (item.order_type === 'SALE_ORDER' ? `INV-${item.id}` : `ORD-${item.id}`)}
+              </Text>
+              <Text style={{ fontFamily: 'Inter-Medium', fontSize: 13, color: '#94A3B8', marginHorizontal: 6 }}>|</Text>
+              <Text style={styles.orderDate}>{new Date(item.date || item.createdAt).toLocaleDateString()}</Text>
+            </View>
           </View>
-          <View style={[styles.statusBadge, isCancelled && { backgroundColor: '#FEE2E2' }, isDelivered && { backgroundColor: '#DCFCE7' }]}>
-            <Text style={[styles.statusText, isCancelled && { color: '#EF4444' }, isDelivered && { color: '#22C55E' }]}>
-              {isCancelled ? 'Cancelled' : isDelivered ? 'Delivered' : item.status || 'Pending'}
+          <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}>
+            <Text style={[styles.statusText, { color: textColor }]}>
+              {displayStatus}
             </Text>
           </View>
         </View>
 
         <View style={styles.itemsContainer}>
-          {(item.outfits || []).map((outfit, idx) => (
-            <View key={idx} style={styles.outfitRow}>
+          {(item.items || []).map((itm, idx) => (
+            <View key={`item-${idx}`} style={styles.outfitRow}>
               <View style={styles.outfitBullet} />
-              <Text style={styles.outfitName}>{outfit.name || 'Outfit'}</Text>
-              <Text style={styles.outfitPrice}>₹{outfit.price}</Text>
+              <Text style={styles.outfitName}>{itm.name || 'Ready-Made Item'}{itm.qty && itm.qty > 1 ? ` (x${itm.qty})` : ''}</Text>
+            </View>
+          ))}
+          {(item.outfits || []).map((outfit, idx) => (
+            <View key={`outfit-${idx}`} style={styles.outfitRow}>
+              <View style={styles.outfitBullet} />
+              <Text style={styles.outfitName}>{outfit.name || 'Ready-Made Item'}{outfit.quantity && outfit.quantity > 1 ? ` (x${outfit.quantity})` : ''}</Text>
+              <Text style={styles.outfitPrice}>₹{outfit.totalAmount || outfit.price || 0}</Text>
             </View>
           ))}
         </View>
@@ -138,6 +169,39 @@ const CustomerRequestedOrdersScreen = () => {
         />
       )}
       </View>
+
+      <Modal visible={cancelModalVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.5)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: 'white', borderRadius: 24, padding: 24, alignItems: 'center' }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <XCircle size={32} color="#EF4444" />
+            </View>
+            <Text style={{ fontFamily: 'Inter-Bold', fontSize: 20, color: '#111827', marginBottom: 8 }}>Cancel Order</Text>
+            <Text style={{ fontFamily: 'Inter-Regular', fontSize: 15, color: '#6B7280', textAlign: 'center', marginBottom: 24 }}>
+              Are you sure you want to cancel this order request? This action cannot be undone.
+            </Text>
+            
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center' }}
+                onPress={() => {
+                  setCancelModalVisible(false);
+                  setOrderToCancel(null);
+                }}
+              >
+                <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 15, color: '#4B5563' }}>No, Keep it</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#EF4444', alignItems: 'center' }}
+                onPress={confirmCancel}
+              >
+                <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 15, color: 'white' }}>Yes, Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };

@@ -210,13 +210,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   quantityBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EEF2FF',
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   quantityText: {
-    color: '#0E9F8A',
+    color: Colors.primary,
     fontFamily: 'Inter-Bold',
     fontSize: 12,
   },
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   blockTitle: {
-    color: '#0E9F8A',
+    color: Colors.primary,
     fontFamily: 'Inter-Bold',
     fontSize: 12,
     textTransform: 'uppercase',
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   measurementCard: {
     width: '47%',
     borderLeftWidth: 3,
-    borderLeftColor: '#0E9F8A',
+    borderLeftColor: Colors.primary,
     backgroundColor: '#FBFDFD',
     paddingHorizontal: 10,
     paddingVertical: 10,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: '#0E9F8A',
+    backgroundColor: Colors.primary,
     marginTop: 7,
     marginRight: 10,
   },

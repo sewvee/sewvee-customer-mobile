@@ -1,4 +1,17 @@
 {
   "name": "sewvee",
-  "displayName": "Sewvee"
+  "displayName": "Sewvee",
+  "expo": {
+    "name": "Sewvee",
+    "slug": "sewvee-customer",
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/fe6a3616-7954-4f1a-81b5-0fbff5056c3d"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fe6a3616-7954-4f1a-81b5-0fbff5056c3d"
+      }
+    }
+  }
 }

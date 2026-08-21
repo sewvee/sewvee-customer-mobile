@@ -20,63 +20,49 @@ export default function InvoiceItemsTable({
   order,
 }: InvoiceItemsTableProps) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View style={styles.table}>
-        <View style={[styles.row, styles.headerRow]}>
-          <Cell label="S.No" width={56} header />
-          <Cell label="Description" width={220} header />
-          <Cell label="Delivery" width={120} header align="center" />
-          <Cell label="Qty" width={60} header align="center" />
-          <Cell label="Rate" width={110} header align="right" />
-          <Cell label="Amount" width={120} header align="right" />
-        </View>
-
-        {items.map((item, index) => {
-          const deliveryDate = getItemDeliveryDate(item, order);
-
-          return (
-            <View key={`${item.id || item.name}-${index}`} style={styles.row}>
-              <Cell label={`${index + 1}`} width={56} />
-              <Cell
-                label={formatInvoiceText(item.name, item.type || 'Item')}
-                subLabel={item.description ? formatInvoiceText(item.description, '') : undefined}
-                width={220}
-              />
-              <Cell
-                label={formatInvoiceDate(deliveryDate)}
-                width={120}
-                align="center"
-                tag={Boolean(deliveryDate)}
-                muted={!deliveryDate}
-              />
-              <Cell
-                label={formatInvoiceQuantity(item.qty ?? item.quantity)}
-                width={60}
-                align="center"
-              />
-              <Cell
-                label={formatInvoiceCurrency(item.rate ?? 0)}
-                width={110}
-                align="right"
-              />
-              <Cell
-                label={formatInvoiceCurrency(item.amount ?? item.totalCost ?? 0)}
-                width={120}
-                align="right"
-                strong
-              />
-            </View>
-          );
-        })}
+    <View style={styles.table}>
+      <View style={[styles.row, styles.headerRow]}>
+        <Cell label="S.No" flex={0.15} header />
+        <Cell label="Description" flex={0.45} header />
+        <Cell label="Delivery" flex={0.25} header align="center" />
+        <Cell label="Amount" flex={0.25} header align="right" />
       </View>
-    </ScrollView>
+
+      {items.map((item, index) => {
+        const deliveryDate = getItemDeliveryDate(item, order);
+
+        return (
+          <View key={`${item.id || item.name}-${index}`} style={styles.row}>
+            <Cell label={`${index + 1}`} flex={0.15} />
+            <Cell
+              label={formatInvoiceText(item.name, item.type || 'Item')}
+              subLabel={item.description ? formatInvoiceText(item.description, '') : undefined}
+              flex={0.45}
+            />
+            <Cell
+              label={formatInvoiceDate(deliveryDate)}
+              flex={0.25}
+              align="center"
+              tag={Boolean(deliveryDate)}
+              muted={!deliveryDate}
+            />
+            <Cell
+              label={formatInvoiceCurrency(item.amount ?? item.totalCost ?? 0)}
+              flex={0.25}
+              align="right"
+              strong
+            />
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
 type CellProps = {
   label: string;
   subLabel?: string;
-  width: number;
+  flex: number;
   align?: 'left' | 'center' | 'right';
   header?: boolean;
   strong?: boolean;
@@ -87,7 +73,7 @@ type CellProps = {
 function Cell({
   label,
   subLabel,
-  width,
+  flex,
   align = 'left',
   header = false,
   strong = false,
@@ -95,7 +81,7 @@ function Cell({
   muted = false,
 }: CellProps) {
   return (
-    <View style={[styles.cell, { width }, align === 'center' && styles.center, align === 'right' && styles.right]}>
+    <View style={[styles.cell, { flex }, align === 'center' && styles.center, align === 'right' && styles.right]}>
       <View style={tag ? styles.tag : undefined}>
         <Text
           style={[
@@ -118,7 +104,6 @@ function Cell({
 
 const styles = StyleSheet.create({
   table: {
-    minWidth: 686,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 16,
@@ -179,13 +164,13 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   tag: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EEF2FF',
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   tagText: {
-    color: '#0E9F8A',
+    color: Colors.primary,
     fontFamily: 'Inter-SemiBold',
     fontSize: 11,
   },

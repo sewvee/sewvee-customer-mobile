@@ -175,16 +175,19 @@ const CustomerDashboardScreen = ({ navigation }) => {
   ];
 
   const renderOrderItem = ({ item }) => {
-    const orderNum = item.billNo || formatOrderNumber(item.id);
+    const isSale = item.order_type === 'SALE_ORDER';
+    const orderLabel = item.billNo || item.order_number || (isSale ? `INV-${item.id}` : `ORD-${item.id}`);
+    
     const outfits = item.outfits || item.items || [];
-    const hasPendingPhotoRequest = outfits.some(
+    const hasPendingPhotoRequest = !isSale && outfits.some(
       (outfit) => 
         (outfit.requestedPhotosFromClient === true || outfit.requestedPhotosFromClient === 'true' || outfit.requestedPhotosFromClient === 1) && 
         (!outfit.photos || outfit.photos.filter(p => p.category === 'REFERENCE').length === 0)
     );
 
     const deliveryDate = outfits.find(o => o.deliveryDate)?.deliveryDate;
-    const outfitTypes = outfits.map(o => o.orderType || 'Stitching').filter((v, i, a) => a.indexOf(v) === i).join(' • ').toUpperCase();
+    
+    const typeLabel = isSale ? 'READY-MADE' : 'STITCHING';
 
     return (
       <TouchableOpacity
@@ -195,39 +198,41 @@ const CustomerDashboardScreen = ({ navigation }) => {
         {/* Top Info: Boutique and Date */}
         <View style={styles.cardTopRow}>
           {item.boutiqueName ? (
-            <View style={styles.boutiquePill}>
-              <Text style={styles.boutiquePillText} numberOfLines={1}>{item.boutiqueName}</Text>
+            <View style={[styles.boutiquePill, { flexShrink: 1, marginRight: 8 }]}>
+              <Text style={styles.boutiquePillText} numberOfLines={1} ellipsizeMode="tail">{item.boutiqueName}</Text>
             </View>
-          ) : <View />}
+          ) : <View style={{ flexShrink: 1 }} />}
           <View style={styles.dateBadge}>
-            <Clock size={12} color={Colors.textSecondary} style={{ marginRight: 4 }} />
+            <Clock size={10} color={Colors.textSecondary} style={{ marginRight: 4 }} />
             <Text style={styles.orderDateText}>{deliveryDate ? `Del: ${formatDate(deliveryDate)}` : formatDate(item.date)}</Text>
           </View>
         </View>
 
         {/* Order Info */}
         <View style={styles.orderInfoRow}>
-          <View>
-            <Text style={styles.orderNumberTitle}>Order #{orderNum}</Text>
-            <Text style={{fontSize: 10, color: '#8B5CF6', fontFamily: 'Inter-Bold', marginTop: 4, letterSpacing: 0.5}}>
-              {outfitTypes || 'OUTFIT'}
-            </Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
+            <Text style={styles.orderNumberTitle}>{orderLabel}</Text>
+            <View style={{backgroundColor: isSale ? '#E0E7FF' : '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8}}>
+               <Text style={{fontSize: 9, color: isSale ? '#4338CA' : '#D97706', fontFamily: 'Inter-Bold', letterSpacing: 0.5}}>
+                 {typeLabel}
+               </Text>
+            </View>
           </View>
           
           <View style={styles.actionFooterIcon}>
-            <ChevronRight size={18} color={Colors.primary} />
+            <ChevronRight size={16} color={Colors.primary} />
           </View>
         </View>
 
         {/* Financials & Alerts */}
-        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9'}}>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F8FAFC'}}>
           <View style={{flex: 1}}>
-             <Text style={{fontSize: 11, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 2}}>Paid</Text>
-             <Text style={{fontSize: 14, color: '#10B981', fontFamily: 'Inter-Bold'}}>₹{item.advance || item.paid || 0}</Text>
+             <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 1}}>Paid</Text>
+             <Text style={{fontSize: 13, color: '#10B981', fontFamily: 'Inter-Bold'}}>₹{item.advance || item.paid || 0}</Text>
           </View>
           <View style={{flex: 1}}>
-             <Text style={{fontSize: 11, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 2}}>Due Balance</Text>
-             <Text style={{fontSize: 14, color: '#EF4444', fontFamily: 'Inter-Bold'}}>₹{item.balance || 0}</Text>
+             <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 1}}>Due Balance</Text>
+             <Text style={{fontSize: 13, color: '#EF4444', fontFamily: 'Inter-Bold'}}>₹{item.balance || 0}</Text>
           </View>
           
           {hasPendingPhotoRequest && (
@@ -273,14 +278,19 @@ const CustomerDashboardScreen = ({ navigation }) => {
             activeOpacity={0.9}
             onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: req.orderId })}
           >
-            <AlertCircle size={20} color="#DC2626" style={{ marginRight: 12 }} />
+            <View style={styles.requestAlertIconBg}>
+              <Camera size={22} color="#F97316" />
+            </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.alertTitle}>Action Required</Text>
+              <Text style={styles.alertTitle}>Photo Request</Text>
               <Text style={styles.alertSubtitle}>
-                Boutique requested reference photos for your {req.outfitName} in Order #{req.billNo}. Tap to upload.
+                Boutique requested reference photos for your {req.outfitName} in Order #{req.billNo}.
               </Text>
             </View>
-            <ChevronRight size={18} color="#DC2626" />
+            <View style={styles.requestAlertActionBtn}>
+              <Text style={styles.requestAlertActionText}>Upload</Text>
+              <ChevronRight size={14} color="#F97316" strokeWidth={3} />
+            </View>
           </TouchableOpacity>
         ))}
 
@@ -451,23 +461,57 @@ const styles = StyleSheet.create({
   requestAlert: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#FED7AA',
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
+    shadowColor: '#F97316',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  requestAlertIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF7ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
   },
   alertTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Inter-Bold',
-    color: '#991B1B',
+    color: '#9A3412',
+    marginBottom: 2,
   },
   alertSubtitle: {
-    fontSize: 12,
-    color: '#7F1D1D',
+    fontSize: 13,
+    color: '#C2410C',
     fontFamily: 'Inter-Medium',
-    marginTop: 2,
+    lineHeight: 18,
+  },
+  requestAlertActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    marginLeft: 8,
+  },
+  requestAlertActionText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Bold',
+    color: '#F97316',
+    marginRight: 2,
   },
   sectionTitle: {
     fontSize: 18,
@@ -481,13 +525,13 @@ const styles = StyleSheet.create({
   },
   orderCardRevamped: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 12,
+    shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
     borderColor: '#F1F5F9',
@@ -496,16 +540,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   boutiquePill: {
     backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   boutiquePillText: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: 'Inter-Medium',
     color: '#334155',
   },
@@ -523,14 +567,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
   orderDateText: {
-    fontSize: 12,
+    fontSize: 10,
     color: Colors.textSecondary,
     fontFamily: 'Inter-SemiBold',
   },
@@ -538,10 +582,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 2,
   },
   orderNumberTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontFamily: 'Inter-Bold',
     color: Colors.textPrimary,
     letterSpacing: -0.2,

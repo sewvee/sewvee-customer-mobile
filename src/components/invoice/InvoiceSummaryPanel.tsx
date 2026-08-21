@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingTop: 12,
     borderTopWidth: 2,
-    borderTopColor: '#0E9F8A',
+    borderTopColor: Colors.primary,
   },
   label: {
     color: Colors.textSecondary,
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   highlightedText: {
-    color: '#0E9F8A',
+    color: Colors.primary,
     fontFamily: 'Inter-Bold',
     fontSize: 15,
     textTransform: 'uppercase',

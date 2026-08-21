@@ -11,8 +11,10 @@ import {
   TextInput,
   LayoutAnimation,
   Platform,
-  Alert
+  Alert,
+  Modal,
 } from 'react-native';
+import CustomerRequestsTab from '../components/CustomerRequestsTab';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Spacing, Shadow } from '../constants/theme';
@@ -31,15 +33,20 @@ import {
   HelpCircle,
   Scissors,
   ShoppingBag as Shirt,
+  ShoppingBag,
   Image as ImageIcon,
   FileText,
   Download,
   ChevronDown,
   PenTool,
   ClipboardList,
-  Plus
+  Plus,
+  Edit2,
+  ImagePlus,
+  Type,
 } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import ImageCropPicker from 'react-native-image-crop-picker';
 import { useDispatch } from 'react-redux';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -47,19 +54,29 @@ import { uploadImageAction } from '../store/uploadSlice';
 import { useToast } from '../context/ToastContext';
 import { formatDate } from '../utils/dateUtils';
 import { formatOrderNumber } from '../utils/orderIdFormatter';
+import { URL_CUSTOMER_PORTAL_ORDERS } from '../config/env';
+import CollageMaker from '../components/CollageMaker';
+import PhotoAnnotationEditor from '../components/PhotoAnnotationEditor';
 
 const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const { orderId } = route.params;
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const { user } = useAuth();
-  const { orders, updateOrder } = useData();
+  const { orders, updateOrder, refreshData } = useData();
 
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
   const [uploadingOutfitId, setUploadingOutfitId] = useState(null);
+  const [showCollageMaker, setShowCollageMaker] = useState(false);
+  const [collageOutfitId, setCollageOutfitId] = useState(null);
   const [courierName, setCourierName] = useState('');
   const [trackingId, setTrackingId] = useState('');
   const [isSavingCourier, setIsSavingCourier] = useState(false);
+  const [editingPhoto, setEditingPhoto] = useState(null); // { file_url, outfitId }
+  const [editDrawerVisible, setEditDrawerVisible] = useState(false);
+  const [annotateVisible, setAnnotateVisible] = useState(false);
+  const [annotatePhotoUri, setAnnotatePhotoUri] = useState(null);
 
   // Find target order
   const order = React.useMemo(() => {
@@ -130,74 +147,145 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   };
 
   const handleUploadReferencePhoto = (outfitId) => {
-    setUploadingOutfitId(outfitId);
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, async (response) => {
-      if (response.didCancel || response.errorCode || !response.assets?.length) {
-        setUploadingOutfitId(null);
-        return;
+    setCollageOutfitId(outfitId);
+    setShowCollageMaker(true);
+  };
+
+  const handleSaveCollage = async (uri) => {
+    setShowCollageMaker(false);
+    setUploadingOutfitId(collageOutfitId);
+    setLoading(true);
+    try {
+      const uploadResult = await dispatch(uploadImageAction({
+        uri: uri,
+        type: 'image/jpeg',
+        name: `collage_${Date.now()}.jpg`,
+        key_name: 'reference_images',
+      })).unwrap();
+
+      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
+
+      if (!fileUrl) {
+        throw new Error('No image URL returned from upload server');
       }
 
-      const asset = response.assets[0];
+      const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${collageOutfitId}/requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          attachment_url: fileUrl,
+          message: 'Uploaded via Customer App',
+          phone: '9090909090'
+        })
+      });
+
+      if (!response.ok) {
+         throw new Error('Failed to notify backend');
+      }
+
+      refreshData();
+      showToast('Photo uploaded successfully', 'success');
+    } catch (err) {
+      console.log('Upload error:', err);
+      showToast(err?.message || 'Failed to upload photo', 'error');
+    } finally {
+      setUploadingOutfitId(null);
+      setLoading(false);
+    }
+  };
+
+  const handleCropUploadedPhoto = async () => {
+    setEditDrawerVisible(false);
+    if (!editingPhoto?.file_url) return;
+    try {
+      const cropped = await ImageCropPicker.openCropper({
+        path: editingPhoto.file_url,
+        mediaType: 'photo',
+        cropperToolbarTitle: 'Crop Photo',
+      });
+      setLoading(true);
+      const uploadResult = await dispatch(uploadImageAction({
+        uri: cropped.path,
+        type: cropped.mime || 'image/jpeg',
+        name: `cropped_${Date.now()}.jpg`,
+        key_name: 'reference_images',
+      })).unwrap();
+      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
+      if (!fileUrl) throw new Error('Upload failed');
+      await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attachment_url: fileUrl, message: 'Updated reference photo (cropped)' }),
+      });
+      refreshData();
+      showToast('Photo updated successfully', 'success');
+    } catch (err) {
+      showToast(err?.message || 'Failed to update photo', 'error');
+    } finally {
+      setLoading(false);
+      setEditingPhoto(null);
+    }
+  };
+
+  const handleChangeUploadedPhoto = () => {
+    setEditDrawerVisible(false);
+    launchImageLibrary({ mediaType: 'photo', quality: 0.9 }, async (response) => {
+      if (response.didCancel || !response.assets?.length) return;
       setLoading(true);
       try {
+        const asset = response.assets[0];
         const uploadResult = await dispatch(uploadImageAction({
           uri: asset.uri,
           type: asset.type || 'image/jpeg',
-          name: asset.fileName || `design_${Date.now()}.jpg`,
+          name: asset.fileName || `ref_${Date.now()}.jpg`,
           key_name: 'reference_images',
         })).unwrap();
-
         const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
-
-        if (!fileUrl) {
-          throw new Error('No image URL returned from upload server');
-        }
-
-        const updatedOutfits = outfits.map(outfit => {
-          if (outfit.id === outfitId) {
-            const currentPhotos = outfit.photos || [];
-            return {
-              ...outfit,
-              requestedPhotosFromClient: false,
-              photos: [
-                ...currentPhotos,
-                {
-                  id: 'photo_' + Date.now(),
-                  file_url: fileUrl,
-                  file_type: 'IMAGE',
-                  category: 'REFERENCE',
-                  uploadedBy: 'Customer'
-                }
-              ]
-            };
-          }
-          return outfit;
+        if (!fileUrl) throw new Error('Upload failed');
+        await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attachment_url: fileUrl, message: 'Updated reference photo' }),
         });
-
-        await updateOrder(order.id, { outfits: updatedOutfits });
-
-        const ordersJson = await AsyncStorage.getItem('sewvee_orders');
-        if (ordersJson) {
-          const localOrders = JSON.parse(ordersJson);
-          const index = localOrders.findIndex(o => o.id === order.id);
-          if (index !== -1) {
-            localOrders[index] = {
-              ...localOrders[index],
-              outfits: updatedOutfits
-            };
-            await AsyncStorage.setItem('sewvee_orders', JSON.stringify(localOrders));
-          }
-        }
-
-        showToast('Reference design uploaded successfully!', 'success');
+        refreshData();
+        showToast('Photo updated successfully', 'success');
       } catch (err) {
-        console.log('Upload image error:', err);
-        showToast('Upload failed: ' + (err.message || 'Server error'), 'error');
+        showToast(err?.message || 'Failed to update photo', 'error');
       } finally {
         setLoading(false);
-        setUploadingOutfitId(null);
+        setEditingPhoto(null);
       }
     });
+  };
+
+  const handleAnnotateDone = async (uri) => {
+    setAnnotateVisible(false);
+    if (!uri || !editingPhoto?.outfitId) return;
+    setLoading(true);
+    try {
+      const uploadResult = await dispatch(uploadImageAction({
+        uri,
+        type: 'image/jpeg',
+        name: `annotated_${Date.now()}.jpg`,
+        key_name: 'reference_images',
+      })).unwrap();
+      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
+      if (!fileUrl) throw new Error('Upload failed');
+      await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attachment_url: fileUrl, message: 'Annotated reference photo' }),
+      });
+      refreshData();
+      showToast('Photo updated successfully', 'success');
+    } catch (err) {
+      showToast(err?.message || 'Failed to upload annotated photo', 'error');
+    } finally {
+      setLoading(false);
+      setEditingPhoto(null);
+    }
   };
 
   return (
@@ -207,13 +295,57 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         <TouchableOpacity style={styles.backIconBtn} onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.navbarTitle}>Order #{order.billNo || order.id}</Text>
+        <Text style={styles.navbarTitle}>
+          {order.order_type === 'SALE_ORDER' ? 'Invoice' : 'Order'} #{order.billNo || order.id}
+        </Text>
         <View style={{ width: 22 }} />
       </View>
 
+      {/* TABS */}
+      {order.order_type !== 'SALE_ORDER' && (
+        <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
+          <TouchableOpacity 
+            style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
+            onPress={() => setActiveTab('details')}
+          >
+            <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Order Details</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
+            onPress={() => setActiveTab('requests')}
+          >
+            <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'requests' ? Colors.primary : '#64748B' }}>Change Requests</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {activeTab === 'requests' ? (
+        <CustomerRequestsTab order={order} />
+      ) : (
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {outfits.map((outfit, index) => {
-          const isUploading = uploadingOutfitId === outfit.id;
+        {order.order_type === 'SALE_ORDER' ? (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <ShoppingBag size={14} color={Colors.primary} />
+              <Text style={styles.cardTitle}>PURCHASED ITEMS</Text>
+            </View>
+            <View style={styles.stitchingTable}>
+              {outfits.map((outfit, index) => (
+                <View key={outfit.id || index} style={[styles.tableRow, index === outfits.length - 1 && styles.tableRowLast]}>
+                  <View style={styles.tableColLeft}>
+                    <Text style={styles.tableColLeftText}>{outfit.outfit_name || outfit.name || "Ready-Made Item"} {outfit.quantity ? `(x${outfit.quantity})` : ''}</Text>
+                  </View>
+                  <View style={styles.tableColRight}>
+                    <Text style={styles.tableColRightText}>₹{outfit.totalAmount || outfit.price || 0}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : (
+          outfits.map((outfit, index) => {
+            const isUploading = uploadingOutfitId === outfit.id;
           const refPhotos = (outfit.photos || []).filter(p => p.category === 'REFERENCE');
           const hasStitching = outfit.stitching && outfit.stitching.length > 0;
           const outfitName = outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`;
@@ -293,6 +425,20 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                     refPhotos.map((photo, pIdx) => (
                       <View key={photo.id || pIdx} style={styles.photoWrapper}>
                         <Image source={{ uri: photo.file_url }} style={styles.photoImg} />
+                        {/* Edit icon overlay */}
+                        <TouchableOpacity
+                          style={{
+                            position: 'absolute', top: 4, right: 4,
+                            backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12,
+                            width: 26, height: 26, alignItems: 'center', justifyContent: 'center',
+                          }}
+                          onPress={() => {
+                            setEditingPhoto({ file_url: photo.file_url, outfitId: outfit.id });
+                            setEditDrawerVisible(true);
+                          }}
+                        >
+                          <Edit2 size={13} color="#fff" />
+                        </TouchableOpacity>
                       </View>
                     ))
                   ) : (
@@ -301,6 +447,34 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                     </Text>
                   )}
                 </View>
+
+                {outfit.requestedPhotosFromClient && (
+                  <View style={{ borderTopWidth: 1, borderColor: '#FFEDD5', padding: 16, backgroundColor: '#FFF7ED', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                      <AlertCircle size={16} color="#F97316" style={{ marginRight: 6 }} />
+                      <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: '#9A3412' }}>
+                        Action Required
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 13, color: '#C2410C', marginBottom: 14, lineHeight: 18 }}>
+                      Boutique has requested you to upload reference photos or sketches for this outfit.
+                    </Text>
+                    <TouchableOpacity 
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F97316', paddingVertical: 12, borderRadius: 8 }}
+                      onPress={() => handleUploadReferencePhoto(outfit.id)}
+                      disabled={uploadingOutfitId === outfit.id}
+                    >
+                      {uploadingOutfitId === outfit.id ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <>
+                          <Upload size={18} color="#FFF" style={{ marginRight: 8 }} />
+                          <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 14 }}>Upload Photo</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               {/* BOUTIQUE NOTES */}
@@ -311,16 +485,32 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                 </View>
               ) : null}
 
+              {/* REQUEST OUTFIT CHANGES — inline per outfit */}
+              {order.order_type !== 'SALE_ORDER' && (
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 14, marginTop: 4, backgroundColor: '#F8FAFC' }}
+                  onPress={() => setActiveTab('requests')}
+                >
+                  <MessageSquare size={18} color={Colors.primary} style={{ marginRight: 8 }} />
+                  <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: Colors.primary }}>Request Outfit Changes</Text>
+                </TouchableOpacity>
+              )}
+
             </View>
           );
-        })}
+        })
+        )}
 
         {/* ACCOUNT SUMMARY */}
         <Text style={styles.sectionHeading}>ACCOUNT SUMMARY</Text>
         <View style={styles.pricingCard}>
           <View style={styles.pricingRow}>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <Scissors size={14} color="#94A3B8" style={{marginRight: 8}} />
+              {order.order_type === 'SALE_ORDER' ? (
+                <ShoppingBag size={14} color="#94A3B8" style={{marginRight: 8}} />
+              ) : (
+                <Scissors size={14} color="#94A3B8" style={{marginRight: 8}} />
+              )}
               <Text style={styles.pricingItemText}>Total Order Value</Text>
             </View>
             <Text style={styles.pricingItemValue}>₹{order.total || 0}</Text>
@@ -328,35 +518,132 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           
           <View style={styles.pricingSeparator} />
           
+          {order.order_type === 'SALE_ORDER' && (
+            <View style={styles.pricingAdvanceRow}>
+              <Text style={styles.pricingAdvanceLabel}>Delivery Method</Text>
+              <Text style={[styles.pricingAdvanceValue, { color: Colors.primary }]}>{order.delivery_method ? order.delivery_method.replace('_', ' ') : 'STORE PICKUP'}</Text>
+            </View>
+          )}
+
           <View style={styles.pricingAdvanceRow}>
             <Text style={styles.pricingAdvanceLabel}>Advance / Paid Amount</Text>
-            <Text style={styles.pricingAdvanceValue}>₹{order.advance || 0}</Text>
+            <Text style={styles.pricingAdvanceValue}>₹{order.advance || order.paid_amount || 0}</Text>
           </View>
           <View style={styles.pricingDueRow}>
             <Text style={styles.pricingDueLabel}>DUE BALANCE</Text>
-            <Text style={styles.pricingDueValue}>₹{order.balance || 0}</Text>
+            <Text style={styles.pricingDueValue}>₹{order.balance || order.balance_amount || 0}</Text>
           </View>
         </View>
 
-        {/* TRANSACTION LOGS */}
-        <Text style={styles.sectionHeading}>TRANSACTION LOGS</Text>
-        <View style={styles.transactionCard}>
-          <View style={styles.transactionRow}>
-             <View>
-               <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                 <Text style={styles.transactionAmount}>₹{order.advance || 1020}</Text>
-                 <View style={styles.upiBadge}><Text style={styles.upiBadgeText}>UPI</Text></View>
-               </View>
-               <Text style={styles.transactionDate}>Date: {formatDate(order.date)}</Text>
-             </View>
-             <TouchableOpacity style={styles.invoiceBtn}>
-               <Download size={14} color={Colors.textPrimary} style={{marginRight: 4}} />
-               <Text style={styles.invoiceBtnText}>Invoice</Text>
-             </TouchableOpacity>
-          </View>
-        </View>
+        {/* INVOICE & TRANSACTIONS */}
+        {(order.advance > 0 || order.paid_amount > 0) && (
+          <>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+              <Text style={styles.sectionHeading}>TRANSACTIONS & INVOICE</Text>
+              <TouchableOpacity 
+                style={[styles.invoiceBtn, { paddingVertical: 6, paddingHorizontal: 12, marginBottom: 12 }]}
+                onPress={() => navigation.navigate('InvoicePreview', { 
+                  order, 
+                  orderId: order.id,
+                  allowedCopyTypes: ['customer'],
+                  initialCopyType: 'customer',
+                  company: {
+                    name: order.boutiqueName || 'Sewvee Premium Boutique',
+                    address: 'Block C, 4th Cross Road, Indira Nagar, Bengaluru',
+                    phone: '+91 9999999999'
+                  }
+                })}
+              >
+                <Download size={14} color={Colors.textPrimary} style={{marginRight: 4}} />
+                <Text style={styles.invoiceBtnText}>Invoice</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.transactionCard}>
+              <View style={styles.transactionRow}>
+                 <View>
+                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                     <Text style={styles.transactionAmount}>₹{order.advance || order.paid_amount || 0}</Text>
+                     <View style={styles.upiBadge}><Text style={styles.upiBadgeText}>PAID</Text></View>
+                   </View>
+                   <Text style={styles.transactionDate}>Date: {formatDate(order.date || order.order_date || new Date())}</Text>
+                 </View>
+              </View>
+            </View>
+          </>
+        )}
 
       </ScrollView>
+      )}
+      <CollageMaker
+        visible={showCollageMaker}
+        onClose={() => setShowCollageMaker(false)}
+        onSaveReference={handleSaveCollage}
+        galleryFolders={[]}
+      />
+
+      {/* ── Photo Edit Drawer ── */}
+      <Modal visible={editDrawerVisible} transparent animationType="slide" onRequestClose={() => setEditDrawerVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setEditDrawerVisible(false)} />
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
+          <Text style={{ fontSize: 17, fontFamily: 'Inter-Bold', color: '#1E293B', marginBottom: 4 }}>Edit Photo</Text>
+          <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: '#64748B', marginBottom: 20 }}>What would you like to do with this photo?</Text>
+
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}
+            onPress={handleCropUploadedPhoto}
+          >
+            <View style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+              <ImagePlus size={22} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#1E293B' }}>Crop Photo</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: '#64748B', marginTop: 2 }}>Adjust framing and dimensions</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}
+            onPress={handleChangeUploadedPhoto}
+          >
+            <View style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+              <ImageIcon size={22} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#1E293B' }}>Change Photo</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: '#64748B', marginTop: 2 }}>Replace with a new image</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}
+            onPress={() => {
+              setEditDrawerVisible(false);
+              setAnnotatePhotoUri(editingPhoto.file_url);
+              setAnnotateVisible(true);
+            }}
+          >
+            <View style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+              <Type size={22} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#1E293B' }}>Add Text</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter-Medium', color: '#64748B', marginTop: 2 }}>Annotate the photo with a label</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={{ alignItems: 'center', paddingVertical: 14, marginTop: 4 }} onPress={() => setEditDrawerVisible(false)}>
+            <Text style={{ fontSize: 15, fontFamily: 'Inter-SemiBold', color: '#64748B' }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <PhotoAnnotationEditor
+        visible={annotateVisible}
+        photoUri={annotatePhotoUri}
+        onClose={() => setAnnotateVisible(false)}
+        onDone={handleAnnotateDone}
+      />
     </SafeAreaView>
   );
 };

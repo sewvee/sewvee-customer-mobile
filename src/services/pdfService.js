@@ -67,7 +67,7 @@ export const normalizeItems = (orderData, includeCancelled = true) => {
         qty: q,
         quantity: q,
         name: it.name || it.type || 'Item',
-        amount: Number(it.amount || it.totalCost || 0),
+        amount: Number(it.amount || it.totalCost || it.total_amount || 0),
         rate: it.rate !== undefined ? Number(it.rate) : (it.totalCost ? (Number(it.totalCost) / q) : 0),
         images: it.images || [],
         sketches: it.sketches || (it.sketchUri ? [it.sketchUri] : []),
@@ -98,7 +98,7 @@ export const normalizeItems = (orderData, includeCancelled = true) => {
       const resolvedQty = includeCancelled ? q : activeQty;
       const resolvedAmount =
         activeQty > 0 || includeCancelled
-          ? activeAmount || Number(it.totalCost) || 0
+          ? activeAmount || Number(it.totalCost) || Number(it.total_amount) || 0
           : 0;
 
       return {

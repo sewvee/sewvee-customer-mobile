@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { Colors } from '../../constants/theme';
 
 type InvoiceMediaGridProps = {
   title: string;
@@ -33,7 +34,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   title: {
-    color: '#0E9F8A',
+    color: Colors.primary,
     fontFamily: 'Inter-Bold',
     fontSize: 12,
     textTransform: 'uppercase',

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
-export const BASE_URL = Platform.OS === 'android' ? "http://10.0.2.2:3021/mobile/" : "http://localhost:3021/mobile/";
+export const API_DOMAIN = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "https://api-stage.sewvee.com" : "https://api.sewvee.com");
+export const BASE_URL = `${API_DOMAIN}/mobile/`;
 export const APP_VERSION = "1.41";
 
 export const RAZORPAY_KEY = "rzp_live_SuH9oa1pqTO6qx";
@@ -19,7 +20,7 @@ export const URL_FCM_TOKEN = `${BASE_URL}auth/fcm-token`;
 export const URL_GET_COUNTRY = `${BASE_URL}location/countries`;
 export const URL_GET_STATE = `${BASE_URL}location/states`;
 export const URL_GET_CITY = `${BASE_URL}location/cities`;
-export const URL_UPLOAD = `https://api.sewvee.com/upload/mobile`;
+export const URL_UPLOAD = `${API_DOMAIN}/upload/mobile`;
 export const URL_COMPANY_ONBOARD = `${BASE_URL}onboardingscreen/company`;
 export const URL_COMPANY_SECTIONS = `${URL_COMPANY_ONBOARD}/sections`;
 export const URL_OUTFIT = `${BASE_URL}outfit`;
@@ -87,9 +88,9 @@ export const URL_INVENTORY_READYMADE = `${BASE_URL}inventory/readymade`;
 export const URL_INVENTORY_PURCHASE  = `${BASE_URL}inventory/purchase`;
 export const URL_INVENTORY_STOCK     = `${BASE_URL}inventory/stock`;
 
-export const YOUR_UPLOAD_URL = 'https://api.sewvee.com/upload/mobile';
-export const URL_APP_VERSION = 'https://api.sewvee.com/app-version/all';
-export const URL_NOTIFICATIONS = 'https://api.sewvee.com/notifications';
+export const YOUR_UPLOAD_URL = `${API_DOMAIN}/upload/mobile`;
+export const URL_APP_VERSION = `${API_DOMAIN}/app-version/all`;
+export const URL_NOTIFICATIONS = `${API_DOMAIN}/notifications`;
 export const URL_NOTIFICATIONS_READ_ALL = `${URL_NOTIFICATIONS}/read-all`;
 export const URL_NOTIFICATION_READ = (id) => `${URL_NOTIFICATIONS}/${id}/read`;
 export const URL_NOTIFICATIONS_UNREAD_COUNT = `${URL_NOTIFICATIONS}/unread-count`;

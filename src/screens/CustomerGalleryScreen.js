@@ -286,8 +286,6 @@ const CustomerGalleryScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
-      
       {/* Header */}
       <View style={styles.header}>
         {activeFolderId ? (

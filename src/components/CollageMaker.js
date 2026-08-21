@@ -322,17 +322,13 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
                 <Download size={20} color={Colors.textPrimary} />
                 <Text style={styles.actionBtnText}>Download</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleShare} disabled={isProcessing}>
-                <Share2 size={20} color="white" />
-                <Text style={styles.actionBtnTextPrimary}>Share</Text>
-              </TouchableOpacity>
+              {onSaveReference && (
+                <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleSaveAsReference} disabled={isProcessing}>
+                  <Check size={20} color="white" />
+                  <Text style={styles.actionBtnTextPrimary}>Save</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            {onSaveReference && (
-              <TouchableOpacity style={styles.saveAsRefBtn} onPress={handleSaveAsReference} disabled={isProcessing}>
-                <Check size={20} color={Colors.primary} />
-                <Text style={styles.saveAsRefBtnText}>Save to Folder</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
       </Modal>

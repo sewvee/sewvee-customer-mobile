@@ -1,0 +1,429 @@
+diff --git a/src/screens/CustomerShopScreen.js b/src/screens/CustomerShopScreen.js
+index a1a0350..496e30a 100644
+--- a/src/screens/CustomerShopScreen.js
++++ b/src/screens/CustomerShopScreen.js
+@@ -10,7 +10,8 @@ import {
+   Linking,
+   Modal,
+   ScrollView,
+-  SafeAreaView
++  SafeAreaView,
++  TextInput
+ } from 'react-native';
+ import { Colors, Spacing, Shadow } from '../constants/theme';
+ import { 
+@@ -20,9 +21,17 @@ import {
+   ChevronRight, 
+   Star,
+   Sparkles,
+-  Heart
++  Heart,
++  Check,
++  MapPin
+ } from 'lucide-react-native';
+ import { useToast } from '../context/ToastContext';
++import { useSelector } from 'react-redux';
++import { useData } from '../context/DataContext';
++import { URL_ORDERS } from '../config/env';
++import axios from 'axios';
++import { useNavigation } from '@react-navigation/native';
++import AsyncStorage from '@react-native-async-storage/async-storage';
+ 
+ const { width: SCREEN_WIDTH } = Dimensions.get('window');
+ 
+@@ -64,9 +73,27 @@ const PRODUCTS_DATA = [
+ 
+ const CustomerShopScreen = () => {
+   const { showToast } = useToast();
++  const navigation = useNavigation();
++  const { profileData } = useSelector(state => state.profile);
++  const { refreshData } = useData();
++
+   const [selectedCategory, setSelectedCategory] = useState('All');
+   const [selectedProduct, setSelectedProduct] = useState(null);
+   const [favorites, setFavorites] = useState([]);
++  
++  const [cart, setCart] = useState([]);
++  const [isCartVisible, setIsCartVisible] = useState(false);
++  const [isDeliveryModalVisible, setIsDeliveryModalVisible] = useState(false);
++  const [deliveryMethod, setDeliveryMethod] = useState('COURIER');
++  const [shippingAddress, setShippingAddress] = useState({
++    name: 'Bhuvan', // Prefilled as requested
++    address_line_1: '',
++    address_line_2: '',
++    city: '',
++    state: '',
++    zipcode: '',
++    phone: '+919876543210' // Prefilled
++  });
+ 
+   const filteredProducts = React.useMemo(() => {
+     if (selectedCategory === 'All') return PRODUCTS_DATA;
+@@ -104,8 +131,85 @@ const CustomerShopScreen = () => {
+       });
+   };
+ 
++  const handleAddToCart = (item) => {
++    if (!cart.find(c => c.id === item.id)) {
++      setCart([...cart, { ...item, quantity: 1 }]);
++      showToast('Added to cart!', 'success');
++    }
++  };
++
++  const handleIncrement = (item) => {
++    setCart(cart.map(c => c.id === item.id ? { ...c, quantity: (c.quantity || 1) + 1 } : c));
++  };
++
++  const handleDecrement = (item) => {
++    setCart(cart.map(c => c.id === item.id ? { ...c, quantity: (c.quantity || 1) - 1 } : c).filter(c => c.quantity > 0));
++  };
++
++  const handleProceedToDelivery = () => {
++    if (cart.length === 0) return;
++    setIsCartVisible(false);
++    setIsDeliveryModalVisible(true);
++  };
++
++  const handleSendOrderRequest = async () => {
++    if (cart.length === 0) return;
++    
++    // Calculate total from static items by parsing the string e.g. "₹3,500"
++    const total = cart.reduce((acc, c) => {
++      const priceStr = c.price ? c.price.toString().replace(/[^0-9.]/g, '') : '0';
++      return acc + (Number(priceStr) * (c.quantity || 1));
++    }, 0);
++    
++    try {
++      if (profileData && profileData.id) {
++        const token = await AsyncStorage.getItem('sewvee_token');
++        await axios.post(URL_ORDERS, {
++          customer_id: profileData.id,
++          company_id: 1, // Fallback since the static items don't belong to a specific boutique
++          order_type: 'SALE_ORDER',
++          order_date: new Date().toISOString(),
++          final_amount: total,
++          total_amount: total,
++          total_outfits: cart.length,
++          order_notes: 'Online App Order',
++          outfits: cart.map(c => {
++            const itemPriceStr = c.price ? c.price.toString().replace(/[^0-9.]/g, '') : '0';
++            const itemPrice = Number(itemPriceStr);
++            return {
++              name: c.name,
++              quantity: c.quantity || 1,
++              total_amount: itemPrice * (c.quantity || 1),
++              items: [{
++                item_type: 'READYMADE',
++                readymade_id: c.id,
++                qty: c.quantity || 1,
++                price: itemPrice,
++                total_price: itemPrice * (c.quantity || 1)
++              }]
++            };
++          })
++        }, {
++          headers: { Authorization: token, 'Content-Type': 'application/json' }
++        });
++        showToast('Order Request Sent Successfully!', 'success');
++        await refreshData();
++      } else {
++        showToast('Please set up your profile first.', 'error');
++      }
++    } catch(err) {
++      console.log('Order sync failed', err?.response?.data || err?.message);
++      showToast('Failed to send order request.', 'error');
++    }
++
++    setIsDeliveryModalVisible(false);
++    setCart([]);
++    navigation.navigate('CustomerRequestedOrders');
++  };
++
+   const renderProductItem = ({ item }) => {
+     const isFav = favorites.includes(item.id);
++    const cartItem = cart.find(c => c.id === item.id);
+ 
+     return (
+       <TouchableOpacity 
+@@ -127,10 +231,24 @@ const CustomerShopScreen = () => {
+           <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+           <View style={styles.priceRow}>
+             <Text style={styles.productPrice}>{item.price}</Text>
+-            <View style={styles.ratingBox}>
+-              <Star size={12} color="#F59E0B" fill="#F59E0B" />
+-              <Text style={styles.ratingText}>{item.rating}</Text>
+-            </View>
++            {cartItem ? (
++              <View style={styles.stepperContainer}>
++                <TouchableOpacity style={styles.stepperBtn} onPress={(e) => { e.stopPropagation(); handleDecrement(item); }}>
++                  <Text style={styles.stepperBtnText}>-</Text>
++                </TouchableOpacity>
++                <Text style={styles.stepperValue}>{cartItem.quantity || 1}</Text>
++                <TouchableOpacity style={styles.stepperBtn} onPress={(e) => { e.stopPropagation(); handleIncrement(item); }}>
++                  <Text style={styles.stepperBtnText}>+</Text>
++                </TouchableOpacity>
++              </View>
++            ) : (
++              <TouchableOpacity 
++                style={styles.addToCartBtnCard}
++                onPress={(e) => { e.stopPropagation(); handleAddToCart(item); }}
++              >
++                <Text style={styles.addToCartBtnCardText}>Add to Cart</Text>
++              </TouchableOpacity>
++            )}
+           </View>
+         </View>
+       </TouchableOpacity>
+@@ -143,8 +261,13 @@ const CustomerShopScreen = () => {
+       <View style={styles.navbar}>
+         <View style={{ width: 24 }} />
+         <Text style={styles.navbarTitle}>Design Catalog</Text>
+-        <TouchableOpacity style={styles.cartIconBtn}>
++        <TouchableOpacity style={styles.cartIconBtn} onPress={() => setIsCartVisible(true)}>
+           <ShoppingBag size={22} color={Colors.textPrimary} />
++          {cart.length > 0 && (
++            <View style={styles.cartBadge}>
++              <Text style={styles.cartBadgeText}>{cart.reduce((a, c) => a + (c.quantity || 1), 0)}</Text>
++            </View>
++          )}
+         </TouchableOpacity>
+       </View>
+ 
+@@ -240,6 +363,148 @@ const CustomerShopScreen = () => {
+           </View>
+         </View>
+       </Modal>
++
++      {/* CART MODAL */}
++      <Modal visible={isCartVisible} transparent animationType="slide">
++        <View style={styles.modalOverlay}>
++          <View style={[styles.modalCard, { height: '70%' }]}>
++            <View style={styles.modalHeader}>
++              <Text style={{ fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary }}>Your Cart</Text>
++              <TouchableOpacity onPress={() => setIsCartVisible(false)} style={{ padding: 4 }}>
++                <X size={24} color={Colors.textPrimary} />
++              </TouchableOpacity>
++            </View>
++            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
++              {cart.length === 0 ? (
++                <View style={{ padding: 40, alignItems: 'center' }}>
++                  <ShoppingBag size={40} color="#94A3B8" />
++                  <Text style={{ marginTop: 12, color: '#64748B', fontFamily: 'Inter-Medium' }}>Your cart is empty.</Text>
++                </View>
++              ) : (
++                cart.map((item, idx) => (
++                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 12, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
++                    <Image source={item.image} style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12 }} />
++                    <View style={{ flex: 1 }}>
++                      <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 4 }}>{item.name}</Text>
++                      <Text style={{ fontSize: 14, color: Colors.primary, fontWeight: 'bold' }}>{item.price}</Text>
++                    </View>
++                    <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
++                      <TouchableOpacity onPress={() => setCart(cart.filter(c => c.id !== item.id))} style={{ padding: 4, marginBottom: 8 }}>
++                        <X size={20} color="#EF4444" />
++                      </TouchableOpacity>
++                      <View style={styles.stepperContainer}>
++                        <TouchableOpacity style={styles.stepperBtn} onPress={() => handleDecrement(item)}>
++                          <Text style={styles.stepperBtnText}>-</Text>
++                        </TouchableOpacity>
++                        <Text style={styles.stepperValue}>{item.quantity || 1}</Text>
++                        <TouchableOpacity style={styles.stepperBtn} onPress={() => handleIncrement(item)}>
++                          <Text style={styles.stepperBtnText}>+</Text>
++                        </TouchableOpacity>
++                      </View>
++                    </View>
++                  </View>
++                ))
++              )}
++            </ScrollView>
++            <View style={styles.modalFooter}>
++              <TouchableOpacity 
++                style={[styles.inquireBtn, cart.length === 0 && { backgroundColor: '#CBD5E1' }]}
++                disabled={cart.length === 0}
++                onPress={handleProceedToDelivery}
++              >
++                <Text style={styles.inquireBtnText}>Proceed to Delivery</Text>
++              </TouchableOpacity>
++            </View>
++          </View>
++        </View>
++      </Modal>
++
++      {/* DELIVERY OPTIONS MODAL */}
++      <Modal visible={isDeliveryModalVisible} transparent animationType="slide">
++        <View style={styles.modalOverlay}>
++          <View style={styles.modalCard}>
++            <View style={styles.modalHeader}>
++              <Text style={{ fontSize: 18, fontWeight: 'bold', color: Colors.textPrimary }}>Delivery Options</Text>
++              <TouchableOpacity onPress={() => setIsDeliveryModalVisible(false)} style={{ padding: 4 }}>
++                <X size={24} color={Colors.textPrimary} />
++              </TouchableOpacity>
++            </View>
++            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, padding: 20 }}>
++              <View style={{ flexDirection: 'row', marginBottom: 20, backgroundColor: '#F1F5F9', borderRadius: 12, padding: 4 }}>
++                <TouchableOpacity 
++                  style={{ flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', backgroundColor: deliveryMethod === 'COURIER' ? 'white' : 'transparent', shadowColor: deliveryMethod === 'COURIER' ? '#000' : 'transparent', shadowOpacity: 0.05, shadowRadius: 2 }}
++                  onPress={() => setDeliveryMethod('COURIER')}
++                >
++                  <Text style={{ fontWeight: '600', color: deliveryMethod === 'COURIER' ? Colors.primary : Colors.textSecondary }}>Courier</Text>
++                </TouchableOpacity>
++                <TouchableOpacity 
++                  style={{ flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', backgroundColor: deliveryMethod === 'IN_PERSON' ? 'white' : 'transparent', shadowColor: deliveryMethod === 'IN_PERSON' ? '#000' : 'transparent', shadowOpacity: 0.05, shadowRadius: 2 }}
++                  onPress={() => setDeliveryMethod('IN_PERSON')}
++                >
++                  <Text style={{ fontWeight: '600', color: deliveryMethod === 'IN_PERSON' ? Colors.primary : Colors.textSecondary }}>Store Pickup</Text>
++                </TouchableOpacity>
++              </View>
++
++              {deliveryMethod === 'COURIER' && (
++                <View style={{ gap: 12 }}>
++                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: Colors.textPrimary, marginBottom: 4 }}>Shipping Address</Text>
++                  
++                  <View style={styles.inputContainer}>
++                    <Text style={styles.inputLabel}>Name</Text>
++                    <TextInput style={styles.inputField} value={shippingAddress.name} onChangeText={(t) => setShippingAddress({...shippingAddress, name: t})} />
++                  </View>
++
++                  <View style={styles.inputContainer}>
++                    <Text style={styles.inputLabel}>Phone Number</Text>
++                    <TextInput style={styles.inputField} keyboardType="phone-pad" value={shippingAddress.phone} onChangeText={(t) => setShippingAddress({...shippingAddress, phone: t})} />
++                  </View>
++                  
++                  <View style={styles.inputContainer}>
++                    <Text style={styles.inputLabel}>Address Line 1</Text>
++                    <TextInput style={styles.inputField} value={shippingAddress.address_line_1} onChangeText={(t) => setShippingAddress({...shippingAddress, address_line_1: t})} />
++                  </View>
++                  
++                  <View style={styles.inputContainer}>
++                    <Text style={styles.inputLabel}>Address Line 2 (Optional)</Text>
++                    <TextInput style={styles.inputField} value={shippingAddress.address_line_2} onChangeText={(t) => setShippingAddress({...shippingAddress, address_line_2: t})} />
++                  </View>
++
++                  <View style={{ flexDirection: 'row', gap: 12 }}>
++                    <View style={[styles.inputContainer, { flex: 1 }]}>
++                      <Text style={styles.inputLabel}>City</Text>
++                      <TextInput style={styles.inputField} value={shippingAddress.city} onChangeText={(t) => setShippingAddress({...shippingAddress, city: t})} />
++                    </View>
++                    <View style={[styles.inputContainer, { flex: 1 }]}>
++                      <Text style={styles.inputLabel}>State</Text>
++                      <TextInput style={styles.inputField} value={shippingAddress.state} onChangeText={(t) => setShippingAddress({...shippingAddress, state: t})} />
++                    </View>
++                  </View>
++
++                  <View style={styles.inputContainer}>
++                    <Text style={styles.inputLabel}>Zipcode</Text>
++                    <TextInput style={styles.inputField} keyboardType="number-pad" value={shippingAddress.zipcode} onChangeText={(t) => setShippingAddress({...shippingAddress, zipcode: t})} />
++                  </View>
++                </View>
++              )}
++
++              {deliveryMethod === 'IN_PERSON' && (
++                <View style={{ padding: 20, alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, marginTop: 10 }}>
++                  <MapPin size={32} color={Colors.primary} style={{ marginBottom: 12 }} />
++                  <Text style={{ textAlign: 'center', color: Colors.textSecondary, fontSize: 14, lineHeight: 20 }}>
++                    You will need to visit the boutique directly to pick up your order once it is ready.
++                  </Text>
++                </View>
++              )}
++            </ScrollView>
++            <View style={styles.modalFooter}>
++              <TouchableOpacity style={styles.inquireBtn} onPress={handleSendOrderRequest}>
++                <Check size={20} color="white" style={{ marginRight: 8 }} />
++                <Text style={styles.inquireBtnText}>Confirm Order</Text>
++              </TouchableOpacity>
++            </View>
++          </View>
++        </View>
++      </Modal>
+     </SafeAreaView>
+   );
+ };
+@@ -268,6 +533,23 @@ const styles = StyleSheet.create({
+   },
+   cartIconBtn: {
+     padding: 6,
++    position: 'relative'
++  },
++  cartBadge: {
++    position: 'absolute',
++    top: 2,
++    right: 2,
++    backgroundColor: Colors.primary,
++    width: 16,
++    height: 16,
++    borderRadius: 8,
++    justifyContent: 'center',
++    alignItems: 'center',
++  },
++  cartBadgeText: {
++    color: 'white',
++    fontSize: 9,
++    fontWeight: 'bold',
+   },
+   categoriesWrapper: {
+     backgroundColor: Colors.white,
+@@ -512,4 +794,64 @@ const styles = StyleSheet.create({
+     fontFamily: 'Inter-Bold',
+     color: Colors.white,
+   },
++  addToCartBtnCard: {
++    backgroundColor: '#F5F3FF', // subtle primary tint
++    paddingVertical: 6,
++    paddingHorizontal: 12,
++    borderRadius: 16,
++    borderWidth: 1,
++    borderColor: '#EDE9FE',
++  },
++  addToCartBtnCardText: {
++    color: Colors.primary,
++    fontSize: 11,
++    fontFamily: 'Inter-Bold',
++  },
++  stepperContainer: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    backgroundColor: '#F8FAFC',
++    borderRadius: 20,
++    borderWidth: 1,
++    borderColor: '#E2E8F0',
++    overflow: 'hidden',
++  },
++  stepperBtn: {
++    paddingHorizontal: 12,
++    paddingVertical: 6,
++    justifyContent: 'center',
++    alignItems: 'center',
++  },
++  stepperBtnText: {
++    fontSize: 16,
++    fontWeight: 'bold',
++    color: Colors.primary,
++  },
++  stepperValue: {
++    fontSize: 14,
++    fontWeight: '700',
++    color: Colors.textPrimary,
++    minWidth: 20,
++    textAlign: 'center',
++  },
++  inputContainer: {
++    marginBottom: 12,
++  },
++  inputLabel: {
++    fontSize: 12,
++    fontWeight: '600',
++    color: Colors.textSecondary,
++    marginBottom: 6,
++    textTransform: 'uppercase',
++  },
++  inputField: {
++    backgroundColor: 'white',
++    borderWidth: 1,
++    borderColor: '#E2E8F0',
++    borderRadius: 8,
++    paddingHorizontal: 14,
++    paddingVertical: 12,
++    fontSize: 14,
++    color: Colors.textPrimary,
++  },
+ });

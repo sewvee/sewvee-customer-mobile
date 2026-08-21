@@ -551,7 +551,8 @@ const OrdersListScreen = ({ navigation }) => {
             }
 
             if (listLoaded && !listNeedsRefresh) {
-                return undefined;
+                // By always fetching on focus, we ensure the latest status is synced
+                // return undefined;
             }
 
             Promise.all([

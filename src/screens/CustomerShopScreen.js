@@ -55,6 +55,7 @@ const CustomerShopScreen = () => {
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [fullScreenImageIndex, setFullScreenImageIndex] = useState(null);
   const [favorites, setFavorites] = useState([]);
   
   const [cart, setCart] = useState([]);
@@ -104,6 +105,17 @@ const CustomerShopScreen = () => {
       const res = await axios.get(`${URL_CUSTOMER_PORTAL_SHOP}?companyId=${companyId}`);
       if (res.data && res.data.success) {
         const rootUrl = BASE_URL.replace('/mobile/', '/');
+        const formatImageUrls = (urlStr) => {
+          if (!urlStr) return [];
+          return urlStr.split(',').map(u => u.trim()).filter(Boolean).map(firstUrl => {
+            if (Platform.OS === 'android' && firstUrl.includes('localhost')) {
+              firstUrl = firstUrl.replace('localhost', '10.0.2.2');
+            }
+            if (firstUrl.startsWith('http')) return encodeURI(firstUrl);
+            if (firstUrl.startsWith('/')) return encodeURI(rootUrl + firstUrl.substring(1));
+            return encodeURI(rootUrl + firstUrl);
+          });
+        };
         const formatImageUrl = (url) => {
           if (!url) return null;
           let firstUrl = url.split(',')[0].trim();
@@ -132,6 +144,7 @@ const CustomerShopScreen = () => {
             stock: Number(p.current_stock || 0),
             description: p.description || 'No description available',
             features: p.quality_specifications ? p.quality_specifications.split('\n') : ['Premium Quality'],
+            images: (formatImageUrls(p.image_url).length > 0) ? formatImageUrls(p.image_url).map(u => ({uri: u})) : [require('../assets/bridal_blouse.png')],
             image: validImg ? { uri: validImg } : require('../assets/bridal_blouse.png')
           };
         });
@@ -443,7 +456,37 @@ const CustomerShopScreen = () => {
 
             {selectedProduct && (
               <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-                <Image source={selectedProduct.image} style={styles.modalImage} resizeMode="cover" />
+                
+                <View style={{ marginBottom: 16 }}>
+                  {selectedProduct.images && selectedProduct.images.length > 1 ? (
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false}
+                      snapToInterval={(SCREEN_WIDTH - 40) * 0.8 + 8}
+                      decelerationRate="fast"
+                      contentContainerStyle={{ gap: 8 }}
+                    >
+                      {selectedProduct.images.map((img, idx) => (
+                        <TouchableOpacity key={idx} activeOpacity={0.9} onPress={() => setFullScreenImageIndex(idx)}>
+                          <Image 
+                            source={img} 
+                            style={[styles.modalImage, { width: (SCREEN_WIDTH - 40) * 0.8, marginBottom: 0 }]} 
+                            resizeMode="cover" 
+                          />
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <TouchableOpacity activeOpacity={0.9} onPress={() => setFullScreenImageIndex(0)}>
+                      <Image 
+                        source={selectedProduct.image} 
+                        style={styles.modalImage} 
+                        resizeMode="cover" 
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
                 
                 <View style={styles.modalBody}>
                   <View style={styles.modalPriceRow}>
@@ -468,30 +511,24 @@ const CustomerShopScreen = () => {
             )}
 
             <View style={styles.modalFooter}>
-              {selectedProduct && selectedProduct.stock <= 0 ? (
-                <View style={[styles.inquireBtn, { backgroundColor: '#F1F5F9' }]}>
-                  <Text style={[styles.inquireBtnText, { color: '#94A3B8' }]}>Out of Stock</Text>
+              {selectedProduct && cart.find(c => c.id === selectedProduct.id) ? (
+                <View style={[styles.stepperContainer, { height: 52, width: '100%', backgroundColor: '#F8FAFC' }]}>
+                  <TouchableOpacity style={[styles.stepperBtn, { flex: 1 }]} onPress={() => handleDecrement(selectedProduct)}>
+                    <Text style={[styles.stepperBtnText, { fontSize: 24 }]}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.stepperValue, { fontSize: 18 }]}>{cart.find(c => c.id === selectedProduct.id).quantity || 1}</Text>
+                  <TouchableOpacity style={[styles.stepperBtn, { flex: 1 }]} onPress={() => handleIncrement(selectedProduct)}>
+                    <Text style={[styles.stepperBtnText, { fontSize: 24 }]}>+</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
-                selectedProduct && cart.find(c => c.id === selectedProduct.id) ? (
-                  <View style={[styles.stepperContainer, { height: 52, flex: 1, backgroundColor: '#F8FAFC' }]}>
-                    <TouchableOpacity style={[styles.stepperBtn, { flex: 1 }]} onPress={() => handleDecrement(selectedProduct)}>
-                      <Text style={[styles.stepperBtnText, { fontSize: 24 }]}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={[styles.stepperValue, { fontSize: 18 }]}>{cart.find(c => c.id === selectedProduct.id).quantity || 1}</Text>
-                    <TouchableOpacity style={[styles.stepperBtn, { flex: 1 }]} onPress={() => handleIncrement(selectedProduct)}>
-                      <Text style={[styles.stepperBtnText, { fontSize: 24 }]}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity 
-                    style={styles.inquireBtn}
-                    onPress={() => handleAddToCart(selectedProduct)}
-                  >
-                    <ShoppingBag size={20} color="white" style={{ marginRight: 8 }} />
-                    <Text style={styles.inquireBtnText}>Add to Cart</Text>
-                  </TouchableOpacity>
-                )
+                <TouchableOpacity 
+                  style={[styles.inquireBtn, { width: '100%' }]}
+                  onPress={() => handleAddToCart(selectedProduct)}
+                >
+                  <ShoppingBag size={20} color="white" style={{ marginRight: 8 }} />
+                  <Text style={styles.inquireBtnText}>Add to Cart</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -637,6 +674,34 @@ const CustomerShopScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+          <Modal visible={fullScreenImageIndex !== null} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center' }}>
+          <TouchableOpacity 
+            style={{ position: 'absolute', top: 50, right: 20, zIndex: 10, padding: 8 }} 
+            onPress={() => setFullScreenImageIndex(null)}
+          >
+            <X size={32} color="#FFF" />
+          </TouchableOpacity>
+          {fullScreenImageIndex !== null && selectedProduct?.images && (
+            <ScrollView 
+              horizontal 
+              pagingEnabled 
+              showsHorizontalScrollIndicator={false}
+              contentOffset={{ x: SCREEN_WIDTH * fullScreenImageIndex, y: 0 }}
+            >
+              {selectedProduct.images.map((img, idx) => (
+                <View key={idx} style={{ width: SCREEN_WIDTH, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                  <Image 
+                    source={img} 
+                    style={{ width: SCREEN_WIDTH, height: '80%' }} 
+                    resizeMode="contain" 
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </View>
       </Modal>
     </View>
