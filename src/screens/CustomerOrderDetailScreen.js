@@ -162,7 +162,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         uri: uri,
         type: 'image/jpeg',
         name: `collage_${Date.now()}.jpg`,
-        key_name: 'reference_images',
+        key_name: 'order_photos',
       })).unwrap();
 
       const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
@@ -257,11 +257,20 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       })).unwrap();
       const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
       if (!fileUrl) throw new Error('Upload failed');
-      await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attachment_url: fileUrl, message: 'Updated reference photo (cropped)' }),
-      });
+      
+      if (editingPhoto.isPending) {
+        setPendingPhotos(prev => {
+          const list = [...(prev[editingPhoto.outfitId] || [])];
+          list[editingPhoto.pendingIndex] = fileUrl;
+          return { ...prev, [editingPhoto.outfitId]: list };
+        });
+      } else {
+        await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attachment_url: fileUrl, message: 'Updated reference photo (cropped)' }),
+        });
+      }
       refreshData();
       showToast('Photo updated successfully', 'success');
     } catch (err) {
@@ -287,11 +296,20 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         })).unwrap();
         const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
         if (!fileUrl) throw new Error('Upload failed');
-        await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attachment_url: fileUrl, message: 'Updated reference photo' }),
-        });
+        
+        if (editingPhoto.isPending) {
+          setPendingPhotos(prev => {
+            const list = [...(prev[editingPhoto.outfitId] || [])];
+            list[editingPhoto.pendingIndex] = fileUrl;
+            return { ...prev, [editingPhoto.outfitId]: list };
+          });
+        } else {
+          await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ attachment_url: fileUrl, message: 'Updated reference photo' }),
+          });
+        }
         refreshData();
         showToast('Photo updated successfully', 'success');
       } catch (err) {
@@ -316,11 +334,20 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       })).unwrap();
       const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
       if (!fileUrl) throw new Error('Upload failed');
-      await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attachment_url: fileUrl, message: 'Annotated reference photo' }),
-      });
+      
+      if (editingPhoto.isPending) {
+        setPendingPhotos(prev => {
+          const list = [...(prev[editingPhoto.outfitId] || [])];
+          list[editingPhoto.pendingIndex] = fileUrl;
+          return { ...prev, [editingPhoto.outfitId]: list };
+        });
+      } else {
+        await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attachment_url: fileUrl, message: 'Annotated reference photo' }),
+        });
+      }
       refreshData();
       showToast('Photo updated successfully', 'success');
     } catch (err) {
@@ -510,8 +537,21 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                           {pendingPhotos[outfit.id].map((url, idx) => (
                             <View key={idx} style={{ marginRight: 10, position: 'relative' }}>
                               <Image source={{ uri: url }} style={{ width: 60, height: 60, borderRadius: 8, backgroundColor: '#FFEDD5' }} />
+                              
+                              {/* Edit Button */}
                               <TouchableOpacity
-                                style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}
+                                style={{ position: 'absolute', top: -6, right: 18, backgroundColor: '#6366F1', borderRadius: 10, width: 22, height: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fff' }}
+                                onPress={() => {
+                                  setEditingPhoto({ file_url: url, outfitId: outfit.id, isPending: true, pendingIndex: idx });
+                                  setEditDrawerVisible(true);
+                                }}
+                              >
+                                <Edit2 size={10} color="#fff" />
+                              </TouchableOpacity>
+
+                              {/* Delete Button */}
+                              <TouchableOpacity
+                                style={{ position: 'absolute', top: -6, right: -6, backgroundColor: '#EF4444', borderRadius: 10, width: 22, height: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fff' }}
                                 onPress={() => removePendingPhoto(outfit.id, idx)}
                               >
                                 <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>X</Text>
