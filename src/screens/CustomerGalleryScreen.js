@@ -334,11 +334,8 @@ const CustomerGalleryScreen = () => {
                 columnWrapperStyle={{ gap: 4, marginBottom: 4 }}
                 renderItem={({ item }) => (
                   <View style={styles.imageWrapper}>
-                    <TouchableOpacity onPress={() => setPreviewImage(item.url)} activeOpacity={0.9}>
+                    <TouchableOpacity onPress={() => setPreviewImage(item)} activeOpacity={0.9}>
                       <Image source={{ uri: item.url }} style={styles.imageItem} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteImageBtn} onPress={() => handleDeleteImage(item.id)}>
-                      <X size={14} color="#FFF" />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -434,11 +431,28 @@ const CustomerGalleryScreen = () => {
 
       <Modal visible={!!previewImage} transparent animationType="fade">
         <View style={styles.previewOverlay}>
-          <TouchableOpacity style={styles.previewClose} onPress={() => setPreviewImage(null)}>
-            <X size={28} color="#FFF" />
-          </TouchableOpacity>
-          {previewImage && (
-            <Image source={{ uri: previewImage }} style={styles.previewImageFull} resizeMode="contain" />
+          <View style={{ position: 'absolute', top: 50, right: 20, flexDirection: 'row', gap: 16, zIndex: 10 }}>
+            <TouchableOpacity 
+              onPress={() => {
+                if (previewImage?.id) {
+                  handleDeleteImage(previewImage.id);
+                  setPreviewImage(null);
+                }
+              }}
+              style={{ backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <Trash2 size={24} color="#EF4444" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => setPreviewImage(null)}
+              style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: 10, borderRadius: 24, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <X size={28} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+          {previewImage?.url && (
+            <Image source={{ uri: previewImage.url }} style={styles.previewImageFull} resizeMode="contain" />
           )}
         </View>
       </Modal>

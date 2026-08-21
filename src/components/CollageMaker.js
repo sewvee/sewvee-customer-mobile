@@ -52,7 +52,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [] }
   };
 
   // Option 1: From Phone Gallery
-  const handleGalleryPick = () => {
+  const handlePickFromPhone = () => {
     setSourcePickerVisible(false);
     ImageCropPicker.openPicker({
       cropping: false,
