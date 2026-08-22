@@ -154,13 +154,9 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
     setShowCollageMaker(false);
     setUploadingOutfitId(collageOutfitId);
     setLoading(true);
-    
-    // Ensure URI is properly formatted for React Native FormData
-    const fileUri = Platform.OS === 'android' && !uri.startsWith('file://') ? 'file://' + uri : uri;
-
     try {
       const uploadResult = await dispatch(uploadImageAction({
-        uri: fileUri,
+        uri: uri,
         type: 'image/jpeg',
         name: `collage_${Date.now()}.jpg`,
         key_name: 'order_photos',
@@ -202,7 +198,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
     setLoading(true);
     try {
       // NOTE: Using a local fallback URL if the staging backend isn't updated yet!
-      const API_BASE = URL_CUSTOMER_PORTAL_ORDERS;
+      const API_BASE = URL_CUSTOMER_PORTAL_ORDERS.includes('api-stage') ? 'http://10.0.2.2:3021/mobile/customer-portal/orders' : URL_CUSTOMER_PORTAL_ORDERS;
 
       for (const fileUrl of urls) {
         const response = await fetch(`${API_BASE}/${order.id}/outfits/${outfitId}/requests`, {
@@ -322,6 +318,42 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
     });
   };
 
+  const handleAnnotateDone = async (uri) => {
+    setAnnotateVisible(false);
+    if (!uri || !editingPhoto?.outfitId) return;
+    setLoading(true);
+    try {
+      const uploadResult = await dispatch(uploadImageAction({
+        uri,
+        type: 'image/jpeg',
+        name: `annotated_${Date.now()}.jpg`,
+        key_name: 'order_photos',
+      })).unwrap();
+      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
+      if (!fileUrl) throw new Error('Upload failed');
+      
+      if (editingPhoto.isPending) {
+        setPendingPhotos(prev => {
+          const list = [...(prev[editingPhoto.outfitId] || [])];
+          list[editingPhoto.pendingIndex] = fileUrl;
+          return { ...prev, [editingPhoto.outfitId]: list };
+        });
+      } else {
+        await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${editingPhoto.outfitId}/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attachment_url: fileUrl, message: 'Annotated reference photo' }),
+        });
+      }
+      refreshData();
+      showToast('Photo updated successfully', 'success');
+    } catch (err) {
+      showToast(err?.message || 'Failed to upload annotated photo', 'error');
+    } finally {
+      setLoading(false);
+      setEditingPhoto(null);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>

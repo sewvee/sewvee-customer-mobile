@@ -79,7 +79,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
       setTextItems([]);
       setActiveTool('select');
     }
-  }, [visible, initialImage]);
+  }, [visible]);
 
   // Handle slot tap
   const handleSlotPress = (index) => {
@@ -350,7 +350,19 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
             {activeTool === 'marker' && (
               <View style={StyleSheet.absoluteFill} {...canvasPan.panHandlers} />
             )}
-            
+            {activeTool === 'text' && (
+              <TouchableOpacity
+                activeOpacity={1}
+                style={StyleSheet.absoluteFill}
+                onPress={(e) => {
+                  const { locationX: x, locationY: y } = e.nativeEvent;
+                  setSelectedTextId(null);
+                  setPendingPos({ x, y });
+                  setDraftText('');
+                  setAddingText(true);
+                }}
+              />
+            )}
             <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
               {paths.map((p, i) => <Path key={i} d={p.d} stroke={p.color} strokeWidth={p.width} fill="none" strokeLinecap="round" strokeLinejoin="round" />)}
               {currentPath && <Path d={currentPath.d} stroke={currentPath.color} strokeWidth={currentPath.width} fill="none" strokeLinecap="round" strokeLinejoin="round" />}
@@ -384,13 +396,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
              <PenTool size={22} color={activeTool === 'marker' ? Colors.primary : Colors.textSecondary} />
              <Text style={[s.toolLabel, activeTool === 'marker' && { color: Colors.primary }]}>Marker</Text>
            </TouchableOpacity>
-           <TouchableOpacity style={[s.toolBtn, activeTool === 'text' && s.toolBtnActive]} onPress={() => {
-    setActiveTool('text');
-    setSelectedTextId(null);
-    setPendingPos({ x: 100, y: 100 });
-    setDraftText('');
-    setAddingText(true);
-  }}>
+           <TouchableOpacity style={[s.toolBtn, activeTool === 'text' && s.toolBtnActive]} onPress={() => setActiveTool('text')}>
              <Type size={22} color={activeTool === 'text' ? Colors.primary : Colors.textSecondary} />
              <Text style={[s.toolLabel, activeTool === 'text' && { color: Colors.primary }]}>Text</Text>
            </TouchableOpacity>

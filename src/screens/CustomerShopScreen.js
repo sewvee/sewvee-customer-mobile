@@ -179,8 +179,11 @@ const CustomerShopScreen = () => {
   const categories = ['All', ...new Set(products.map(p => p.category))];
 
   const filteredProducts = React.useMemo(() => {
-    if (selectedCategory === 'All') return products;
-    return products.filter(p => p.category === selectedCategory);
+    let list = products.filter(p => p.stock > 0);
+    if (selectedCategory !== 'All') {
+      list = list.filter(p => p.category === selectedCategory);
+    }
+    return list;
   }, [selectedCategory, products]);
 
   const handleToggleFavorite = (id, event) => {

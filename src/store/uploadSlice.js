@@ -31,10 +31,10 @@ export const uploadImageAction = createAsyncThunk(
 
             const response = await axios.post(URL_UPLOAD, formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
                     'accept': '*/*',
                     'Authorization': formattedToken,
-                }
+                },
+                // transformRequest removed for React Native
             });
             console.log("UPLOAD IMAGE - Response:", response.data);
             return response.data;
