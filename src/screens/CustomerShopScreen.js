@@ -334,30 +334,36 @@ const CustomerShopScreen = () => {
   return (
     <View style={styles.container}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#F5F3FF' }}>
-        <View style={styles.navbar}>
-          <Text style={styles.headerTitle}>Shopping</Text>
-          
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            {boutiques.length > 0 && selectedBoutique && (
-              <TouchableOpacity 
-                style={styles.headerBoutiqueSelector}
-                onPress={() => setIsBoutiqueModalVisible(true)}
-              >
-                <Store size={14} color={Colors.primary} style={{ marginRight: 4 }} />
-                <Text style={styles.headerBoutiqueText} numberOfLines={1}>{selectedBoutique.name}</Text>
-                <ChevronDown size={14} color={Colors.textSecondary} style={{ marginLeft: 2 }} />
-              </TouchableOpacity>
-            )}
+                <View style={[styles.navbar, { justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16, height: 'auto' }]}>
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+            onPress={() => setIsBoutiqueModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#F5F3FF', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+              <Store size={22} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <Text style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'Inter-Bold', letterSpacing: 0.5, marginBottom: 2 }}>
+                SHOPPING AT
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 17, fontFamily: 'Inter-Bold', color: '#0F172A', marginRight: 6, flexShrink: 1 }} numberOfLines={1}>
+                  {selectedBoutique ? selectedBoutique.name : 'Select Boutique'}
+                </Text>
+                <ChevronDown size={16} color="#64748B" />
+              </View>
+            </View>
+          </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cartIconBtn} onPress={() => setIsCartVisible(true)}>
-              <ShoppingBag size={22} color={Colors.textPrimary} />
-              {cart.length > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>{cart.reduce((a, c) => a + (c.quantity || 1), 0)}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.cartIconBtn} onPress={() => setIsCartVisible(true)}>
+            <ShoppingBag size={24} color={Colors.textPrimary} />
+            {cart.length > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cart.reduce((a, c) => a + (c.quantity || 1), 0)}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
