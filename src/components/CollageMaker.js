@@ -111,7 +111,6 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
     setActiveSlot(null);
   };
 
-  // Global Crop Action
   const handleGlobalCrop = () => {
     let slotToCrop = activeSlot;
     if (slotToCrop == null || !images[slotToCrop]) {
@@ -122,8 +121,12 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
       showToast("Please select or add a photo to crop first", "error");
       return;
     }
-    const sourcePath = originalImages[slotToCrop] || images[slotToCrop];
-    ImageCropPicker.openCropper({ path: sourcePath, freeStyleCropEnabled: true })
+    let sourcePath = originalImages[slotToCrop] || images[slotToCrop];
+    // Ensure file:// prefix on Android for ImageCropPicker compatibility
+    if (Platform.OS === 'android' && sourcePath && !sourcePath.startsWith('file://') && !sourcePath.startsWith('http')) {
+      sourcePath = 'file://' + sourcePath;
+    }
+    ImageCropPicker.openCropper({ path: sourcePath, freeStyleCropEnabled: true, cropperToolbarTitle: 'Crop Photo' })
       .then(img => {
         setImages(prev => ({ ...prev, [slotToCrop]: img.path }));
         setActiveSlot(slotToCrop);

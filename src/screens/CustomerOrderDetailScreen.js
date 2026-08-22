@@ -76,6 +76,28 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const [editingPhoto, setEditingPhoto] = useState(null); // { file_url, outfitId }
   const [editDrawerVisible, setEditDrawerVisible] = useState(false);
   const [customerAddedRefPhotos, setCustomerAddedRefPhotos] = useState([]);
+  const [galleryFolders, setGalleryFolders] = useState([]);
+
+  // Fetch Sewvee gallery folders so customer can pick from their saved photos
+  useEffect(() => {
+    const fetchGallery = async () => {
+      try {
+        const token = user?.token || user?.data?.token || user?.accessToken || user?.data?.accessToken || user?.access_token || user?.data?.access_token || '';
+        const formattedToken = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+        const { API_DOMAIN } = require('../config/env');
+        const res = await fetch(`${API_DOMAIN}/mobile/customer-portal/gallery`, {
+          headers: { Authorization: formattedToken },
+        });
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setGalleryFolders(json.data);
+        }
+      } catch (e) {
+        console.log('Gallery fetch error:', e);
+      }
+    };
+    fetchGallery();
+  }, []);
 
   // Find target order
   const order = React.useMemo(() => {
@@ -166,7 +188,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         key_name: 'order_photos',
       })).unwrap();
 
-      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
+      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.full_url || uploadResult?.data?.full_url || uploadResult?.url || uploadResult?.data?.url || '';
 
       if (!fileUrl) {
         throw new Error('No image URL returned from upload server');
@@ -256,7 +278,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         name: `cropped_${Date.now()}.jpg`,
         key_name: 'order_photos',
       })).unwrap();
-      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
+      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.full_url || uploadResult?.data?.full_url || uploadResult?.url || uploadResult?.data?.url || '';
       if (!fileUrl) throw new Error('Upload failed');
       
       if (editingPhoto.isPending) {
@@ -295,7 +317,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           name: asset.fileName || `ref_${Date.now()}.jpg`,
           key_name: 'order_photos',
         })).unwrap();
-        const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
+        const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.full_url || uploadResult?.data?.full_url || uploadResult?.url || uploadResult?.data?.url || '';
         if (!fileUrl) throw new Error('Upload failed');
         
         if (editingPhoto.isPending) {
@@ -652,7 +674,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         visible={showCollageMaker}
         onClose={() => { setShowCollageMaker(false); setEditingPhoto(null); }}
         onSaveReference={handleSaveCollage}
-        galleryFolders={[]}
+        galleryFolders={galleryFolders}
         initialImage={editingPhoto ? editingPhoto.file_url : null}
       />
 

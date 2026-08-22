@@ -27,14 +27,14 @@ const CustomerProfileScreen = () => {
 
   const initials = (user?.name || 'C').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  const stitchingOrders = (orders || []).filter(o => o.order_type !== 'SALE_ORDER');
+  const allOrders = orders || [];
 
-  const stitchingCompleted = stitchingOrders.filter(o => {
+  const totalCompleted = allOrders.filter(o => {
     const s = (o.statusName || o.status || '').toLowerCase();
     return s === 'delivered' || s === 'completed';
   }).length;
 
-  const stitchingPending = stitchingOrders.filter(o => {
+  const totalActive = allOrders.filter(o => {
     const s = (o.statusName || o.status || '').toLowerCase();
     return s !== 'delivered' && s !== 'completed' && s !== 'cancelled';
   }).length;
@@ -58,21 +58,21 @@ const CustomerProfileScreen = () => {
           {/* Divider */}
           <View style={styles.cardDivider} />
 
-          {/* Stitching Stats */}
-          <Text style={styles.statsLabel}>Custom Stitching</Text>
+          {/* All Orders Stats */}
+          <Text style={styles.statsLabel}>My Orders</Text>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stitchingOrders.length}</Text>
+              <Text style={styles.statValue}>{allOrders.length}</Text>
               <Text style={styles.statSublabel}>Total</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#F59E0B' }]}>{stitchingPending}</Text>
+              <Text style={[styles.statValue, { color: '#F59E0B' }]}>{totalActive}</Text>
               <Text style={styles.statSublabel}>Active</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#10B981' }]}>{stitchingCompleted}</Text>
+              <Text style={[styles.statValue, { color: '#10B981' }]}>{totalCompleted}</Text>
               <Text style={styles.statSublabel}>Done</Text>
             </View>
           </View>

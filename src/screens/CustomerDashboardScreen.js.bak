@@ -453,6 +453,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
   statsRow: {
     flexDirection: 'row',
     backgroundColor: Colors.white,

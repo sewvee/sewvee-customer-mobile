@@ -97,7 +97,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
           key_name: 'order_photos',
         })).unwrap();
 
-        const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
+        const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.full_url || uploadResult?.data?.full_url || uploadResult?.url || uploadResult?.data?.url || '';
         if (fileUrl) {
           await handleSend(fileUrl);
         } else {
