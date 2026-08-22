@@ -175,51 +175,64 @@ const CustomerDashboardScreen = ({ navigation }) => {
         activeOpacity={0.7}
         onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: item.id })}
       >
-        {/* Row 1: Boutique pill (left), Date (right) */}
+        {/* Row 1: Boutique name (left), Date (right) */}
         <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
           {item.boutiqueName ? (
-            <View style={styles.boutiquePill}>
-              <Text style={styles.boutiquePillText} numberOfLines={1}>{item.boutiqueName}</Text>
-            </View>
+            <Text style={{fontSize: 15, fontFamily: 'Inter-Bold', color: '#1E293B', flex: 1}} numberOfLines={1}>
+              {item.boutiqueName}
+            </Text>
           ) : <View style={{ flex: 1 }} />}
           <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#F1F5F9'}}>
-            <Clock size={12} color="#94A3B8" style={{ marginRight: 4 }} />
+            <Clock size={12} color="#64748B" style={{ marginRight: 4 }} />
             <Text style={{fontSize: 11, fontFamily: 'Inter-Medium', color: '#475569'}}>
               {deliveryDate ? formatDate(deliveryDate) : formatDate(item.date)}
             </Text>
           </View>
         </View>
 
-        {/* Row 2: Order No + Type Badge + Chevron */}
-        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <Text style={{fontSize: 15, color: '#1E293B', fontFamily: 'Inter-Bold', marginRight: 8}}>{orderLabel}</Text>
-            <View style={{backgroundColor: isSale ? '#EEF2FF' : '#FFEDD5', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4}}>
-              <Text style={{fontSize: 9, fontFamily: 'Inter-Bold', color: isSale ? '#4338CA' : '#EA580C', textTransform: 'uppercase', letterSpacing: 0.5}}>{typeLabel}</Text>
-            </View>
-          </View>
-          <ChevronRight size={18} color="#94A3B8" />
-        </View>
+        {/* Horizontal Divider */}
+        <View style={{height: 1, backgroundColor: '#E2E8F0', marginBottom: 12}} />
 
-        {/* Row 3: Paid and Due Balance */}
-        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: hasPendingPhotoRequest ? 12 : 4}}>
-          <View>
-            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 2}>Paid</Text>
-            <Text style={{fontSize: 13, color: '#10B981', fontFamily: 'Inter-Bold'}}>
-              ₹{Number(item.advance || item.paid || 0)}
+        {/* Row 2: 4 columns with vertical dividers */}
+        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+          {/* Col 1: Order No */}
+          <View style={{flex: 1, alignItems: 'flex-start'}}>
+            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 4}}>Order No</Text>
+            <Text style={{fontSize: 13, color: '#1E293B', fontFamily: 'Inter-Bold'}}>{orderLabel}</Text>
+          </View>
+          
+          <View style={{width: 1, height: '100%', backgroundColor: '#E2E8F0', marginHorizontal: 6}} />
+          
+          {/* Col 2: Type */}
+          <View style={{flex: 1, alignItems: 'center'}}>
+            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 4}}>Type</Text>
+            <Text style={{fontSize: 11, color: isSale ? '#4338CA' : '#D97706', fontFamily: 'Inter-Bold'}}>{typeLabel}</Text>
+          </View>
+
+          <View style={{width: 1, height: '100%', backgroundColor: '#E2E8F0', marginHorizontal: 6}} />
+
+          {/* Col 3: Total Amount */}
+          <View style={{flex: 1, alignItems: 'center'}}>
+            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 4}}>Total Amount</Text>
+            <Text style={{fontSize: 13, color: '#1E293B', fontFamily: 'Inter-Bold'}}>
+              ₹{item.totalAmount || item.total || (Number(item.advance || item.paid || 0) + Number(item.balance || 0))}
             </Text>
           </View>
-          <View style={{alignItems: 'flex-end'}}>
-            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 2}>Due Balance</Text>
+
+          <View style={{width: 1, height: '100%', backgroundColor: '#E2E8F0', marginHorizontal: 6}} />
+
+          {/* Col 4: Due */}
+          <View style={{flex: 1, alignItems: 'flex-end'}}>
+            <Text style={{fontSize: 10, color: '#64748B', fontFamily: 'Inter-Medium', marginBottom: 4}}>Due</Text>
             <Text style={{fontSize: 13, color: '#EF4444', fontFamily: 'Inter-Bold'}}>₹{item.balance || 0}</Text>
           </View>
         </View>
 
-        {/* Reference Photo Needed Alert */}
+        {/* PHOTO NEEDED Alert (Full Width below) */}
         {hasPendingPhotoRequest && (
-          <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF7ED', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#FFEDD5'}}>
-            <AlertCircle size={14} color="#EA580C" style={{marginRight: 8}} />
-            <Text style={{color: '#EA580C', fontSize: 12, fontFamily: 'Inter-SemiBold'}}>Reference design photo needed</Text>
+          <View style={[styles.photoRequestAlert, { marginTop: 14, alignSelf: 'stretch', justifyContent: 'center', marginLeft: 0 }]}>
+            <Camera size={14} color="#FFFFFF" style={{marginRight: 6}} />
+            <Text style={[styles.photoRequestText, {fontSize: 12}]}>PHOTO NEEDED</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -228,42 +241,30 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Welcome Header */}
+      {/* Welcome Banner */}
       <View style={styles.header}>
         <View>
           <Text style={styles.greetingText}>Hello, {user?.name || 'Customer'}!</Text>
           <Text style={styles.subGreetingText}>Check your custom stitching orders</Text>
         </View>
         <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('CustomerProfile')}>
-          <User size={20} color={Colors.primary} />
+          <View style={styles.avatarInner}>
+            <User size={20} color={Colors.primary} />
+          </View>
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+        }
       >
-        {/* Banner */}
-        <TouchableOpacity 
-          style={styles.readymadesBanner}
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate('CustomerShop')}
-        >
-          <Text style={styles.bannerTitle}>New! Shop Readymades</Text>
-          <Text style={styles.bannerSubtitle}>Explore the latest collections from your boutique and order online.</Text>
-          <View style={styles.shopNowBtn}>
-            <ShoppingBag size={14} color="#6366F1" style={{ marginRight: 6 }} />
-            <Text style={styles.shopNowBtnText}>Shop Now</Text>
-          </View>
-        </TouchableOpacity>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Active Orders</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('CustomerRequestedOrders')}>
-            <Text style={styles.viewAllText}>View All</Text>
-          </TouchableOpacity>
-        </View>
+        {/* ORDERS SECTION */}
+        <Text style={styles.sectionTitle}>Your Active Orders</Text>
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -290,6 +291,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
           </View>
         )}
       </ScrollView>
+      </View>
 
       {/* WELCOME INTRODUCTION CAROUSEL */}
       <Modal visible={showIntro} transparent animationType="fade">
@@ -360,62 +362,7 @@ export default CustomerDashboardScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F3FF', // Match web PWA pale purple bg
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  readymadesBanner: {
-    backgroundColor: '#6366F1',
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 16,
-    marginBottom: 24,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  bannerTitle: {
-    fontSize: 20,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  bannerSubtitle: {
-    fontSize: 14,
-    color: '#E0E7FF',
-    fontFamily: 'Inter-Medium',
-    lineHeight: 20,
-    marginBottom: 16,
-    paddingRight: 40,
-  },
-  shopNowBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  shopNowBtnText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Bold',
-    color: '#6366F1',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Bold',
-    color: '#6366F1',
+    backgroundColor: '#F5F3FF',
   },
   header: {
     flexDirection: 'row',
@@ -452,6 +399,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
   },
   statsRow: {
     flexDirection: 'row',
