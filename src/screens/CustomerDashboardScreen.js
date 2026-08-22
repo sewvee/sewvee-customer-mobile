@@ -161,7 +161,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
     const outfits = item.outfits || item.items || [];
     const hasPendingPhotoRequest = !isSale && outfits.some(
       (outfit) => 
-        (outfit.requestedPhotosFromClient === true || outfit.requestedPhotosFromClient === 'true' || outfit.requestedPhotosFromClient === 1) && 
+        (outfit.requestedPhotosFromClient === true || outfit.requestedPhotosFromClient === 'true' || outfit.requestedPhotosFromClient === 1 || String(outfit.requestedPhotosFromClient) === '1') && 
         (!outfit.photos || outfit.photos.filter(p => p.category === 'REFERENCE').length === 0)
     );
 
