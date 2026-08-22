@@ -161,7 +161,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
     const outfits = item.outfits || item.items || [];
     const hasPendingPhotoRequest = !isSale && outfits.some(
       (outfit) => 
-        (outfit.requestedPhotosFromClient === true || outfit.requestedPhotosFromClient === 'true' || outfit.requestedPhotosFromClient === 1 || String(outfit.requestedPhotosFromClient) === '1') && 
+        ((outfit.requestedPhotosFromClient && outfit.requestedPhotosFromClient !== '0' && outfit.requestedPhotosFromClient !== 'false' && outfit.requestedPhotosFromClient !== 0) || (outfit.requested_photos_from_client && outfit.requested_photos_from_client !== '0' && outfit.requested_photos_from_client !== 'false' && outfit.requested_photos_from_client !== 0)) && 
         (!outfit.photos || outfit.photos.filter(p => p.category === 'REFERENCE').length === 0)
     );
 
@@ -262,6 +262,31 @@ const CustomerDashboardScreen = ({ navigation }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
         }
       >
+
+        
+        {/* ACTIVE REQUESTS ALERT */}
+        {pendingRequests.map((req, idx) => (
+          <TouchableOpacity
+            key={`${req.orderId}-${req.outfitId}-${idx}`}
+            style={styles.requestAlert}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: req.orderId })}
+          >
+            <View style={styles.requestAlertIconBg}>
+              <Camera size={22} color="#F97316" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.alertTitle}>Photo Request</Text>
+              <Text style={styles.alertSubtitle}>
+                Boutique requested reference photos for your {req.outfitName} in Order #{req.billNo}.
+              </Text>
+            </View>
+            <View style={styles.requestAlertActionBtn}>
+              <Text style={styles.requestAlertActionText}>Upload</Text>
+              <ChevronRight size={14} color="#F97316" strokeWidth={3} />
+            </View>
+          </TouchableOpacity>
+        ))}
 
         {/* ORDERS SECTION */}
         <Text style={styles.sectionTitle}>Your Active Orders</Text>
