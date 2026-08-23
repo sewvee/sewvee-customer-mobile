@@ -31,6 +31,7 @@ export const uploadImageAction = createAsyncThunk(
 
             const response = await axios.post(URL_UPLOAD, formData, {
                 headers: {
+                    'Content-Type': 'multipart/form-data',
                     'accept': '*/*',
                     'Authorization': formattedToken,
                 },
