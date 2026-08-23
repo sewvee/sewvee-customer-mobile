@@ -30,7 +30,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
     try {
       if (!order?.id) return;
       const API_BASE = API_DOMAIN;
-      fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/requests/read`, { method: 'POST', headers: { 'Authorization': getToken() } }).catch(e => console.log(e));
+      
       const res = await fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/requests`, {
         headers: { 'Authorization': getToken() },
       });
@@ -131,17 +131,21 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
             key={outfit.id}
             style={[styles.outfitCard, { 
               backgroundColor: '#fff', 
-              borderWidth: 0, 
-              borderLeftWidth: 4, 
-              borderLeftColor: Colors.primary,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              borderRadius: 12,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 5,
               shadowOffset: { width: 0, height: 2 },
               elevation: 2,
-              paddingVertical: 16
+              paddingVertical: 16,
+              paddingHorizontal: 16
             }]}
-            onPress={() => setActiveOutfit(outfit)}
+            onPress={() => {
+              setActiveOutfit(outfit);
+              fetch(`${API_DOMAIN}/mobile/customer-portal/orders/${order.id}/outfits/${outfit.id}/requests/read`, { method: 'POST', headers: { 'Authorization': getToken() } }).then(() => fetchRequests()).catch(e => console.log(e));
+            }}
           >
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#1E293B' }}>
@@ -151,9 +155,18 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
                 {outfit.orderType || 'Stitching'} • {outfit.urgency || 'NORMAL'}
               </Text>
             </View>
-            <View style={{ backgroundColor: '#EEF2FF', padding: 8, borderRadius: 12 }}>
-              <MessageSquare size={18} color={Colors.primary} />
-            </View>
+            {(() => {
+              const unreadCount = requests.filter(r => Number(r.order_outfit_id) === Number(outfit.id) && r.sender_type === 'BOUTIQUE' && !r.is_read_by_customer).length;
+              return unreadCount > 0 ? (
+                <View style={{ backgroundColor: '#25D366', width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#fff', fontSize: 12, fontFamily: 'Inter-Bold' }}>{unreadCount}</Text>
+                </View>
+              ) : (
+                <View style={{ backgroundColor: '#F1F5F9', padding: 8, borderRadius: 12 }}>
+                  <MessageSquare size={18} color={'#94A3B8'} />
+                </View>
+              );
+            })()}
           </TouchableOpacity>
         ))}
       </View>
