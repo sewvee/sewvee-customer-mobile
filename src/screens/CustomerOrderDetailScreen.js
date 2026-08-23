@@ -67,6 +67,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [uploadingOutfitId, setUploadingOutfitId] = useState(null);
+  const [submittingOutfitId, setSubmittingOutfitId] = useState(null);
   const [showCollageMaker, setShowCollageMaker] = useState(false);
   const [pendingPhotos, setPendingPhotos] = useState({});
   const [collageOutfitId, setCollageOutfitId] = useState(null);
@@ -229,6 +230,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       showToast(err?.message || 'Failed to upload photo', 'error');
     } finally {
       setUploadingOutfitId(null);
+      setSubmittingOutfitId(null);
       setLoading(false);
     }
   };
@@ -252,7 +254,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
     const urls = pendingPhotos[outfitId] || [];
     if (urls.length === 0) return;
 
-    setUploadingOutfitId(outfitId);
+    setSubmittingOutfitId(outfitId);
     setLoading(true);
     try {
       // NOTE: Using a local fallback URL if the staging backend isn't updated yet!
@@ -290,6 +292,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       showToast(err?.message || 'Failed to notify backend', 'error');
     } finally {
       setUploadingOutfitId(null);
+      setSubmittingOutfitId(null);
       setLoading(false);
     }
   };
@@ -588,7 +591,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                       <TouchableOpacity 
                         style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F97316', paddingVertical: 12, borderRadius: 8 }}
                         onPress={() => handleUploadReferencePhoto(outfit.id)}
-                        disabled={uploadingOutfitId === outfit.id}
+                        disabled={uploadingOutfitId === outfit.id || submittingOutfitId === outfit.id}
                       >
                         {uploadingOutfitId === outfit.id ? (
                           <ActivityIndicator size="small" color="#FFF" />
@@ -606,9 +609,13 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                         <TouchableOpacity 
                           style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#10B981', paddingVertical: 12, borderRadius: 8 }}
                           onPress={() => handleConfirmPhotosClick(outfit.id)}
-                          disabled={uploadingOutfitId === outfit.id}
+                          disabled={uploadingOutfitId === outfit.id || submittingOutfitId === outfit.id}
                         >
-                          <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 14 }}>Confirm Photos</Text>
+                          {submittingOutfitId === outfit.id ? (
+                            <ActivityIndicator size="small" color="#FFF" />
+                          ) : (
+                            <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 14 }}>Confirm Photos</Text>
+                          )}
                         </TouchableOpacity>
                       )}
                     </View>
