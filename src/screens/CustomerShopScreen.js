@@ -240,7 +240,7 @@ const CustomerShopScreen = () => {
     
     try {
       if (user && (user.id || user.mobile)) {
-        const token = await AsyncStorage.getItem('sewvee_token');
+        const token = await AsyncStorage.getItem('userToken');
         await axios.post(URL_ORDERS, {
           customer_id: user.customer_id || user.id,
           customer_mobile: user.mobile,

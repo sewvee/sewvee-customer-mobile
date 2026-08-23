@@ -368,10 +368,13 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
             <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Order Details</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
+            style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
             onPress={() => setActiveTab('requests')}
           >
             <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'requests' ? Colors.primary : '#64748B' }}>Change Requests</Text>
+            {order?.has_unread_messages ? (
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', marginLeft: 6 }} />
+            ) : null}
           </TouchableOpacity>
         </View>
       )}

@@ -48,7 +48,7 @@ const CustomerRequestedOrdersScreen = () => {
     setCancelModalVisible(false);
     setCancelling(orderToCancel.id);
     try {
-      const token = await AsyncStorage.getItem('sewvee_token');
+      const token = await AsyncStorage.getItem('userToken');
       await axios.patch(`${URL_ORDERS}/${orderToCancel.id}/status`, { status_id: 4 }, {
         headers: { Authorization: token, 'Content-Type': 'application/json' }
       });
