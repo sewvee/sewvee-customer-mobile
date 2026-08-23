@@ -201,9 +201,16 @@ const CustomerDashboardScreen = ({ navigation }) => {
         {/* Row 1: Boutique name (left), Date (right) */}
         <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
           {item.boutiqueName ? (
-            <Text style={{fontSize: 15, fontFamily: 'Inter-Bold', color: '#1E293B', flex: 1}} numberOfLines={1}>
-              {item.boutiqueName}
-            </Text>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{fontSize: 15, fontFamily: 'Inter-Bold', color: '#1E293B'}} numberOfLines={1}>
+                {item.boutiqueName}
+              </Text>
+              {item.has_unread_messages ? (
+                <View style={{ marginLeft: 6, backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
+                  <Text style={{ color: '#FFF', fontSize: 9, fontFamily: 'Inter-Bold' }}>New Message</Text>
+                </View>
+              ) : null}
+            </View>
           ) : <View style={{ flex: 1 }} />}
           <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#F1F5F9'}}>
             <Clock size={12} color="#64748B" style={{ marginRight: 4 }} />

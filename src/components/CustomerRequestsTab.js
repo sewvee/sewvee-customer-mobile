@@ -30,6 +30,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
     try {
       if (!order?.id) return;
       const API_BASE = API_DOMAIN;
+      fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/requests/read`, { method: 'POST', headers: { 'Authorization': getToken() } }).catch(e => console.log(e));
       const res = await fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/requests`, {
         headers: { 'Authorization': getToken() },
       });
