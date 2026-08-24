@@ -177,7 +177,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   const outfitRequests = requests.filter(r => r.order_outfit_id === activeOutfit.id);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FAFC' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* Header */}
       <View style={styles.chatHeader}>
         <TouchableOpacity onPress={() => setActiveOutfit(null)} style={{ padding: 8, marginRight: 8 }}>
