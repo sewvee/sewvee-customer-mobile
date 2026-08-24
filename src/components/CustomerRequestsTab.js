@@ -14,6 +14,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [fullScreenImage, setFullScreenImage] = useState(null);
   
   const dispatch = useDispatch();
   const { showToast } = useToast();
@@ -270,6 +271,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
         <TextInput
           style={styles.input}
           placeholder="Type a message..."
+          placeholderTextColor="#94A3B8"
           value={message}
           onChangeText={setMessage}
           multiline
@@ -282,7 +284,16 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
           {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={18} color="#FFF" />}
         </TouchableOpacity>
       </View>
-    </View>
+    
+      <Modal visible={!!fullScreenImage} transparent animationType="fade" onRequestClose={() => setFullScreenImage(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity style={{ position: 'absolute', top: 40, right: 20, zIndex: 10, padding: 10 }} onPress={() => setFullScreenImage(null)}>
+            <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>Close</Text>
+          </TouchableOpacity>
+          {fullScreenImage && <Image source={{ uri: fullScreenImage }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
+        </View>
+      </Modal>
+</KeyboardAvoidingView>
   );
 }
 
