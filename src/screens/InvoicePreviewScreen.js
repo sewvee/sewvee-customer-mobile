@@ -679,7 +679,7 @@ export default function InvoicePreviewScreen({
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 120 },
+          { paddingBottom: Math.max(insets.bottom, 36) + 120 },
         ]}
         showsVerticalScrollIndicator={false}
       >

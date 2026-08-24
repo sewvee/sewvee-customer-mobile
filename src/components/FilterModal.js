@@ -245,7 +245,7 @@ const FilterModal = ({
       {/* ── Main Filter Modal ── */}
       <Modal visible={showFilter} transparent animationType="slide">
         <View style={styles.backdrop}>
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 36) + 16 }]}>
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>Filter & Sort</Text>

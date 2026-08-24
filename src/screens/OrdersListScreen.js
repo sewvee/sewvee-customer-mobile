@@ -1527,7 +1527,7 @@ const OrdersListScreen = ({ navigation }) => {
                             />
                         </View>
 
-                        <View style={{ height: insets.bottom + 20 }} />
+                        <View style={{ height: Math.max(insets.bottom, 36) + 20 }} />
                     </View>
                 </Pressable>
             </Modal>

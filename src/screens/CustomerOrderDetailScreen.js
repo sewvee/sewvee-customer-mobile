@@ -44,6 +44,7 @@ import {
   Edit2,
   ImagePlus,
   Type,
+  X,
 } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import ImageCropPicker from 'react-native-image-crop-picker';
@@ -415,7 +416,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       )}
 
       {activeTab === 'requests' ? (
-        <CustomerRequestsTab order={order} />
+        <CustomerRequestsTab order={order} onUpdateStatus={refreshData} />
       ) : (
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

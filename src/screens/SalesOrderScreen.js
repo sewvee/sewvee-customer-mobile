@@ -1282,7 +1282,7 @@ const SalesOrderScreenInternal = ({ navigation }) => {
                     style={[
                         styles.stickyFooter,
                         {
-                            paddingBottom: insets.bottom + 16,
+                            paddingBottom: Math.max(insets.bottom, 36) + 16,
                         },
                     ]}
                 >

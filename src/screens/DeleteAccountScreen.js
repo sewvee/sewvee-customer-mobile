@@ -64,7 +64,7 @@ const DeleteAccountScreen = ({ navigation }) => {
 
             {/* BOTTOM BUTTONS */}
 
-            <View style={[styles.bottomContainer, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={[styles.bottomContainer, { paddingBottom: Math.max(insets.bottom, 36) + 20 }]}>
 
                 <TouchableOpacity
                     style={styles.deleteBtn}

@@ -500,7 +500,7 @@ const SelectionBottomSheet = ({
                 ) : null}
                 <TouchableOpacity
                     activeOpacity={1}
-                    style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}
+                    style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 36) + 16 }]}
                     onPress={() => {}}
                 >
                     {/* Handle */}

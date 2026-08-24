@@ -784,7 +784,7 @@ const AddMaterialItemModal = ({
                     </ScrollView>
 
                     {/* Footer Actions */}
-                    <View style={[styles.footer, { paddingBottom: insets.bottom + 15 }]}>
+                    <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 36) + 15 }]}>
                         <TouchableOpacity style={styles.closeActionBtn} onPress={onClose}>
                             <Text style={styles.closeActionText}>Close</Text>
                         </TouchableOpacity>

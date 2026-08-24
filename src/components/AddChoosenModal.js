@@ -1327,7 +1327,7 @@ return (
                                         )}
 
                                     </ScrollView>
-                                    <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
+                                    <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 36) + 10 }]}>
                                         <TouchableOpacity style={styles.materialCancelBtn} onPress={handleChooserClose}>
                                             <Text style={styles.materialCancelBtnText}>Cancel</Text>
                                         </TouchableOpacity>
@@ -1463,7 +1463,7 @@ return (
                                     </ScrollView>
 
                                     {/* Footer Buttons */}
-                                    <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+                                    <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 36) + 16 }]}>
                                         <TouchableOpacity
                                             style={styles.readymadeCancelBtn}
                                             onPress={handleChooserClose}

@@ -1723,7 +1723,7 @@ const DashboardScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={{ height: insets.bottom + 30 }} />
+                        <View style={{ height: Math.max(insets.bottom, 36) + 30 }} />
                     </View>
                 </TouchableOpacity>
             </Modal>
