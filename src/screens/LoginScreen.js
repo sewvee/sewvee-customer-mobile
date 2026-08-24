@@ -39,6 +39,10 @@ const LoginScreen = ({ navigation }) => {
   const [storedPin, setStoredPin] = useState(null);
   const [pinError, setPinError] = useState('');
   
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -78,6 +82,28 @@ const LoginScreen = ({ navigation }) => {
     }
     setLoading(false);
   };
+
+  
+  const handleEmailSubmit = async () => {
+    Keyboard.dismiss();
+    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    
+    setLoading(true);
+    // TODO: Call your backend API here to send the OTP to the email
+    // await api.post('/send-email-otp', { email, phone });
+    
+    setTimeout(() => {
+      setLoading(false);
+      showToast('Verification code sent to your email!', 'success');
+      setStep('EMAIL_OTP');
+      fadeAnim.setValue(0);
+    }, 1500);
+  };
+
 
   const handleLoginSuccess = async () => {
     setLoading(true);
@@ -138,6 +164,25 @@ const LoginScreen = ({ navigation }) => {
           showToast('PINs do not match', 'error');
         }
       }
+    } else if (currentStep === 'EMAIL_OTP') {
+      setEmailOtp(cleaned);
+      setPinError('');
+      if (cleaned.length === 4) {
+        // TODO: Call your backend API here to verify the OTP
+        // const isValid = await api.post('/verify-email-otp', { email, otp: cleaned });
+        
+        // Mock verification: accept any 4 digit code for testing
+        if (cleaned.length === 4) {
+          showToast('Email verified! You can now set a new PIN.', 'success');
+          setStep('CREATE_PIN');
+          setPin('');
+          setEmailOtp('');
+          fadeAnim.setValue(0);
+        } else {
+          setPinError('Invalid verification code.');
+          setEmailOtp('');
+        }
+      }
     } else if (currentStep === 'ENTER_PIN') {
       setPin(cleaned);
       setPinError('');
@@ -182,6 +227,8 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.subtitle}>
                 {step === 'PHONE_INPUT' && 'Enter your phone number to access your boutique orders and designs.'}
                 {step === 'CREATE_PIN' && 'Create a 4-digit PIN for quick access.'}
+                {step === 'EMAIL_INPUT' && 'Enter your registered email to reset your PIN.'}
+                {step === 'EMAIL_OTP' && `Enter the 4-digit code sent to ${email}`}
                 {step === 'CONFIRM_PIN' && 'Confirm your 4-digit PIN.'}
                 {step === 'ENTER_PIN' && `Welcome back! Enter your PIN for ${phone}`}
               </Text>
@@ -222,16 +269,55 @@ const LoginScreen = ({ navigation }) => {
               </View>
             )}
 
-            {(step === 'CREATE_PIN' || step === 'CONFIRM_PIN' || step === 'ENTER_PIN') && (
+            
+            {step === 'EMAIL_INPUT' && (
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Email Address</Text>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="mail-outline" size={20} color="#94A3B8" />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your email"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      value={email}
+                      onChangeText={(val) => {
+                        setEmail(val);
+                        setEmailError('');
+                      }}
+                    />
+                  </View>
+                  {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+                </View>
+
+                <TouchableOpacity style={[styles.loginBtn, loading && styles.loginBtnDisabled]} onPress={handleEmailSubmit} disabled={loading}>
+                  {loading ? <ActivityIndicator color="#fff" /> : (
+                    <>
+                      <Text style={styles.loginBtnText}>Send Code</Text>
+                      <Ionicons name="arrow-forward" size={20} color="#fff" />
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.linkBtn} onPress={() => { setStep('ENTER_PIN'); }}>
+                  <Text style={styles.linkText}>Back to PIN</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+
+            {(step === 'CREATE_PIN' || step === 'CONFIRM_PIN' || step === 'ENTER_PIN' || step === 'EMAIL_OTP') && (
               <View style={styles.form}>
                 <View style={styles.pinWrapper}>
-                  {renderPinDots(step === 'CONFIRM_PIN' ? confirmPin : pin)}
+                  {renderPinDots(step === 'CONFIRM_PIN' ? confirmPin : step === 'EMAIL_OTP' ? emailOtp : pin)}
                   <TextInput
                     style={styles.hiddenPinInput}
                     keyboardType="number-pad"
                     maxLength={4}
                     autoFocus={true}
-                    value={step === 'CONFIRM_PIN' ? confirmPin : pin}
+                    value={step === 'CONFIRM_PIN' ? confirmPin : step === 'EMAIL_OTP' ? emailOtp : pin}
                     onChangeText={(val) => handlePinChange(val, step)}
                   />
                 </View>
@@ -247,7 +333,7 @@ const LoginScreen = ({ navigation }) => {
                 {step === 'ENTER_PIN' && (
                   <TouchableOpacity style={styles.linkBtn} onPress={() => {
                     // Reset PIN flow via OTP could go here. For now just reset it.
-                    showToast('PIN reset flow would trigger here. We will integrate Google Email reset soon!', 'info');
+                    setStep('EMAIL_INPUT'); fadeAnim.setValue(0);
                   }}>
                     <Text style={styles.linkText}>Forgot PIN?</Text>
                   </TouchableOpacity>
