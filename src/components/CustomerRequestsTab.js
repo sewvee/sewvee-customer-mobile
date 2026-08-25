@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
-import { Camera, Send, MessageCircle, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Alert, Modal } from 'react-native';
+import { Camera, Send, MessageCircle, MessageSquare, ChevronLeft, ChevronRight, Trash2, MoreVertical, Edit2, X } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,6 +15,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   
   const dispatch = useDispatch();
   const { showToast } = useToast();
@@ -25,6 +26,24 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   const getToken = () => {
     const token = authUser?.token || authUser?.data?.token || authUser?.accessToken || authUser?.data?.accessToken || authUser?.access_token || authUser?.data?.access_token || '';
     return token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+  };
+
+    const handleDelete = async (reqId) => {
+    try {
+      const res = await fetch(`${API_DOMAIN}/api/customer-portal/orders/${order.id}/requests/${reqId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': getToken() },
+      });
+      if (res.ok) {
+        setRequests(prev => prev.filter(r => r.id !== reqId));
+        showToast('Message deleted', 'success');
+      } else {
+        showToast('Failed to delete message', 'error');
+      }
+    } catch (err) {
+      console.log(err);
+      showToast('Network error', 'error');
+    }
   };
 
   const fetchRequests = async () => {
@@ -46,7 +65,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
 
   useEffect(() => {
     fetchRequests();
-    const interval = setInterval(fetchRequests, 10000);
+    const interval = setInterval(fetchRequests, 2000);
     return () => clearInterval(interval);
   }, [order?.id]);
 
@@ -215,14 +234,42 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
               <View key={req.id} style={[styles.messageRow, isCustomer ? styles.msgRight : styles.msgLeft]}>
                 <View style={[styles.bubble, isCustomer ? styles.bubbleCustomer : styles.bubbleBoutique]}>
                   {req.attachment_url ? (
-                    <Image source={{ uri: req.attachment_url }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: req.message ? 8 : 0 }} />
+                    <View>
+                      <TouchableOpacity onPress={() => setFullScreenImage(req.attachment_url)}>
+                        <Image source={{ uri: req.attachment_url }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: req.message ? 8 : 0 }} />
+                      </TouchableOpacity>
+                      
+                    </View>
                   ) : null}
                   {req.message ? (
                     <Text style={{ fontSize: 14, color: isCustomer ? '#FFF' : '#1E293B' }}>{req.message}</Text>
                   ) : null}
-                  <Text style={{ fontSize: 10, color: isCustomer ? 'rgba(255,255,255,0.7)' : '#94A3B8', marginTop: 4, alignSelf: 'flex-end' }}>
-                    {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 }}>
+                    {isCustomer && (
+                      <TouchableOpacity 
+                        style={{ marginRight: 6 }}
+                        onPress={() => {
+                          const options = [];
+                          if (!req.attachment_url) {
+                            options.push({ text: 'Edit', onPress: () => { setEditingId(req.id); setMessage(req.message || ''); } });
+                          }
+                          options.push({ text: 'Delete', onPress: () => handleDelete(req.id), style: 'destructive' });
+                          options.push({ text: 'Cancel', style: 'cancel' });
+                          Alert.alert('Message Options', '', options);
+                        }}
+                      >
+                        <MoreVertical size={14} color={isCustomer ? "rgba(255,255,255,0.8)" : "#94A3B8"} />
+                      </TouchableOpacity>
+                    )}
+                    {(req.is_edited || req.isEdited) && (
+                      <Text style={{ fontSize: 9, fontStyle: 'italic', color: isCustomer ? 'rgba(255,255,255,0.6)' : '#94A3B8', marginRight: 4 }}>
+                        (edited)
+                      </Text>
+                    )}
+                    <Text style={{ fontSize: 10, color: isCustomer ? 'rgba(255,255,255,0.7)' : '#94A3B8' }}>
+                      {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
                 </View>
               </View>
             );
