@@ -25,6 +25,9 @@ import SplashScreen from '../screens/SplashScreen';
 
 import SignupScreen from '../screens/SignupScreen';
 import RegisterFlowScreen from '../screens/RegisterFlowScreen';
+import CustomerSignupScreen from '../screens/CustomerSignupScreen';
+import CustomerForgotPinScreen from '../screens/CustomerForgotPinScreen';
+import CustomerResetPinScreen from '../screens/CustomerResetPinScreen';
 import VerifyOtpScreen from '../screens/VerifyOtpScreen';
 import ForgotPinScreen from '../screens/ForgotPinScreen';
 import ResetPinScreen from '../screens/ResetPinScreen';
@@ -69,6 +72,7 @@ import CustomerRequestedOrdersScreen from '../screens/CustomerRequestedOrdersScr
 import CustomerGalleryScreen from '../screens/CustomerGalleryScreen';
 import CustomerShopScreen from '../screens/CustomerShopScreen';
 import CustomerProfileScreen from '../screens/CustomerProfileScreen';
+import CustomerMyProfileScreen from '../screens/CustomerMyProfileScreen';
 
 /* ---------------- STACKS ---------------- */
 
@@ -172,10 +176,12 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Splash" component={SplashScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="Signup" component={RegisterFlowScreen} />
+      <AuthStack.Screen name="Signup" component={CustomerSignupScreen} />
       <AuthStack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
       <AuthStack.Screen name="ForgotPin" component={ForgotPinScreen} />
       <AuthStack.Screen name="ResetPin" component={ResetPinScreen} />
+      <AuthStack.Screen name="CustomerForgotPin" component={CustomerForgotPinScreen} />
+      <AuthStack.Screen name="CustomerResetPin" component={CustomerResetPinScreen} />
       <AuthStack.Screen name="Termsscreen" component={TermsScreen} />
       <AuthStack.Screen name="PrivacyPolicyScreen" component={PrivacyPolicyScreen} />
     </AuthStack.Navigator>
@@ -221,7 +227,7 @@ function MainTabs() {
   const { user, hasPermission } = useAuth();
   const canViewInsights = hasPermission?.('Insights', 'view') ?? true;
   const isTailor = user?.role === 'Tailor';
-  const isCustomer = user?.role === 'Customer';
+  const isCustomer = user?.role === 'Customer' || !user?.role;
 
   if (isCustomer) {
     return <CustomerTabs />;
@@ -413,6 +419,7 @@ export default function RootNavigator() {
 
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="CustomerRequestedOrders" component={CustomerRequestedOrdersScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CustomerMyProfile" component={CustomerMyProfileScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CustomerOrderDetail" component={CustomerOrderDetailScreen} options={{ headerShown: false }} />
           {/* <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} options={{ headerShown: true, title: 'Client Details' }} /> */}
           <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false, }} />

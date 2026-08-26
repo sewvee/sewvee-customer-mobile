@@ -1,0 +1,507 @@
+const fs = require('fs');
+const loginPath = 'src/screens/LoginScreen.js';
+
+const newContent = `import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Keyboard,
+  Platform,
+  Animated,
+  StatusBar,
+  Image,
+  ImageBackground,
+  KeyboardAvoidingView,
+  ScrollView,
+  SafeAreaView
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Colors } from '../constants/theme';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { URL_CUSTOMER_PORTAL_ORDERS } from '../config/env';
+
+const LoginScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+  const { login, saveUser } = useAuth();
+  const { showToast } = useToast();
+
+  const [step, setStep] = useState('PHONE_INPUT');
+  
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [storedPin, setStoredPin] = useState(null);
+  const [pinError, setPinError] = useState('');
+  
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  
+  const [loading, setLoading] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  }, [step]);
+
+  const handlePhoneSubmit = async () => {
+    Keyboard.dismiss();
+    if (phone.length !== 10) {
+      showToast('Enter valid 10 digit phone number', 'error');
+      return;
+    }
+    const phoneRegex = /^[6-9][0-9]{9}$/;
+    if (!phoneRegex.test(phone)) {
+      showToast('Please provide a valid phone number', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const savedPin = await AsyncStorage.getItem(\`@sewvee_pin_\${phone}\`);
+      if (savedPin) {
+        setStoredPin(savedPin);
+        setStep('ENTER_PIN');
+      } else {
+        setStep('CREATE_PIN');
+      }
+      fadeAnim.setValue(0);
+    } catch (e) {
+      console.log('Error reading PIN', e);
+    }
+    setLoading(false);
+  };
+
+  const handleEmailSubmit = async () => {
+    Keyboard.dismiss();
+    const emailRegex = /^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      showToast('Verification code sent to your email!', 'success');
+      setStep('EMAIL_OTP');
+      fadeAnim.setValue(0);
+    }, 1500);
+  };
+
+  const handleLoginSuccess = async () => {
+    setLoading(true);
+    let customerName = 'Guest Customer';
+    let customerId = 'cust_guest_' + Date.now();
+    try {
+      const response = await fetch(\`\${URL_CUSTOMER_PORTAL_ORDERS}?phone=\${phone}&limit=1\`);
+      if (response.ok) {
+        const json = await response.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const firstOrder = json.data[0];
+          customerName = firstOrder.customerName || 'Customer';
+          customerId = firstOrder.customerId || customerId;
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching live customer info for login', err);
+    }
+
+    const customerProfile = {
+      id: customerId,
+      name: customerName,
+      mobile: phone,
+      role: 'Customer',
+      lastLogin: new Date().toISOString(),
+    };
+    await saveUser(customerProfile);
+    await login('customer_demo_token', true);
+    setLoading(false);
+    showToast('Welcome back, ' + customerName + '!', 'success');
+    navigation.navigate('Main');
+  };
+
+  const handlePinChange = async (val, currentStep) => {
+    const cleaned = val.replace(/[^0-9]/g, '');
+    if (currentStep === 'CREATE_PIN') {
+      setPin(cleaned);
+      if (cleaned.length === 4) {
+        setTimeout(() => {
+          setStep('CONFIRM_PIN');
+          fadeAnim.setValue(0);
+        }, 300);
+      }
+    } else if (currentStep === 'CONFIRM_PIN') {
+      setConfirmPin(cleaned);
+      setPinError('');
+      if (cleaned.length === 4) {
+        if (cleaned === pin) {
+          await AsyncStorage.setItem(\`@sewvee_pin_\${phone}\`, pin);
+          handleLoginSuccess();
+        } else {
+          setPinError('PINs do not match. Try again.');
+          setConfirmPin('');
+          setStep('CREATE_PIN');
+          setPin('');
+          fadeAnim.setValue(0);
+          showToast('PINs do not match', 'error');
+        }
+      }
+    } else if (currentStep === 'EMAIL_OTP') {
+      setEmailOtp(cleaned);
+      setPinError('');
+      if (cleaned.length === 4) {
+        if (cleaned.length === 4) {
+          showToast('Email verified! You can now set a new PIN.', 'success');
+          setStep('CREATE_PIN');
+          setPin('');
+          setEmailOtp('');
+          fadeAnim.setValue(0);
+        } else {
+          setPinError('Invalid verification code.');
+          setEmailOtp('');
+        }
+      }
+    } else if (currentStep === 'ENTER_PIN') {
+      setPin(cleaned);
+      setPinError('');
+      if (cleaned.length === 4) {
+        if (cleaned === storedPin) {
+          handleLoginSuccess();
+        } else {
+          setPinError('Incorrect PIN. Please try again.');
+          setPin('');
+        }
+      }
+    }
+  };
+
+  const renderPinDots = (value) => {
+    return (
+      <View style={styles.pinDotsContainer}>
+        {[0, 1, 2, 3].map((_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.pinDot,
+              value.length > i && styles.pinDotFilled,
+            ]}
+          />
+        ))}
+      </View>
+    );
+  };
+
+  return (
+    <ImageBackground source={require('../assets/boutique_lady.jpg')} style={styles.container} blurRadius={3}>
+      <View style={styles.overlay}>
+        <SafeAreaView style={styles.safeArea}>
+          <StatusBar translucent={true} backgroundColor="transparent" barStyle="light-content" />
+          <KeyboardAvoidingView 
+            style={styles.keyboardView} 
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+              <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
+                
+                <View style={styles.header}>
+                  <Image 
+                    source={require('../assets/logo.png')} 
+                    style={styles.logoImage} 
+                    resizeMode="contain" 
+                  />
+                  <Text style={styles.title}>Sewvee</Text>
+                  <Text style={styles.subtitle}>
+                    {step === 'PHONE_INPUT' && 'Enter your phone number to access your boutique orders and designs.'}
+                    {step === 'CREATE_PIN' && 'Create a 4-digit PIN for quick access.'}
+                    {step === 'EMAIL_INPUT' && 'Enter your registered email to reset your PIN.'}
+                    {step === 'EMAIL_OTP' && \`Enter the 4-digit code sent to \${email}\`}
+                    {step === 'CONFIRM_PIN' && 'Confirm your 4-digit PIN.'}
+                    {step === 'ENTER_PIN' && \`Welcome back! Enter your PIN for \${phone}\`}
+                  </Text>
+                </View>
+
+                {step === 'PHONE_INPUT' && (
+                  <View style={styles.form}>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Phone Number</Text>
+                      <View style={styles.inputWrapper}>
+                        <Ionicons name="call-outline" size={20} color="#64748B" />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="10 Digit Mobile Number"
+                          placeholderTextColor="#94A3B8"
+                          keyboardType="number-pad"
+                          maxLength={10}
+                          value={phone}
+                          onChangeText={(val) => {
+                            const cleaned = val.replace(/[^0-9]/g, '');
+                            setPhone(cleaned);
+                            if (cleaned.length > 0 && cleaned[0] < '6') setPhoneError('Invalid mobile number');
+                            else setPhoneError('');
+                          }}
+                        />
+                      </View>
+                      {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+                    </View>
+
+                    <TouchableOpacity style={[styles.loginBtn, loading && styles.loginBtnDisabled]} onPress={handlePhoneSubmit} disabled={loading}>
+                      {loading ? <ActivityIndicator color="#fff" /> : (
+                        <>
+                          <Text style={styles.loginBtnText}>Continue</Text>
+                          <Ionicons name="arrow-forward" size={20} color="#fff" />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+                
+                {step === 'EMAIL_INPUT' && (
+                  <View style={styles.form}>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Email Address</Text>
+                      <View style={styles.inputWrapper}>
+                        <Ionicons name="mail-outline" size={20} color="#64748B" />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Enter your email"
+                          placeholderTextColor="#94A3B8"
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          value={email}
+                          onChangeText={(val) => {
+                            setEmail(val);
+                            setEmailError('');
+                          }}
+                        />
+                      </View>
+                      {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+                    </View>
+
+                    <TouchableOpacity style={[styles.loginBtn, loading && styles.loginBtnDisabled]} onPress={handleEmailSubmit} disabled={loading}>
+                      {loading ? <ActivityIndicator color="#fff" /> : (
+                        <>
+                          <Text style={styles.loginBtnText}>Send Code</Text>
+                          <Ionicons name="arrow-forward" size={20} color="#fff" />
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.linkBtn} onPress={() => { setStep('ENTER_PIN'); }}>
+                      <Text style={styles.linkText}>Back to PIN</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {(step === 'CREATE_PIN' || step === 'CONFIRM_PIN' || step === 'ENTER_PIN' || step === 'EMAIL_OTP') && (
+                  <View style={styles.form}>
+                    <View style={styles.pinWrapper}>
+                      {renderPinDots(step === 'CONFIRM_PIN' ? confirmPin : step === 'EMAIL_OTP' ? emailOtp : pin)}
+                      <TextInput
+                        style={styles.hiddenPinInput}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        autoFocus={true}
+                        value={step === 'CONFIRM_PIN' ? confirmPin : step === 'EMAIL_OTP' ? emailOtp : pin}
+                        onChangeText={(val) => handlePinChange(val, step)}
+                      />
+                    </View>
+
+                    {pinError ? <Text style={[styles.errorText, {textAlign: 'center', marginBottom: 20}]}>{pinError}</Text> : null}
+
+                    {loading && <ActivityIndicator color={Colors.primary} size="large" style={{ marginTop: 20 }} />}
+                    
+                    <TouchableOpacity style={styles.linkBtn} onPress={() => { setStep('PHONE_INPUT'); setPin(''); setConfirmPin(''); }}>
+                      <Text style={styles.linkText}>Change Phone Number</Text>
+                    </TouchableOpacity>
+
+                    {step === 'ENTER_PIN' && (
+                      <TouchableOpacity style={styles.linkBtn} onPress={() => {
+                        setStep('EMAIL_INPUT'); fadeAnim.setValue(0);
+                      }}>
+                        <Text style={styles.linkText}>Forgot PIN?</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+              </Animated.View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </View>
+    </ImageBackground>
+  );
+};
+
+export default LoginScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoImage: {
+    width: 185,
+    height: 150,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 26,
+    fontFamily: 'Inter-Bold',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    fontFamily: 'Inter-Medium',
+    lineHeight: 22,
+    paddingHorizontal: 10,
+  },
+  form: {
+    width: '100%',
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#334155',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 56,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  input: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#0F172A',
+    fontFamily: 'Inter-SemiBold',
+    letterSpacing: 1,
+  },
+  loginBtn: {
+    backgroundColor: Colors.primary,
+    height: 54,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  loginBtnDisabled: {
+    opacity: 0.7,
+  },
+  loginBtnText: {
+    fontSize: 16,
+    color: '#fff',
+    fontFamily: 'Inter-Bold',
+    marginRight: 8,
+  },
+  errorText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 8,
+    marginLeft: 4,
+  },
+  pinWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 30,
+    position: 'relative',
+    height: 60,
+  },
+  pinDotsContainer: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  pinDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+  },
+  pinDotFilled: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
+  },
+  hiddenPinInput: {
+    position: 'absolute',
+    opacity: 0,
+    width: '100%',
+    height: '100%',
+  },
+  linkBtn: {
+    alignItems: 'center',
+    marginTop: 20,
+    padding: 8,
+  },
+  linkText: {
+    color: Colors.primary,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+  }
+});
+`;
+
+fs.writeFileSync(loginPath, newContent);

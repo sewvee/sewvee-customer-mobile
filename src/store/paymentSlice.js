@@ -63,6 +63,10 @@ const resolveFileUrl = (value) => {
     }
 
     if (/^(https?:|file:|content:|data:)/i.test(rawValue)) {
+        if (rawValue.includes('localhost:')) {
+            const { API_DOMAIN } = require('../config/env');
+            return rawValue.replace(/http:\/\/localhost:\d+/, API_DOMAIN);
+        }
         return rawValue;
     }
 

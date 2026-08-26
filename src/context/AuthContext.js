@@ -101,6 +101,17 @@ export const AuthProvider = ({ children }) => {
             AsyncStorage.setItem(STORAGE_KEYS.TOKEN, tokenToSave),
             AsyncStorage.setItem(STORAGE_KEYS.ONBOARDED, String(onboarded))
         ]);
+        
+        try {
+            const fcmToken = await AsyncStorage.getItem('fcmToken');
+            if (fcmToken) {
+                console.log('Sending FCM Token to backend on login:', fcmToken);
+                dispatch(saveFcmTokenAction({ fcm_token: fcmToken })).catch(e => console.error('FCM Token dispatch error', e));
+            }
+        } catch (fcmError) {
+            console.error('Error registering FCM token during login:', fcmError);
+        }
+
         setUserToken(tokenToSave);
         setIsOnboarded(onboarded);
     };

@@ -45,6 +45,7 @@ import {
   ImagePlus,
   Type,
   X,
+  Check,
 } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import ImageCropPicker from 'react-native-image-crop-picker';
@@ -57,6 +58,20 @@ import { formatDate } from '../utils/dateUtils';
 import { formatOrderNumber } from '../utils/orderIdFormatter';
 import { URL_CUSTOMER_PORTAL_ORDERS } from '../config/env';
 import CollageMaker from '../components/CollageMaker';
+
+
+const resolveImageUrl = (url) => {
+  if (!url) return url;
+  if (url.includes('localhost:')) {
+    const { API_DOMAIN } = require('../config/env');
+    return url.replace(/http:\/\/localhost:\d+/, API_DOMAIN);
+  }
+  if (!url.startsWith('http')) {
+    const { API_DOMAIN } = require('../config/env');
+    return `${API_DOMAIN}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+  return url;
+};
 
 const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const { orderId } = route.params;
@@ -77,6 +92,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const [isSavingCourier, setIsSavingCourier] = useState(false);
   const [editingPhoto, setEditingPhoto] = useState(null); // { file_url, outfitId }
   const [editDrawerVisible, setEditDrawerVisible] = useState(false);
+  const [activeOutfitIndex, setActiveOutfitIndex] = useState(0);
 
   const [confirmDrawerVisible, setConfirmDrawerVisible] = useState(false);
   const [confirmOutfitId, setConfirmOutfitId] = useState(null);
@@ -395,28 +411,171 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       </View>
 
       {/* TABS */}
-      {order.order_type !== 'SALE_ORDER' && (
-        <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
-          <TouchableOpacity 
-            style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
-            onPress={() => setActiveTab('details')}
-          >
-            <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Order Details</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
-            onPress={() => setActiveTab('requests')}
-          >
-            <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'requests' ? Colors.primary : '#64748B' }}>Change Requests</Text>
-            {order?.has_unread_messages ? (
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', marginLeft: 6 }} />
-            ) : null}
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
+        <TouchableOpacity 
+          style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
+          onPress={() => setActiveTab('details')}
+        >
+          <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Details</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
+          onPress={() => setActiveTab('requests')}
+        >
+          <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'requests' ? Colors.primary : '#64748B' }}>Requests</Text>
+          {order?.has_unread_messages ? (
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', marginLeft: 6 }} />
+          ) : null}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'payment' ? Colors.primary : 'transparent' }}
+          onPress={() => setActiveTab('payment')}
+        >
+          <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'payment' ? Colors.primary : '#64748B' }}>Payments</Text>
+        </TouchableOpacity>
+      </View>
 
       {activeTab === 'requests' ? (
         <CustomerRequestsTab order={order} onUpdateStatus={refreshData} />
+      ) : activeTab === 'payment' ? (
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.sectionHeading, { marginTop: 16 }]}>ORDER BILLING SUMMARY</Text>
+        <View style={styles.pricingCard}>
+          {outfits.map((outfit, idx) => {
+             const outfitName = outfit.outfit_name || outfit.name || 'Outfit';
+             return (
+               <View key={'billing-' + (outfit.id || idx)} style={{ marginBottom: 12 }}>
+                 <Text style={{ fontSize: 11, fontFamily: 'Inter-Bold', color: Colors.primary, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                   {outfitName}
+                 </Text>
+                 
+                 {order.order_type === 'SALE_ORDER' ? (
+                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 8 }}>
+                     <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: '#475569' }}>Readymade (x{outfit.quantity || 1})</Text>
+                     <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: Colors.textPrimary }}>₹{Number(outfit.totalAmount || outfit.total_amount || outfit.price || 0).toFixed(2)}</Text>
+                   </View>
+                 ) : (
+                   <View>
+                     {(outfit.services || []).map((service, sIdx) => (
+                       <View key={'srv-' + sIdx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 8 }}>
+                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                           <Scissors size={12} color="#94A3B8" style={{ marginRight: 6 }} />
+                           <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: '#475569' }}>{service.service_name || service.name || 'Stitching'}</Text>
+                         </View>
+                         <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: Colors.textPrimary }}>₹{Number(service.price || 0).toFixed(2)}</Text>
+                       </View>
+                     ))}
+                     {(outfit.services?.length === 0 || !outfit.services) && (
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 8 }}>
+                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                           <Scissors size={12} color="#94A3B8" style={{ marginRight: 6 }} />
+                           <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: '#475569' }}>Stitching</Text>
+                         </View>
+                         <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: Colors.textPrimary }}>₹{Number(outfit.totalAmount || outfit.total_amount || outfit.price || 0).toFixed(2)}</Text>
+                       </View>
+                     )}
+                     {(outfit.items || []).filter(i => i.item_type === 'MATERIAL').map((mat, mIdx) => (
+                       <View key={'mat-' + mIdx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 8 }}>
+                         <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 18 }}>
+                           <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: '#475569' }}>{mat.material_name || mat.name || 'Material'}</Text>
+                         </View>
+                         <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: Colors.textPrimary }}>₹{Number(mat.total_amount || mat.amount || mat.price || 0).toFixed(2)}</Text>
+                       </View>
+                     ))}
+                   </View>
+                 )}
+                 <View style={{ height: 1, backgroundColor: '#F1F5F9', marginTop: 8 }} />
+               </View>
+             );
+          })}
+          
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 }}>
+            <Text style={{ fontSize: 12, fontFamily: 'Inter-Bold', color: Colors.textPrimary }}>TOTAL BILLING</Text>
+            <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: Colors.textPrimary }}>₹{Number(order.totalAmount || order.total || 0).toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.pricingSeparator} />
+          
+          {order.order_type === 'SALE_ORDER' && (
+            <View style={styles.pricingAdvanceRow}>
+              <Text style={styles.pricingAdvanceLabel}>Delivery Method</Text>
+              <Text style={[styles.pricingAdvanceValue, { color: Colors.primary }]}>{order.delivery_method ? String(order.delivery_method).replace('_', ' ') : 'STORE PICKUP'}</Text>
+            </View>
+          )}
+
+          <View style={styles.pricingAdvanceRow}>
+            <Text style={styles.pricingAdvanceLabel}>Advance / Paid Amount</Text>
+            <Text style={styles.pricingAdvanceValue}>₹{Number(order.advanceAmount || order.advance || order.paid_amount || 0).toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.pricingDueRow}>
+            <Text style={styles.pricingDueLabel}>DUE BALANCE</Text>
+            <Text style={styles.pricingDueValue}>₹{Number((order.totalAmount || order.total || 0) - (order.advanceAmount || order.advance || order.paid_amount || 0)).toFixed(2)}</Text>
+          </View>
+        </View>
+
+        {(order.payments && order.payments.length > 0) ? (
+          <>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+              <Text style={styles.sectionHeading}>TRANSACTION LOGS</Text>
+            </View>
+
+            <View style={styles.transactionCard}>
+              {order.payments.map((payment, pIdx) => (
+                <View key={'payment-' + pIdx} style={[styles.transactionRow, pIdx !== order.payments.length - 1 && { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }]}>
+                   <View>
+                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                       <Text style={styles.transactionAmount}>₹{Number(payment.amount).toFixed(2)}</Text>
+                       <View style={styles.upiBadge}><Text style={styles.upiBadgeText}>{payment.payment_mode || 'PAID'}</Text></View>
+                     </View>
+                     <Text style={styles.transactionDate}>Date: {formatDate(payment.payment_date || payment.createdAt || new Date())}</Text>
+                     {payment.transaction_id && (
+                       <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 2, fontFamily: 'Inter-Medium' }}>Txn ID: {payment.transaction_id}</Text>
+                     )}
+                   </View>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : (Number(order.advanceAmount || order.advance || order.paid_amount || 0) > 0) && (
+          <>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+              <Text style={styles.sectionHeading}>TRANSACTION LOGS</Text>
+            </View>
+
+            <View style={styles.transactionCard}>
+              <View style={styles.transactionRow}>
+                 <View>
+                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                     <Text style={styles.transactionAmount}>₹{Number(order.advanceAmount || order.advance || order.paid_amount || 0).toFixed(2)}</Text>
+                     <View style={styles.upiBadge}><Text style={styles.upiBadgeText}>PAID</Text></View>
+                   </View>
+                   <Text style={styles.transactionDate}>Date: {formatDate(order.date || order.createdAt || order.order_date || new Date())}</Text>
+                 </View>
+              </View>
+            </View>
+          </>
+        )}
+
+        <TouchableOpacity 
+          style={[styles.invoiceBtn, { paddingVertical: 14, justifyContent: 'center', marginBottom: 32, backgroundColor: '#FFF' }]}
+          onPress={() => navigation.navigate('InvoicePreview', { 
+            order, 
+            orderId: order.id,
+            allowedCopyTypes: ['customer'],
+            initialCopyType: 'customer',
+            company: {
+              name: order.boutiqueName || 'Sewvee Premium Boutique',
+              address: 'Block C, 4th Cross Road, Indira Nagar, Bengaluru',
+              phone: '+91 9999999999'
+            }
+          })}
+        >
+          <Download size={16} color={Colors.textPrimary} style={{marginRight: 6}} />
+          <Text style={[styles.invoiceBtnText, { fontSize: 14 }]}>Download Invoice</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
       ) : (
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -440,19 +599,36 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
             </View>
           </View>
         ) : (
-          outfits.map((outfit, index) => {
-            const isUploading = uploadingOutfitId === outfit.id;
-            const apiRefPhotos = (outfit.photos || []).filter(p => p.category === 'REFERENCE');
-            const localRefPhotos = customerAddedRefPhotos.filter(p => p.outfitId === outfit.id);
-            const refPhotos = [...apiRefPhotos, ...localRefPhotos];
-            const hasStitching = outfit.stitching && outfit.stitching.length > 0;
-          const outfitName = outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`;
+          <View>
+            {outfits.length > 1 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.outfitTabsContainer} contentContainerStyle={styles.outfitTabsContent}>
+                {outfits.map((o, idx) => (
+                  <TouchableOpacity 
+                    key={o.id || idx}
+                    style={[styles.outfitTabItem, activeOutfitIndex === idx && styles.activeOutfitTabItem]}
+                    onPress={() => setActiveOutfitIndex(idx)}
+                  >
+                    <Text style={[styles.outfitTabItemText, activeOutfitIndex === idx && styles.activeOutfitTabItemText]}>
+                      {o.name ? o.name.toUpperCase() : `OUTFIT ${idx + 1}`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            
+            {(() => {
+              const outfit = outfits[activeOutfitIndex];
+              if (!outfit) return null;
+              const index = activeOutfitIndex;
+              const isUploading = uploadingOutfitId === outfit.id;
+              const apiRefPhotos = (outfit.photos || []).filter(p => p.category === 'REFERENCE' || p.category === 'SKETCH');
+              const localRefPhotos = customerAddedRefPhotos.filter(p => p.outfitId === outfit.id);
+              const refPhotos = [...apiRefPhotos, ...localRefPhotos];
+              const hasStitching = outfit.stitching && outfit.stitching.length > 0;
+              const outfitName = outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`;
 
-          return (
-            <View key={outfit.id || index} style={styles.outfitBlock}>
-              <View style={styles.outfitTitleRow}>
-                <Text style={styles.outfitTitleText}>{outfitName}</Text>
-              </View>
+              return (
+                <View key={outfit.id || index} style={styles.outfitBlock}>
 
               {/* OUTFIT DETAILS Card */}
               <View style={styles.card}>
@@ -520,25 +696,13 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                 </View>
                 <View style={styles.photosContent}>
                   {refPhotos.length > 0 ? (
-                    refPhotos.map((photo, pIdx) => (
+                    refPhotos.map((photo, pIdx) => {
+                      let fullUrl = resolveImageUrl(photo.file_url);
+                      return (
                       <View key={photo.id || pIdx} style={styles.photoWrapper}>
-                        <Image source={{ uri: photo.file_url }} style={styles.photoImg} />
-                        {/* Edit icon overlay */}
-                        <TouchableOpacity
-                          style={{
-                            position: 'absolute', top: 4, right: 4,
-                            backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12,
-                            width: 26, height: 26, alignItems: 'center', justifyContent: 'center',
-                          }}
-                          onPress={() => {
-                            setEditingPhoto({ file_url: photo.file_url, outfitId: outfit.id });
-                            setEditDrawerVisible(true);
-                          }}
-                        >
-                          <Edit2 size={13} color="#fff" />
-                        </TouchableOpacity>
+                        <Image source={{ uri: fullUrl }} style={styles.photoImg} />
                       </View>
-                    ))
+                    )})
                   ) : (
                     <Text style={{ fontSize: 13, color: '#94A3B8', fontStyle: 'italic', paddingVertical: 8 }}>
                       No photos uploaded by boutique.
@@ -560,7 +724,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                     {(pendingPhotos[outfit.id] || []).length > 0 && (
                       <View style={{ marginBottom: 12 }}>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, paddingRight: 8 }}>
-                          {pendingPhotos[outfit.id].map((url, idx) => (
+                          {pendingPhotos[outfit.id].map((rawUrl, idx) => { const url = resolveImageUrl(rawUrl); return (
                             <View key={idx} style={{ width: 72, height: 72, marginRight: 16 }}>
                               <Image source={{ uri: url }} style={{ width: '100%', height: '100%', borderRadius: 8, backgroundColor: '#FFEDD5' }} resizeMode="cover" />
                               
@@ -583,7 +747,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                                 <Text style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}>X</Text>
                               </TouchableOpacity>
                             </View>
-                          ))}
+                          ); })}
                         </ScrollView>
                       </View>
                     )}
@@ -635,81 +799,12 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
               
 
             </View>
-          );
-        })
+              );
+            })()}
+          </View>
         )}
 
-        {/* ACCOUNT SUMMARY */}
-        <Text style={styles.sectionHeading}>ACCOUNT SUMMARY</Text>
-        <View style={styles.pricingCard}>
-          <View style={styles.pricingRow}>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              {order.order_type === 'SALE_ORDER' ? (
-                <ShoppingBag size={14} color="#94A3B8" style={{marginRight: 8}} />
-              ) : (
-                <Scissors size={14} color="#94A3B8" style={{marginRight: 8}} />
-              )}
-              <Text style={styles.pricingItemText}>Total Order Value</Text>
-            </View>
-            <Text style={styles.pricingItemValue}>₹{order.total || 0}</Text>
-          </View>
-          
-          <View style={styles.pricingSeparator} />
-          
-          {order.order_type === 'SALE_ORDER' && (
-            <View style={styles.pricingAdvanceRow}>
-              <Text style={styles.pricingAdvanceLabel}>Delivery Method</Text>
-              <Text style={[styles.pricingAdvanceValue, { color: Colors.primary }]}>{order.delivery_method ? order.delivery_method.replace('_', ' ') : 'STORE PICKUP'}</Text>
-            </View>
-          )}
-
-          <View style={styles.pricingAdvanceRow}>
-            <Text style={styles.pricingAdvanceLabel}>Advance / Paid Amount</Text>
-            <Text style={styles.pricingAdvanceValue}>₹{order.advance || order.paid_amount || 0}</Text>
-          </View>
-          <View style={styles.pricingDueRow}>
-            <Text style={styles.pricingDueLabel}>DUE BALANCE</Text>
-            <Text style={styles.pricingDueValue}>₹{order.balance || order.balance_amount || 0}</Text>
-          </View>
-        </View>
-
-        {/* INVOICE & TRANSACTIONS */}
-        {(order.advance > 0 || order.paid_amount > 0) && (
-          <>
-            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-              <Text style={styles.sectionHeading}>TRANSACTIONS & INVOICE</Text>
-              <TouchableOpacity 
-                style={[styles.invoiceBtn, { paddingVertical: 6, paddingHorizontal: 12, marginBottom: 12 }]}
-                onPress={() => navigation.navigate('InvoicePreview', { 
-                  order, 
-                  orderId: order.id,
-                  allowedCopyTypes: ['customer'],
-                  initialCopyType: 'customer',
-                  company: {
-                    name: order.boutiqueName || 'Sewvee Premium Boutique',
-                    address: 'Block C, 4th Cross Road, Indira Nagar, Bengaluru',
-                    phone: '+91 9999999999'
-                  }
-                })}
-              >
-                <Download size={14} color={Colors.textPrimary} style={{marginRight: 4}} />
-                <Text style={styles.invoiceBtnText}>Invoice</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.transactionCard}>
-              <View style={styles.transactionRow}>
-                 <View>
-                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                     <Text style={styles.transactionAmount}>₹{order.advance || order.paid_amount || 0}</Text>
-                     <View style={styles.upiBadge}><Text style={styles.upiBadgeText}>PAID</Text></View>
-                   </View>
-                   <Text style={styles.transactionDate}>Date: {formatDate(order.date || order.order_date || new Date())}</Text>
-                 </View>
-              </View>
-            </View>
-          </>
-        )}
+        
 
       </ScrollView>
       )}
@@ -890,13 +985,34 @@ const styles = StyleSheet.create({
   outfitBlock: {
     marginBottom: 32,
   },
-  outfitTitleRow: {
-    marginBottom: 12,
+  outfitTabsContainer: {
+    marginBottom: 16,
   },
-  outfitTitleText: {
-    fontSize: 16,
+  outfitTabsContent: {
+    paddingHorizontal: 2,
+    paddingBottom: 4,
+  },
+  outfitTabItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  activeOutfitTabItem: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  outfitTabItemText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Medium',
+    color: '#64748B',
+  },
+  activeOutfitTabItemText: {
+    color: '#FFF',
     fontFamily: 'Inter-Bold',
-    color: Colors.textPrimary,
   },
   card: {
     backgroundColor: Colors.white,

@@ -139,17 +139,22 @@ export const DataProvider = ({ children }) => {
     const fetchOrdersFromBackend = useCallback(async () => {
         try {
             const mobile = user?.mobile;
+            console.log('DEBUG: fetchOrders mobile:', mobile);
             if (!mobile) return [];
             const cleanPhone = String(mobile).replace(/[^0-9]/g, '').slice(-10);
+            console.log('DEBUG: fetchOrders cleanPhone:', cleanPhone);
             if (!cleanPhone || cleanPhone.length < 10) return [];
 
+            console.log(`DEBUG: fetch URL: ${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
             const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
+            console.log('DEBUG: fetch status:', response.status);
             if (!response.ok) return [];
             const json = await response.json();
+            console.log('DEBUG: fetch json success:', json.success, 'data length:', json.data?.length);
             if (!json.success || !Array.isArray(json.data)) return [];
             return json.data;
         } catch (err) {
-            console.log('fetchOrdersFromBackend error:', err?.message || err);
+            console.log('DEBUG: fetchOrdersFromBackend error:', err?.message || err);
             return [];
         }
     }, [user]);
@@ -189,7 +194,7 @@ export const DataProvider = ({ children }) => {
 
             // Fetch live orders from backend by phone number
             const liveOrders = await fetchOrdersFromBackend();
-            if (liveOrders.length > 0) {
+            if (liveOrders && liveOrders.length > 0) {
                 setOrders(liveOrders);
                 // Cache them locally for offline access
                 await AsyncStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(liveOrders));
@@ -197,6 +202,7 @@ export const DataProvider = ({ children }) => {
                 // Update Guest Customer name from backend
                 const realName = liveOrders[0].customerName;
                 if (realName && realName !== 'Customer' && user?.name === 'Guest Customer') {
+                    // Only update if not already updated to avoid infinite loop
                     saveUser({ ...user, name: realName });
                 }
             } else {

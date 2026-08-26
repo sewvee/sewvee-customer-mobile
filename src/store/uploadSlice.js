@@ -29,19 +29,28 @@ export const uploadImageAction = createAsyncThunk(
 
             
 
-            const response = await axios.post(URL_UPLOAD, formData, {
+            const response = await fetch(URL_UPLOAD, {
+                method: 'POST',
                 headers: {
-                    'Content-Type': 'multipart/form-data',
                     'accept': '*/*',
                     'Authorization': formattedToken,
+                    // DO NOT set Content-Type manually with fetch and FormData in React Native
                 },
-                // transformRequest removed for React Native
+                body: formData
             });
-            console.log("UPLOAD IMAGE - Response:", response.data);
-            return response.data;
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                console.log("UPLOAD IMAGE - API Error:", data);
+                return rejectWithValue(data);
+            }
+            
+            console.log("UPLOAD IMAGE - Response:", data);
+            return data;
         } catch (error) {
-            console.log("UPLOAD IMAGE - Error:", error.response?.data || error.message);
-            return rejectWithValue(error.response?.data || error.message);
+            console.log("UPLOAD IMAGE - Catch Error:", error.message);
+            return rejectWithValue(error.message);
         }
     }
 );

@@ -20,6 +20,7 @@ const LAYOUTS = [
   { id: '2_vertical', slots: 2, label: '2 Vertical' },
   { id: '2_horizontal', slots: 2, label: '2 Horizontal' },
   { id: '3_grid', slots: 3, label: '3 Grid' },
+  { id: '3_grid_v', slots: 3, label: '3 Stacked' },
   { id: '4_grid', slots: 4, label: '4 Grid' },
 ];
 
@@ -111,7 +112,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
     setActiveSlot(null);
   };
 
-  const handleGlobalCrop = () => {
+  const handleGlobalCrop = async () => {
     let slotToCrop = activeSlot;
     if (slotToCrop == null || !images[slotToCrop]) {
       const firstSlot = Object.keys(images).find(k => images[k]);
@@ -122,10 +123,20 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
       return;
     }
     let sourcePath = originalImages[slotToCrop] || images[slotToCrop];
-    // Ensure file:// prefix on Android for ImageCropPicker compatibility
-    if (Platform.OS === 'android' && sourcePath && !sourcePath.startsWith('file://') && !sourcePath.startsWith('http')) {
+
+    if (sourcePath && sourcePath.startsWith('http')) {
+      try {
+        const localPath = `${RNFS.CachesDirectoryPath}/temp_crop_${Date.now()}.jpg`;
+        await RNFS.downloadFile({ fromUrl: sourcePath, toFile: localPath }).promise;
+        sourcePath = Platform.OS === 'android' ? `file://${localPath}` : localPath;
+      } catch (err) {
+        showToast("Failed to download image for cropping", "error");
+        return;
+      }
+    } else if (Platform.OS === 'android' && sourcePath && !sourcePath.startsWith('file://')) {
       sourcePath = 'file://' + sourcePath;
     }
+
     ImageCropPicker.openCropper({ path: sourcePath, freeStyleCropEnabled: true, cropperToolbarTitle: 'Crop Photo' })
       .then(img => {
         setImages(prev => ({ ...prev, [slotToCrop]: img.path }));
@@ -332,9 +343,16 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
         <View style={s.canvasArea}>
           <ViewShot ref={viewShotRef} style={s.collageContainer} options={{ format: 'jpg', quality: 0.95 }}>
             {/* The Layout Slots */}
-            <View style={{ flex: 1, flexDirection: selectedLayout.id.includes('horizontal') || selectedLayout.id === '4_grid' ? 'column' : 'row', gap: 4 }}>
+            <View style={{ flex: 1, flexDirection: selectedLayout.id.includes('horizontal') || selectedLayout.id === '4_grid' || selectedLayout.id === '3_grid_v' ? 'column' : 'row', gap: 4 }}>
               {selectedLayout.id === '1_single' ? (
                 renderSlot(0)
+              ) : selectedLayout.id === '3_grid_v' ? (
+                <>
+                  <View style={{ flex: 1 }}>{renderSlot(0)}</View>
+                  <View style={{ flex: 1, flexDirection: 'row', gap: 4 }}>
+                    {[1, 2].map(i => renderSlot(i))}
+                  </View>
+                </>
               ) : (selectedLayout.id === '3_grid' || selectedLayout.id === '4_grid') ? (
                 <>
                   <View style={{ flex: 1, flexDirection: 'row', gap: 4 }}>
@@ -546,7 +564,7 @@ const s = StyleSheet.create({
   actionBtnTextPrimary: { fontSize: 15, fontFamily: 'Inter-SemiBold', color: 'white' },
   textItem: { position: 'absolute', padding: 4 },
   textItemSelected: { borderWidth: 1.5, borderColor: Colors.primary, borderRadius: 4, borderStyle: 'dashed' },
-  annotationText: { fontFamily: 'Inter-Bold', textShadowColor: 'rgba(255,255,255,0.9)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
+  annotationText: { fontFamily: 'Inter-Bold' },
   deleteTextBtn: { position: 'absolute', top: -11, right: -11, backgroundColor: '#EF4444', borderRadius: 11, width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
   overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', zIndex: 100 },
   inputCard: { backgroundColor: '#1E293B', padding: 20, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingBottom: 42 },

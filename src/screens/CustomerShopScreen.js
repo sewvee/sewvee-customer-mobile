@@ -33,7 +33,7 @@ import {
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { URL_ORDERS, URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
+import { URL_CUSTOMER_PORTAL_ORDERS, URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
 import axios from 'axios';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -241,7 +241,7 @@ const CustomerShopScreen = () => {
     try {
       if (user && (user.id || user.mobile)) {
         const token = await AsyncStorage.getItem('userToken');
-        await axios.post(URL_ORDERS, {
+        await axios.post(URL_CUSTOMER_PORTAL_ORDERS, {
           customer_id: user.customer_id || user.id,
           customer_mobile: user.mobile,
           customer_name: user.name || 'App Customer',
@@ -267,7 +267,7 @@ const CustomerShopScreen = () => {
             }]
           }))
         }, {
-          headers: { Authorization: token, 'Content-Type': 'application/json' }
+          headers: { Authorization: token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '', 'Content-Type': 'application/json' }
         });
         showToast('Order Request Sent Successfully!', 'success');
         await refreshData();

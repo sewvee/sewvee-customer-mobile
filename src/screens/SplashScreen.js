@@ -65,11 +65,11 @@ const SplashScreen = ({ navigation }) => {
           navigation.replace('TrialExpiredScreen');
         }
       } else {
-        navigation.replace('Login');
+        navigation.replace('Signup');
       }
     } catch (error) {
       console.log('SplashScreen: fetchSubscriptionCurrent error:', error);
-      navigation.replace('Login');
+      navigation.replace('Signup');
     }
   };
 

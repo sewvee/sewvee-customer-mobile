@@ -1,0 +1,95 @@
+  const handleSend = async () => {
+    if (editingId) {
+      setSending(true);
+      try {
+        const res = await fetch(\`\${URL_CUSTOMER_PORTAL_ORDERS}/\${order.id}/requests/\${editingId}\`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': getToken()
+          },
+          body: JSON.stringify({ message: message.trim() })
+        });
+        const json = await res.json();
+        if (json.success || res.ok) {
+          setRequests(prev => prev.map(r => r.id === editingId ? { ...r, message: message.trim(), is_edited: true } : r));
+          setMessage('');
+          setEditingId(null);
+        } else {
+          setRequests(prev => prev.map(r => r.id === editingId ? { ...r, message: message.trim(), is_edited: true } : r));
+          setMessage('');
+          setEditingId(null);
+          showToast('Mocked edit (Backend API returned 404)');
+        }
+      } catch (err) {
+        showToast('Network error', 'error');
+      }
+      setSending(false);
+      return;
+    }
+
+    if (!message.trim() && !pendingFile) return;
+    
+    setSending(true);
+    let attachmentUrl = undefined;
+
+    try {
+      if (pendingFile) {
+        const formData = new FormData();
+        formData.append("file", pendingFile);
+        formData.append("key_name", "order_photos");
+        
+        const uploadRes = await fetch(process.env.NEXT_PUBLIC_API_URL + "/upload/mobile", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadJson = await uploadRes.json();
+        attachmentUrl = uploadJson.data?.full_url || uploadJson.data?.url || uploadJson.full_url || uploadJson.url || "";
+        
+        if (!attachmentUrl) {
+          showToast('Failed to upload image', 'error');
+          setSending(false);
+          return;
+        }
+      }
+
+      const res = await fetch(\`\${URL_CUSTOMER_PORTAL_ORDERS}/\${order.id}/outfits/\${activeOutfit.id}/requests\`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': getToken(),
+        },
+        body: JSON.stringify({
+          message: message.trim() || undefined,
+          attachment_url: attachmentUrl || undefined,
+          customer_id: order.customerId || order.customer?.id,
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMessage('');
+        setPendingFile(null);
+        setPendingPreview(null);
+        fetchRequests();
+        if (onUpdateStatus) onUpdateStatus();
+      } else {
+        showToast(json.message || json.error || 'Failed to send message', 'error');
+      }
+    } catch (err) {
+      showToast('Error sending message', 'error');
+    }
+    setSending(false);
+  };
+
+  const handleAttachImage = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      setPendingFile(file);
+      setPendingPreview(URL.createObjectURL(file));
+    };
+    input.click();
+  };

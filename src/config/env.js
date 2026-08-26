@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-export const API_DOMAIN = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "https://api-stage.sewvee.com" : "https://api.sewvee.com");
+export const API_DOMAIN = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "http://10.0.2.2:3021" : "https://api.sewvee.com");
 export const BASE_URL = `${API_DOMAIN}/mobile/`;
 export const APP_VERSION = "1.41";
 
@@ -97,3 +97,8 @@ export const URL_NOTIFICATIONS_UNREAD_COUNT = `${URL_NOTIFICATIONS}/unread-count
 
 export const URL_CUSTOMER_PORTAL_ORDERS = `${BASE_URL}customer-portal/orders`;
 export const URL_CUSTOMER_PORTAL_SHOP = `${BASE_URL}customer-portal/shop`;
+
+export const URL_CUSTOMER_AUTH_REGISTER = `${BASE_URL}customer-auth/register`;
+export const URL_CUSTOMER_AUTH_LOGIN = `${BASE_URL}customer-auth/login`;
+export const URL_CUSTOMER_AUTH_PROFILE = `${BASE_URL}customer-auth/profile`;
+export const URL_CUSTOMER_AUTH_CHANGE_PIN = `${BASE_URL}customer-auth/change-pin`;

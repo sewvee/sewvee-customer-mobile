@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { normalizeImageUrl } from '../utils/imageUtils';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Alert, Modal } from 'react-native';
 import { Camera, Send, MessageCircle, MessageSquare, ChevronLeft, ChevronRight, Trash2, MoreVertical, Edit2, X } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
@@ -15,6 +16,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
+  const [selectedMessage, setSelectedMessage] = useState(null);
   const [editingId, setEditingId] = useState(null);
   
   const dispatch = useDispatch();
@@ -118,7 +120,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
           key_name: 'order_photos',
         })).unwrap();
 
-        const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.full_url || uploadResult?.data?.full_url || uploadResult?.url || uploadResult?.data?.url || '';
+        const fileUrl = uploadResult?.data?.full_url || uploadResult?.full_url || uploadResult?.data?.url || uploadResult?.url || uploadResult?.data?.file_url || uploadResult?.file_url || '';
         if (fileUrl) {
           await handleSend(fileUrl);
         } else {
@@ -176,7 +178,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
               </Text>
             </View>
             {(() => {
-              const unreadCount = requests.filter(r => Number(r.order_outfit_id) === Number(outfit.id) && r.sender_type === 'BOUTIQUE' && !r.is_read_by_customer).length;
+              const unreadCount = requests.filter(r => Number(r.order_outfit_id) === Number(outfit.id) && (r.sender_type === 'BOUTIQUE' || r.sender_type === 'BUSINESS') && !r.is_read_by_customer).length;
               return unreadCount > 0 ? (
                 <View style={{ backgroundColor: '#25D366', width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ color: '#fff', fontSize: 12, fontFamily: 'Inter-Bold' }}>{unreadCount}</Text>
@@ -232,35 +234,29 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
             const isCustomer = req.sender_type === 'CUSTOMER';
             return (
               <View key={req.id} style={[styles.messageRow, isCustomer ? styles.msgRight : styles.msgLeft]}>
+                
+                {/* 3 DOTS FOR CUSTOMER (MOVED OUTSIDE) */}
+                {isCustomer && (
+                  <TouchableOpacity 
+                    style={{ justifyContent: 'center', marginRight: 8, padding: 4 }}
+                    onPress={() => setSelectedMessage(req)}
+                  >
+                    <MoreVertical size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+                )}
+
                 <View style={[styles.bubble, isCustomer ? styles.bubbleCustomer : styles.bubbleBoutique]}>
                   {req.attachment_url ? (
                     <View>
                       <TouchableOpacity onPress={() => setFullScreenImage(req.attachment_url)}>
-                        <Image source={{ uri: req.attachment_url }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: req.message ? 8 : 0 }} />
+                        <Image source={{ uri: normalizeImageUrl(req.attachment_url) }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: req.message ? 8 : 0 }} />
                       </TouchableOpacity>
-                      
                     </View>
                   ) : null}
                   {req.message ? (
                     <Text style={{ fontSize: 14, color: isCustomer ? '#FFF' : '#1E293B' }}>{req.message}</Text>
                   ) : null}
                   <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 }}>
-                    {isCustomer && (
-                      <TouchableOpacity 
-                        style={{ marginRight: 6 }}
-                        onPress={() => {
-                          const options = [];
-                          if (!req.attachment_url) {
-                            options.push({ text: 'Edit', onPress: () => { setEditingId(req.id); setMessage(req.message || ''); } });
-                          }
-                          options.push({ text: 'Delete', onPress: () => handleDelete(req.id), style: 'destructive' });
-                          options.push({ text: 'Cancel', style: 'cancel' });
-                          Alert.alert('Message Options', '', options);
-                        }}
-                      >
-                        <MoreVertical size={14} color={isCustomer ? "rgba(255,255,255,0.8)" : "#94A3B8"} />
-                      </TouchableOpacity>
-                    )}
                     {(req.is_edited || req.isEdited) && (
                       <Text style={{ fontSize: 9, fontStyle: 'italic', color: isCustomer ? 'rgba(255,255,255,0.6)' : '#94A3B8', marginRight: 4 }}>
                         (edited)
@@ -273,7 +269,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
                 </View>
               </View>
             );
-          })
+})
         )}
       </ScrollView>
 
@@ -298,6 +294,46 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
           {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={18} color="#FFF" />}
         </TouchableOpacity>
       </View>
+      
+      {/* Custom BottomSheet Modal for Message Options */}
+      <Modal visible={!!selectedMessage} transparent animationType="slide" onRequestClose={() => setSelectedMessage(null)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setSelectedMessage(null)}>
+          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 }} onStartShouldSetResponder={() => true}>
+            <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#1E293B', marginBottom: 16, textAlign: 'center' }}>Message Options</Text>
+            
+            {selectedMessage && !selectedMessage.attachment_url && (
+              <TouchableOpacity 
+                style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
+                onPress={() => {
+                  setEditingId(selectedMessage.id);
+                  setMessage(selectedMessage.message || '');
+                  setSelectedMessage(null);
+                }}
+              >
+                <Text style={{ fontSize: 15, fontFamily: 'Inter-Medium', color: '#1E293B', textAlign: 'center' }}>Edit Message</Text>
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity 
+              style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
+              onPress={() => {
+                handleDelete(selectedMessage.id);
+                setSelectedMessage(null);
+              }}
+            >
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#EF4444', textAlign: 'center' }}>Delete Message</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={{ paddingVertical: 16, marginTop: 8, backgroundColor: '#F1F5F9', borderRadius: 12 }}
+              onPress={() => setSelectedMessage(null)}
+            >
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#64748B', textAlign: 'center' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Modal visible={!!fullScreenImage} transparent animationType="fade" onRequestClose={() => setFullScreenImage(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}>
           <TouchableOpacity style={{ position: 'absolute', top: 40, right: 20, zIndex: 10, padding: 10 }} onPress={() => setFullScreenImage(null)}>

@@ -88,8 +88,19 @@ const CustomerRequestedOrdersScreen = () => {
 
     const canCancel = !isCancelled && !isDelivered;
 
+    const outfits = item.outfits || item.items || [];
+    const hasPendingPhotoRequest = outfits.some(
+      (outfit) => 
+        ((outfit.requestedPhotosFromClient && outfit.requestedPhotosFromClient !== '0' && outfit.requestedPhotosFromClient !== 'false' && outfit.requestedPhotosFromClient !== 0) || (outfit.requested_photos_from_client && outfit.requested_photos_from_client !== '0' && outfit.requested_photos_from_client !== 'false' && outfit.requested_photos_from_client !== 0)) && 
+        (!outfit.photos || outfit.photos.filter(p => p.category === 'REFERENCE').length === 0)
+    );
+
     return (
-      <View style={styles.orderCard}>
+      <TouchableOpacity 
+        style={styles.orderCard}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: item.id })}
+      >
         <View style={styles.cardHeader}>
           <View>
             <Text style={styles.boutiqueName}>{item.boutiqueName || 'Boutique'}</Text>
@@ -137,7 +148,13 @@ const CustomerRequestedOrdersScreen = () => {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+
+        {hasPendingPhotoRequest && (
+          <View style={[styles.photoRequestAlert, { marginTop: 14, alignSelf: 'stretch', justifyContent: 'center', marginLeft: 0 }]}>
+            <Text style={[styles.photoRequestText, {fontSize: 12}]}>PHOTO NEEDED</Text>
+          </View>
+        )}
+      </TouchableOpacity>
     );
   };
 
@@ -349,5 +366,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-Bold',
     color: Colors.danger,
+  },
+  photoRequestAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F97316',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  photoRequestText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter-Bold',
   },
 });

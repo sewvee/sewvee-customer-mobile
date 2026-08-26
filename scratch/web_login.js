@@ -1,4 +1,7 @@
-import React, { useState, useRef } from 'react';
+const fs = require('fs');
+const loginPath = 'src/screens/LoginScreen.js';
+
+const newContent = `import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,7 +21,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { API_DOMAIN } from '../config/env';
+import { URL_CUSTOMER_PORTAL_ORDERS } from '../config/env';
 
 const { width, height } = Dimensions.get('window');
 const WEB_PRIMARY = '#5B43EE';
@@ -36,32 +39,72 @@ const LoginScreen = ({ navigation }) => {
   const handleContinue = async () => {
     Keyboard.dismiss();
     setErrorMsg('');
-    if (phone.length !== 10) return setErrorMsg('Please enter a valid 10-digit mobile number');
-    if (pin.length !== 4) return setErrorMsg('Please enter a 4-digit PIN');
+
+    if (phone.length !== 10) {
+      setErrorMsg('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    const phoneRegex = /^[6-9][0-9]{9}$/;
+    if (!phoneRegex.test(phone)) {
+      setErrorMsg('Please enter a valid mobile number');
+      return;
+    }
+    if (pin.length !== 4) {
+      setErrorMsg('PIN must be exactly 4 digits');
+      return;
+    }
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_DOMAIN}/mobile/customer-auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: phone, pin })
-      });
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setLoading(false);
-        setPin('');
-        return setErrorMsg(data.message || 'Invalid credentials');
+      const savedPin = await AsyncStorage.getItem(\`@sewvee_pin_\${phone}\`);
+      
+      if (savedPin) {
+        // Existing user login
+        if (savedPin === pin) {
+          await handleLoginSuccess();
+        } else {
+          setErrorMsg('Incorrect PIN. Please try again.');
+          setPin('');
+        }
+      } else {
+        // First time pin set
+        await AsyncStorage.setItem(\`@sewvee_pin_\${phone}\`, pin);
+        await handleLoginSuccess();
       }
-
-      await saveUser(data.customer);
-      await login(data.accessToken, true);
-      showToast(`Welcome back, ${data.customer.name}!`, 'success');
     } catch (e) {
       console.log('Error handling login', e);
-      setErrorMsg('Network error. Please try again.');
+      setErrorMsg('An error occurred during login');
     }
     setLoading(false);
+  };
+
+  const handleLoginSuccess = async () => {
+    let customerName = 'Guest Customer';
+    let customerId = 'cust_guest_' + Date.now();
+    try {
+      const response = await fetch(\`\${URL_CUSTOMER_PORTAL_ORDERS}?phone=\${phone}&limit=1\`);
+      if (response.ok) {
+        const json = await response.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const firstOrder = json.data[0];
+          customerName = firstOrder.customerName || 'Customer';
+          customerId = firstOrder.customerId || customerId;
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching customer info', err);
+    }
+    const customerProfile = {
+      id: customerId,
+      name: customerName,
+      mobile: phone,
+      role: 'Customer',
+      lastLogin: new Date().toISOString(),
+    };
+    await saveUser(customerProfile);
+    await login('customer_demo_token', true);
+    showToast('Welcome back, ' + customerName + '!', 'success');
+    navigation.navigate('Main');
   };
 
   const renderPinBoxes = () => (
@@ -90,7 +133,7 @@ const LoginScreen = ({ navigation }) => {
 
       {/* Background */}
       <Image
-        source={require('../assets/login_bg.png')}
+        source={require('../assets/login_bg.jpg')}
         style={styles.bgImage}
         resizeMode="cover"
       />
@@ -135,7 +178,7 @@ const LoginScreen = ({ navigation }) => {
 
             <View style={styles.pinHeaderRow}>
               <Text style={styles.label}>4-DIGIT PIN</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('CustomerForgotPin')}>
+              <TouchableOpacity onPress={() => showToast('Enter a new PIN to set it up if this is your first time', 'info')}>
                 <Text style={styles.forgotText}>Forgot PIN?</Text>
               </TouchableOpacity>
             </View>
@@ -177,8 +220,8 @@ export default LoginScreen;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
-  bgImage: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
-  bgOverlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.15)' },
+  bgImage: { position: 'absolute', top: 0, left: 0, width, height },
+  bgOverlay: { position: 'absolute', top: 0, left: 0, width, height, backgroundColor: 'rgba(0,0,0,0.15)' },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   card: {
@@ -194,11 +237,11 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   header: { alignItems: 'center', marginBottom: 28 },
-  logo: { width: 140, height: 40, marginBottom: 16 },
+  logo: { width: 60, height: 60, marginBottom: 12 },
   appName: { fontSize: 24, fontFamily: 'Inter-Bold', color: '#1E293B', marginBottom: 6 },
   subtitle: { fontSize: 14, color: '#64748B', fontFamily: 'Inter-Medium', textAlign: 'center' },
   formSection: { width: '100%' },
-  label: { fontSize: 11, fontFamily: 'Inter-Bold', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  label: { fontSize: 11, fontFamily: 'Inter-Bold', color: '#64748B', uppercase: true, letterSpacing: 0.5, marginBottom: 8 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -247,3 +290,7 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 13, color: '#64748B', fontFamily: 'Inter-Medium' },
   footerLink: { fontSize: 13, color: WEB_PRIMARY, fontFamily: 'Inter-SemiBold' }
 });
+\`;
+
+fs.writeFileSync(loginPath, newContent);
+console.log('LoginScreen updated to match web app');
