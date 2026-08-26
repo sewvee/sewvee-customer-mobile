@@ -9,7 +9,11 @@ export const normalizeImageUrl = (uri) => {
     const apiDomain = BASE_URL.replace('/mobile/customer-portal/', '').replace('/mobile/', '');
 
     if (typeof finalUri === 'string') {
-        if (finalUri.startsWith('/media/') || finalUri.startsWith('/uploads/') || finalUri.startsWith('/api/')) {
+        if (finalUri.startsWith('http://localhost:3021')) {
+            finalUri = finalUri.replace('http://localhost:3021', apiDomain);
+        } else if (finalUri.startsWith('http://localhost:3022')) {
+            finalUri = finalUri.replace('http://localhost:3022', apiDomain);
+        } else if (finalUri.startsWith('/media/') || finalUri.startsWith('/uploads/') || finalUri.startsWith('/api/')) {
             finalUri = `${apiDomain}${finalUri}`;
         }
 

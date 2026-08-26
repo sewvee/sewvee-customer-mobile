@@ -32,7 +32,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
 
     const handleDelete = async (reqId) => {
     try {
-      const res = await fetch(`${API_DOMAIN}/api/customer-portal/orders/${order.id}/requests/${reqId}`, {
+      const res = await fetch(`${API_DOMAIN}/mobile/customer-portal/orders/${order.id}/requests/${reqId}`, {
         method: 'DELETE',
         headers: { 'Authorization': getToken() },
       });
@@ -77,23 +77,41 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
     setSending(true);
     try {
       const API_BASE = API_DOMAIN;
-      const res = await fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/outfits/${activeOutfit.id}/requests`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': getToken(),
-        },
-        body: JSON.stringify({
-          message: message.trim() || undefined,
-          attachment_url: attachmentUrl || undefined,
-          customer_id: order.customer_id,
-        })
-      });
+      let res;
+      if (editingId && !attachmentUrl) {
+        res = await fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/requests/${editingId}`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': getToken(),
+          },
+          body: JSON.stringify({ message: message.trim() })
+        });
+      } else {
+        res = await fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/outfits/${activeOutfit.id}/requests`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': getToken(),
+          },
+          body: JSON.stringify({
+            message: message.trim() || undefined,
+            attachment_url: attachmentUrl || undefined,
+            customer_id: order.customer_id,
+          })
+        });
+      }
+      
       const json = await res.json();
       console.log('handleSend response:', JSON.stringify(json));
-      if (json.success) {
+      if (json.success || res.ok) {
+        if (editingId && !attachmentUrl) {
+          setRequests(prev => prev.map(r => r.id === editingId ? { ...r, message: message.trim(), is_edited: true, updated_at: new Date().toISOString() } : r));
+        } else {
+          fetchRequests();
+        }
         setMessage('');
-        fetchRequests();
+        setEditingId(null);
         if (onUpdateStatus) onUpdateStatus();
       } else {
         showToast(json.message || json.error || 'Failed to send message', 'error');
