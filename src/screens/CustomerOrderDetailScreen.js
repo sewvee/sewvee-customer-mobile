@@ -100,6 +100,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
 
   const [customerAddedRefPhotos, setCustomerAddedRefPhotos] = useState([]);
   const [galleryFolders, setGalleryFolders] = useState([]);
+  const [isOutfitChatActive, setIsOutfitChatActive] = useState(false);
 
   // Fetch Sewvee gallery folders so customer can pick from their saved photos
   useEffect(() => {
@@ -399,53 +400,58 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Navbar */}
-      <View style={styles.navbar}>
-        <TouchableOpacity style={styles.backIconBtn} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={22} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.navbarTitle}>
-          {order.order_type === 'SALE_ORDER' ? 'Invoice' : 'Order'} #{order.billNo || order.id}
-        </Text>
-        <View style={{ width: 22 }} />
-      </View>
+      {!isOutfitChatActive && (
+        <>
+          {/* Navbar */}
+          <View style={styles.navbar}>
+            <TouchableOpacity style={styles.backIconBtn} onPress={() => navigation.goBack()}>
+              <ArrowLeft size={22} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.navbarTitle}>
+              {order.order_type === 'SALE_ORDER' ? 'Invoice' : 'Order'} #{order.billNo || order.id}
+            </Text>
+            <View style={{ width: 22 }} />
+          </View>
 
-      {/* TABS */}
-      <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
-        <TouchableOpacity 
-          style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
-          onPress={() => setActiveTab('details')}
-        >
-          <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Details</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
-          onPress={() => setActiveTab('requests')}
-        >
-          <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'requests' ? Colors.primary : '#64748B' }}>Requests</Text>
-          {order?.has_unread_messages ? (
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', marginLeft: 6 }} />
-          ) : null}
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'payment' ? Colors.primary : 'transparent' }}
-          onPress={() => setActiveTab('payment')}
-        >
-          <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'payment' ? Colors.primary : '#64748B' }}>Payments</Text>
-        </TouchableOpacity>
-      </View>
+          {/* TABS */}
+          <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
+            <TouchableOpacity 
+              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
+              onPress={() => setActiveTab('details')}
+            >
+              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Details</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
+              onPress={() => setActiveTab('requests')}
+            >
+              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'requests' ? Colors.primary : '#64748B' }}>Requests</Text>
+              {order?.has_unread_messages ? (
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', marginLeft: 6 }} />
+              ) : null}
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'payment' ? Colors.primary : 'transparent' }}
+              onPress={() => setActiveTab('payment')}
+            >
+              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'payment' ? Colors.primary : '#64748B' }}>Payments</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
 
       {activeTab === 'requests' ? (
-        <CustomerRequestsTab order={order} onUpdateStatus={refreshData} />
+        <CustomerRequestsTab order={order} onUpdateStatus={refreshData} onChatActive={setIsOutfitChatActive} />
       ) : activeTab === 'payment' ? (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionHeading, { marginTop: 16 }]}>ORDER BILLING SUMMARY</Text>
         <View style={styles.pricingCard}>
           {outfits.map((outfit, idx) => {
              const outfitName = outfit.outfit_name || outfit.name || 'Outfit';
+             const isLast = idx === outfits.length - 1;
              return (
-               <View key={'billing-' + (outfit.id || idx)} style={{ marginBottom: 12 }}>
-                 <Text style={{ fontSize: 11, fontFamily: 'Inter-Bold', color: Colors.primary, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+               <View key={'billing-' + (outfit.id || idx)} style={{ paddingBottom: 12, borderBottomWidth: isLast ? 0 : 1, borderBottomColor: '#F1F5F9' }}>
+                 <Text style={{ fontSize: 11, fontFamily: 'Inter-Bold', color: Colors.primary, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' }}>
                    {outfitName}
                  </Text>
                  

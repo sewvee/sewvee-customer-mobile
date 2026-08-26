@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,14 +50,9 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
   // Filter orders matching logged in customer's mobile
   const customerOrders = React.useMemo(() => {
-    if (!user || !user.mobile) return [];
-    const targetMobile = user.mobile.replace(/[^0-9]/g, '').slice(-10);
-    const filtered = orders.filter(order => {
-      const orderMobile = (order.customerMobile || order.customer?.whatsappNumber || order.customer?.mobile || order.customer?.mobile_number || '').replace(/[^0-9]/g, '').slice(-10);
-      return orderMobile === targetMobile;
-    });
-    return filtered.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
-  }, [orders, user]);
+    if (!orders || orders.length === 0) return [];
+    return [...orders].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+  }, [orders]);
 
   // Metrics
   
@@ -164,8 +160,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
     const outfits = item.outfits || item.items || [];
     const hasPendingPhotoRequest = !isSale && outfits.some(
       (outfit) => 
-        ((outfit.requestedPhotosFromClient && outfit.requestedPhotosFromClient !== '0' && outfit.requestedPhotosFromClient !== 'false' && outfit.requestedPhotosFromClient !== 0) || (outfit.requested_photos_from_client && outfit.requested_photos_from_client !== '0' && outfit.requested_photos_from_client !== 'false' && outfit.requested_photos_from_client !== 0)) && 
-        (!outfit.photos || outfit.photos.filter(p => p.category === 'REFERENCE').length === 0)
+        (outfit.requestedPhotosFromClient || outfit.requested_photos_from_client)
     );
 
     const deliveryDate = outfits.find(o => o.deliveryDate)?.deliveryDate;
@@ -251,6 +246,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F3FF" />
       {/* Welcome Banner */}
       <View style={styles.header}>
         <View>
@@ -414,7 +410,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 10,
+    paddingBottom: 100,
   },
   statsRow: {
     flexDirection: 'row',

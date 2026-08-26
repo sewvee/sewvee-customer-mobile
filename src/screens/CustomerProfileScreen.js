@@ -19,6 +19,9 @@ const CustomerProfileScreen = () => {
   const initials = (user?.name || 'C').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   const stitchingOrders = (orders || []).filter(o => o.order_type !== 'SALE_ORDER');
+  const readymadeOrders = (orders || []).filter(o => o.order_type === 'SALE_ORDER');
+  const totalOrders = (orders || []).length;
+  
   const stitchingCompleted = stitchingOrders.filter(o => {
     const s = (o.statusName || o.status || '').toLowerCase();
     return s === 'delivered' || s === 'completed';
@@ -46,21 +49,21 @@ const CustomerProfileScreen = () => {
           <View style={styles.cardDivider} />
 
           {/* Stats */}
-          <Text style={styles.statsLabel}>My Orders</Text>
+          <Text style={styles.statsLabel}>Order Insights</Text>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{stitchingOrders.length}</Text>
+              <Text style={styles.statValue}>{totalOrders}</Text>
               <Text style={styles.statSublabel}>Total</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#F59E0B' }]}>{stitchingPending}</Text>
-              <Text style={styles.statSublabel}>Active</Text>
+              <Text style={[styles.statValue, { color: '#F59E0B' }]}>{stitchingOrders.length}</Text>
+              <Text style={styles.statSublabel}>Stitching</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#10B981' }]}>{stitchingCompleted}</Text>
-              <Text style={styles.statSublabel}>Done</Text>
+              <Text style={[styles.statValue, { color: '#10B981' }]}>{readymadeOrders.length}</Text>
+              <Text style={styles.statSublabel}>Readymade</Text>
             </View>
           </View>
         </View>
@@ -113,7 +116,7 @@ export default CustomerProfileScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 60 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 100 },
 
   // Hero
   heroCard: {

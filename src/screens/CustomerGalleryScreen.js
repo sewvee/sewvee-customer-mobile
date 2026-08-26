@@ -555,6 +555,7 @@ const styles = StyleSheet.create({
   },
   folderList: {
     padding: GRID_SPACING,
+    paddingBottom: 100,
     gap: GRID_SPACING,
   },
   folderCard: {
@@ -616,6 +617,7 @@ const styles = StyleSheet.create({
   },
   imageGrid: {
     padding: 2,
+    paddingBottom: 100,
   },
   imageWrapper: {
     width: SCREEN_WIDTH / 3 - (8 / 3),

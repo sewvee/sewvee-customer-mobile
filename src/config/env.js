@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-export const API_DOMAIN = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "http://10.0.2.2:3021" : "https://api.sewvee.com");
+export const API_DOMAIN = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "http://10.0.2.2:3021" : "https://api-stage.sewvee.com");
 export const BASE_URL = `${API_DOMAIN}/mobile/`;
 export const APP_VERSION = "1.41";
 
