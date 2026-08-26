@@ -5,9 +5,14 @@ export const normalizeImageUrl = (uri) => {
     if (!uri) return null;
     let finalUri = typeof uri === 'object' ? uri.uri : uri;
     
-    // Get the base API domain without /mobile/
-    const apiDomain = BASE_URL.replace('/mobile/customer-portal/', '').replace('/mobile/', '');
-
+    // Fallbacks to get the domain
+    let apiDomain = BASE_URL;
+    if (apiDomain.includes('/mobile/')) {
+        apiDomain = apiDomain.split('/mobile/')[0];
+    } else if (apiDomain.includes('/api/')) {
+        apiDomain = apiDomain.split('/api/')[0];
+    }
+    
     if (typeof finalUri === 'string') {
         if (finalUri.startsWith('http://localhost:3021')) {
             finalUri = finalUri.replace('http://localhost:3021', apiDomain);
@@ -17,9 +22,9 @@ export const normalizeImageUrl = (uri) => {
             finalUri = `${apiDomain}${finalUri}`;
         }
 
-        // Encode the URI to handle spaces and special characters, which crash Android's Image loader
         try {
-            finalUri = encodeURI(finalUri);
+            // Decode first to prevent double encoding, then encode
+            finalUri = encodeURI(decodeURI(finalUri));
         } catch (e) {
             console.log("URI encoding failed", e);
         }

@@ -9,7 +9,7 @@ import { uploadImageAction } from '../store/uploadSlice';
 import { useToast } from '../context/ToastContext';
 import { API_DOMAIN } from '../config/env';
 
-export default function CustomerRequestsTab({ order, onUpdateStatus }) {
+export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActive }) {
   const [activeOutfit, setActiveOutfit] = useState(null);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -18,10 +18,21 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   const [fullScreenImage, setFullScreenImage] = useState(null);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [pendingAttachment, setPendingAttachment] = useState(null);
   
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const scrollViewRef = useRef();
+
+  useEffect(() => {
+    if (onChatActive) {
+      onChatActive(!!activeOutfit);
+    }
+  }, [activeOutfit, onChatActive]);
+
+  useEffect(() => {
+    if (activeOutfit) fetchRequests();
+  }, [activeOutfit]);
 
   // Get auth token from Redux
   const authUser = useSelector(state => state.auth?.user);
@@ -72,13 +83,14 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   }, [order?.id]);
 
   const handleSend = async (attachmentUrl = null) => {
-    if (!message.trim() && !attachmentUrl) return;
+    const finalAttachment = attachmentUrl || pendingAttachment;
+    if (!message.trim() && !finalAttachment) return;
     
     setSending(true);
     try {
       const API_BASE = API_DOMAIN;
       let res;
-      if (editingId && !attachmentUrl) {
+      if (editingId && !finalAttachment) {
         res = await fetch(`${API_BASE}/mobile/customer-portal/orders/${order.id}/requests/${editingId}`, {
           method: 'PUT',
           headers: { 
@@ -96,7 +108,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
           },
           body: JSON.stringify({
             message: message.trim() || undefined,
-            attachment_url: attachmentUrl || undefined,
+            attachment_url: finalAttachment || undefined,
             customer_id: order.customer_id,
           })
         });
@@ -105,12 +117,13 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
       const json = await res.json();
       console.log('handleSend response:', JSON.stringify(json));
       if (json.success || res.ok) {
-        if (editingId && !attachmentUrl) {
+        if (editingId && !finalAttachment) {
           setRequests(prev => prev.map(r => r.id === editingId ? { ...r, message: message.trim(), is_edited: true, updated_at: new Date().toISOString() } : r));
         } else {
           fetchRequests();
         }
         setMessage('');
+        setPendingAttachment(null);
         setEditingId(null);
         if (onUpdateStatus) onUpdateStatus();
       } else {
@@ -140,7 +153,8 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
 
         const fileUrl = uploadResult?.data?.full_url || uploadResult?.full_url || uploadResult?.data?.url || uploadResult?.url || uploadResult?.data?.file_url || uploadResult?.file_url || '';
         if (fileUrl) {
-          await handleSend(fileUrl);
+          setPendingAttachment(fileUrl);
+          setSending(false);
         } else {
           showToast('Failed to upload image', 'error');
           setSending(false);
@@ -216,7 +230,11 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
   const outfitRequests = requests.filter(r => r.order_outfit_id === activeOutfit.id);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FAFC' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1, backgroundColor: '#F8FAFC' }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       {/* Header */}
       <View style={styles.chatHeader}>
         <TouchableOpacity onPress={() => setActiveOutfit(null)} style={{ padding: 8, marginRight: 8 }}>
@@ -281,7 +299,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
                       </Text>
                     )}
                     <Text style={{ fontSize: 10, color: isCustomer ? 'rgba(255,255,255,0.7)' : '#94A3B8' }}>
-                      {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date((req.is_edited || req.isEdited) ? (req.updated_at || req.created_at) : req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   </View>
                 </View>
@@ -292,7 +310,17 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
       </ScrollView>
 
       {/* Input */}
+      
+      {pendingAttachment && (
+        <View style={{ padding: 12, backgroundColor: '#F1F5F9', borderTopWidth: 1, borderTopColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center' }}>
+          <Image source={{ uri: normalizeImageUrl(pendingAttachment) }} style={{ width: 50, height: 50, borderRadius: 8 }} />
+          <TouchableOpacity style={{ marginLeft: 12, backgroundColor: '#E2E8F0', padding: 6, borderRadius: 12 }} onPress={() => setPendingAttachment(null)}>
+            <X size={16} color="#64748B" />
+          </TouchableOpacity>
+        </View>
+      )}
       <View style={styles.inputArea}>
+
         <TouchableOpacity style={styles.attachBtn} onPress={handleAttachImage} disabled={sending}>
           <Camera size={22} color="#64748B" />
         </TouchableOpacity>
@@ -357,7 +385,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus }) {
           <TouchableOpacity style={{ position: 'absolute', top: 40, right: 20, zIndex: 10, padding: 10 }} onPress={() => setFullScreenImage(null)}>
             <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold' }}>Close</Text>
           </TouchableOpacity>
-          {fullScreenImage && <Image source={{ uri: fullScreenImage }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
+          {fullScreenImage && <Image source={{ uri: normalizeImageUrl(fullScreenImage) }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
         </View>
       </Modal>
     </KeyboardAvoidingView>
@@ -440,6 +468,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
+    color: '#0F172A',
     maxHeight: 100,
     marginHorizontal: 8,
   },
