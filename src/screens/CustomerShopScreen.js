@@ -43,7 +43,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CustomerShopScreen = () => {
   const { showToast } = useToast();
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user, getAuthToken } = useAuth();
   const { orders, refreshData } = useData();
 
   const [selectedBoutique, setSelectedBoutique] = useState(null);
@@ -74,6 +74,12 @@ const CustomerShopScreen = () => {
     phone: user?.mobile || user?.phone || ''
   });
 
+  const SEWVEE_DIRECT = {
+    id: 'sewvee_direct',
+    name: 'Sewvee Originals',
+    isSewveeDirect: true,
+  };
+
   useEffect(() => {
     if (orders && orders.length > 0) {
       const uniqueBoutiques = [];
@@ -86,23 +92,28 @@ const CustomerShopScreen = () => {
       });
       setBoutiques(uniqueBoutiques);
       if (uniqueBoutiques.length > 0 && !selectedBoutique) {
-        setSelectedBoutique(uniqueBoutiques[0]);
+        setSelectedBoutique(SEWVEE_DIRECT);
       }
+    } else if (!selectedBoutique) {
+      setSelectedBoutique(SEWVEE_DIRECT);
     }
   }, [orders]);
 
   useEffect(() => {
     if (selectedBoutique) {
-      fetchProducts(selectedBoutique.id);
+      fetchProducts(selectedBoutique);
     } else {
       setProducts([]);
     }
   }, [selectedBoutique]);
 
-  const fetchProducts = async (companyId) => {
+  const fetchProducts = async (boutique) => {
     try {
       setLoadingProducts(true);
-      const res = await axios.get(`${URL_CUSTOMER_PORTAL_SHOP}?companyId=${companyId}`);
+      const url = boutique.isSewveeDirect 
+        ? `${BASE_URL}customer/store/catalogue` 
+        : `${URL_CUSTOMER_PORTAL_SHOP}?companyId=${boutique.id}`;
+      const res = await axios.get(url);
       if (res.data && res.data.success) {
         const rootUrl = BASE_URL.replace('/mobile/', '/');
         const formatImageUrls = (urlStr) => {
@@ -429,22 +440,42 @@ const CustomerShopScreen = () => {
               </TouchableOpacity>
             </View>
             <ScrollView style={{ padding: 20 }}>
-              {boutiques.map(b => (
-                <TouchableOpacity
-                  key={b.id}
-                  style={[styles.boutiqueOption, selectedBoutique?.id === b.id && styles.boutiqueOptionActive]}
-                  onPress={() => {
-                    setSelectedBoutique(b);
-                    setIsBoutiqueModalVisible(false);
-                  }}
-                >
-                  <Store size={20} color={selectedBoutique?.id === b.id ? Colors.primary : Colors.textSecondary} />
-                  <Text style={[styles.boutiqueOptionText, selectedBoutique?.id === b.id && { color: Colors.primary, fontFamily: 'Inter-Bold' }]}>
-                    {b.name}
-                  </Text>
-                  {selectedBoutique?.id === b.id && <Check size={18} color={Colors.primary} />}
-                </TouchableOpacity>
-              ))}
+              <Text style={{ fontSize: 13, color: Colors.textSecondary, fontFamily: 'Inter-Bold', marginBottom: 12, marginTop: 8 }}>SEWVEE DIRECT</Text>
+              <TouchableOpacity
+                style={[styles.boutiqueOption, selectedBoutique?.id === 'sewvee_direct' && styles.boutiqueOptionActive]}
+                onPress={() => {
+                  setSelectedBoutique(SEWVEE_DIRECT);
+                  setIsBoutiqueModalVisible(false);
+                }}
+              >
+                <Sparkles size={20} color={selectedBoutique?.id === 'sewvee_direct' ? Colors.primary : Colors.textSecondary} />
+                <Text style={[styles.boutiqueOptionText, selectedBoutique?.id === 'sewvee_direct' && { color: Colors.primary, fontFamily: 'Inter-Bold' }]}>
+                  Sewvee Originals
+                </Text>
+                {selectedBoutique?.id === 'sewvee_direct' && <Check size={18} color={Colors.primary} />}
+              </TouchableOpacity>
+
+              {boutiques.length > 0 && (
+                <>
+                  <Text style={{ fontSize: 13, color: Colors.textSecondary, fontFamily: 'Inter-Bold', marginBottom: 12, marginTop: 16 }}>MY BOUTIQUES</Text>
+                  {boutiques.map(b => (
+                    <TouchableOpacity
+                      key={b.id}
+                      style={[styles.boutiqueOption, selectedBoutique?.id === b.id && styles.boutiqueOptionActive]}
+                      onPress={() => {
+                        setSelectedBoutique(b);
+                        setIsBoutiqueModalVisible(false);
+                      }}
+                    >
+                      <Store size={20} color={selectedBoutique?.id === b.id ? Colors.primary : Colors.textSecondary} />
+                      <Text style={[styles.boutiqueOptionText, selectedBoutique?.id === b.id && { color: Colors.primary, fontFamily: 'Inter-Bold' }]}>
+                        {b.name}
+                      </Text>
+                      {selectedBoutique?.id === b.id && <Check size={18} color={Colors.primary} />}
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
             </ScrollView>
           </View>
         </TouchableOpacity>
