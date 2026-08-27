@@ -35,7 +35,8 @@ import {
     Bell,
     Delete,
     Settings,
-    CirclePile
+    CirclePile,
+    HandCoins
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTeam } from '../context/TeamContext';
@@ -502,6 +503,13 @@ const SettingsScreen = ({ navigation }) => {
                                             value="View & updates"
                                             onPress={() => navigation.navigate('InventoryScreen')}
                                             color={Colors.success}
+                                        />
+                                        <SettingItem
+                                            icon={HandCoins}
+                                            title="Materials & Payments"
+                                            value="Manage materials and payments"
+                                            onPress={() => navigation.navigate('Payments')}
+                                            color={Colors.primary}
                                             isLast={true}
                                         />
                                     </View>

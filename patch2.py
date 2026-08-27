@@ -1,68 +1,44 @@
-import re
+import os
 
-with open('src/screens/CustomerOrderDetailScreen.js', 'r') as f:
+filepath = 'src/screens/CustomerDashboardScreen.js'
+with open(filepath, 'r') as f:
     content = f.read()
 
-target_start = "const handleUploadReferencePhoto = (outfitId) => {"
-target_end = "  };"
+target = """        {/* ORDERS SECTION */}
+        <Text style={styles.sectionTitle}>Your Active Orders</Text>"""
 
-match = re.search(r"  const handleUploadReferencePhoto = \(outfitId\) => \{.*?\n  \};\n", content, re.DOTALL)
-if match:
-    old_func = match.group(0)
-    new_func = """  const handleUploadReferencePhoto = (outfitId) => {
-    setCollageOutfitId(outfitId);
-    setShowCollageMaker(true);
-  };
+replacement = """        {/* QUICK ACTIONS */}
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <QuickActionCard
+          title="New Stitch Order"
+          subtitle="Upload your design and get it stitched."
+          cta="Start Order"
+          icon={<Scissors size={24} color={Colors.white} />}
+          primary={true}
+          onPress={() => { /* Navigate to new stitch order flow */ }}
+        />
+        <QuickActionCard
+          title="Shop Ready-made"
+          subtitle="Browse dresses from boutiques."
+          cta="Shop Now"
+          icon={<ShoppingBag size={24} color={Colors.primary} />}
+          onPress={() => navigation.navigate('CustomerShop')}
+        />
+        <QuickActionCard
+          title="My Designs"
+          subtitle="View saved inspirations and uploaded designs."
+          cta="Open Gallery"
+          icon={<Camera size={24} color={Colors.primary} />}
+          onPress={() => navigation.navigate('CustomerGallery')}
+        />
 
-  const handleSaveCollage = async (uri) => {
-    setShowCollageMaker(false);
-    setUploadingOutfitId(collageOutfitId);
-    setLoading(true);
-    try {
-      const uploadResult = await dispatch(uploadImageAction({
-        uri: uri,
-        type: 'image/jpeg',
-        name: `collage_${Date.now()}.jpg`,
-        key_name: 'reference_images',
-      })).unwrap();
+        {/* ORDERS SECTION */}
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Your Active Orders</Text>"""
 
-      const fileUrl = uploadResult?.file_url || uploadResult?.data?.file_url || uploadResult?.url || uploadResult?.data?.url || '';
-
-      if (!fileUrl) {
-        throw new Error('No image URL returned from upload server');
-      }
-
-      const URL_CUSTOMER_PORTAL_ORDERS = 'http://192.168.1.16:3021/mobile/customer-portal/orders';
-      const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${collageOutfitId}/requests`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          attachment_url: fileUrl,
-          message: 'Uploaded via Customer App',
-          phone: '9090909090'
-        })
-      });
-
-      if (!response.ok) {
-         throw new Error('Failed to notify backend');
-      }
-
-      refreshData();
-      showToast('Photo uploaded successfully', 'success');
-    } catch (err) {
-      console.log('Upload error:', err);
-      showToast(err?.message || 'Failed to upload photo', 'error');
-    } finally {
-      setUploadingOutfitId(null);
-      setLoading(false);
-    }
-  };
-"""
-    content = content.replace(old_func, new_func)
-    with open('src/screens/CustomerOrderDetailScreen.js', 'w') as f:
+if target in content:
+    content = content.replace(target, replacement)
+    with open(filepath, 'w') as f:
         f.write(content)
-    print("Patched handleUploadReferencePhoto!")
+    print("Success")
 else:
-    print("Could not find the function block")
+    print("Target not found")

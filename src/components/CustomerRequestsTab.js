@@ -7,7 +7,8 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { useDispatch, useSelector } from 'react-redux';
 import { uploadImageAction } from '../store/uploadSlice';
 import { useToast } from '../context/ToastContext';
-import { API_DOMAIN } from '../config/env';
+import { API_DOMAIN, BASE_URL } from '../config/env';
+import { useOrderChat } from '../hooks/useOrderChat';
 
 export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActive }) {
   const [activeOutfit, setActiveOutfit] = useState(null);
@@ -23,6 +24,9 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const scrollViewRef = useRef();
+
+  // Initialize Socket.IO connection
+  const { socketMessages, addMessageLocally } = useOrderChat(order?.id, BASE_URL);
 
   useEffect(() => {
     if (onChatActive) {
@@ -78,9 +82,25 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
 
   useEffect(() => {
     fetchRequests();
-    const interval = setInterval(fetchRequests, 2000);
+    // Fallback sync: polling reduced from 2s to 15s since we now have real-time sockets
+    const interval = setInterval(fetchRequests, 15000);
     return () => clearInterval(interval);
   }, [order?.id]);
+
+  // Merge socket messages with fetched REST messages
+  useEffect(() => {
+    if (socketMessages.length > 0) {
+      setRequests((prev) => {
+        const newReqs = [...prev];
+        socketMessages.forEach(sm => {
+          if (!newReqs.find(r => r.id === sm.id)) {
+            newReqs.push(sm);
+          }
+        });
+        return newReqs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      });
+    }
+  }, [socketMessages]);
 
   const handleSend = async (attachmentUrl = null) => {
     const finalAttachment = attachmentUrl || pendingAttachment;

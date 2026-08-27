@@ -10,7 +10,8 @@ import {
   TrendingUp,
   User,
   HandCoins,
-  Folder
+  Folder,
+  MessageCircle
 } from 'lucide-react-native';
 
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -66,10 +67,14 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
 import TailorDashboardScreen from '../screens/TailorDashboardScreen';
 
+import CustomerChatListScreen from '../screens/CustomerChatListScreen';
+import CustomerChatScreen from '../screens/CustomerChatScreen';
 import CustomerDashboardScreen from '../screens/CustomerDashboardScreen';
 import CustomerOrderDetailScreen from '../screens/CustomerOrderDetailScreen';
 import CustomerRequestedOrdersScreen from '../screens/CustomerRequestedOrdersScreen';
 import CustomerGalleryScreen from '../screens/CustomerGalleryScreen';
+import CustomerOrdersScreen from '../screens/CustomerOrdersScreen';
+import NewStitchRequestScreen from '../screens/NewStitchRequestScreen';
 import CustomerShopScreen from '../screens/CustomerShopScreen';
 import CustomerProfileScreen from '../screens/CustomerProfileScreen';
 import CustomerMyProfileScreen from '../screens/CustomerMyProfileScreen';
@@ -130,13 +135,25 @@ function CustomerTabs() {
         }}
       />
       <CustomerTab.Screen
-        name="CustomerGallery"
-        component={CustomerGalleryScreen}
+        name="CustomerOrders"
+        component={CustomerOrdersScreen}
         options={{
-          tabBarLabel: 'Gallery',
+          tabBarLabel: 'Orders',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.activeTab]}>
-              <Folder size={22} color={focused ? '#FFF' : color} />
+              <ShoppingBag size={22} color={focused ? '#FFF' : color} />
+            </View>
+          ),
+        }}
+      />
+      <CustomerTab.Screen
+        name="CustomerChatList"
+        component={CustomerChatListScreen}
+        options={{
+          tabBarLabel: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIcon, focused && styles.activeTab]}>
+              <MessageCircle size={22} color={focused ? '#FFF' : color} />
             </View>
           ),
         }}
@@ -362,14 +379,13 @@ function MainTabs() {
       />
 
       <Tab.Screen
-        name="Payments"
-        component={PaymentsScreen}
+        name="ChatList"
+        component={CustomerChatListScreen}
         options={{
-          tabBarLabel: 'Payments',
-          tabBarButton: canViewInsights ? undefined : () => null,
+          tabBarLabel: 'Chat',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.activeTab]}>
-              <HandCoins size={24} color={focused ? '#FFF' : color} strokeWidth={focused ? 2.5 : 2} />
+              <MessageCircle size={24} color={focused ? '#FFF' : color} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
         }}
@@ -418,9 +434,12 @@ export default function RootNavigator() {
           {/* <Stack.Screen name="InventoryScreen" component={InventoryScreen} options={{ headerShown: false }} /> */}
 
           <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="CustomerChat" component={CustomerChatScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CustomerRequestedOrders" component={CustomerRequestedOrdersScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="NewStitchRequest" component={NewStitchRequestScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CustomerMyProfile" component={CustomerMyProfileScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CustomerOrderDetail" component={CustomerOrderDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CustomerGallery" component={CustomerGalleryScreen} options={{ headerShown: false }} />
           {/* <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} options={{ headerShown: true, title: 'Client Details' }} /> */}
           <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false, }} />
           <Stack.Screen name="InvoicePreview" component={InvoicePreviewScreen} options={{ headerShown: false }} />
