@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -11,7 +12,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
-  StatusBar,
+  StatusBar, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,28 +31,107 @@ import {
   Package,
   Check,
   Camera,
-  Scissors
+  Scissors,
+  ChevronDown,
+  MessageCircle,
+  Bell
 } from 'lucide-react-native';
+import axios from 'axios';
+import { URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { formatDate } from '../utils/dateUtils';
 import { formatOrderNumber } from '../utils/orderIdFormatter';
+import LinearGradient from 'react-native-linear-gradient';
+import QuickActionCard from '../components/QuickActionCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CustomerDashboardScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, getAuthToken } = useAuth();
   const { orders, refreshData, loading } = useData();
   const [refreshing, setRefreshing] = useState(false);
   
+  
+  const [shopItems, setShopItems] = useState([]);
+  const [loadingShop, setLoadingShop] = useState(false);
+
+  useEffect(() => {
+    fetchInitialShopItems();
+  }, [user]);
+
+  const fetchInitialShopItems = async () => {
+    try {
+      const token = await getAuthToken();
+      // First get boutiques to find Sewvee Direct or any boutique
+      const bRes = await axios.get(`${BASE_URL}customer-portal/boutiques`, {
+        headers: { Authorization: token }
+      });
+      if (bRes.data && bRes.data.success && bRes.data.data.length > 0) {
+        let boutiques = bRes.data.data;
+        // Prefer Sewvee Direct if available, else first one
+        let targetBoutique = boutiques.find(b => (b.boutique_name || b.name || '').toLowerCase().includes('sewvee direct')) || boutiques[0];
+        fetchShopItems(targetBoutique.id);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch initial shop items', err);
+    }
+  };
+
+  const fetchShopItems = async (companyId) => {
+    try {
+      setLoadingShop(true);
+      const res = await axios.get(`${URL_CUSTOMER_PORTAL_SHOP}?companyId=${companyId}`);
+      if (res.data && res.data.success) {
+        setShopItems(res.data.data.slice(0, 5));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch shop items for dashboard', err);
+    } finally {
+      setLoadingShop(false);
+    }
+  };
+
   // Welcome Carousel modal state
   const [showIntro, setShowIntro] = useState(false);
   const [introIndex, setIntroIndex] = useState(0);
 
   // Filter orders matching logged in customer's mobile
+
+  
+
+  const renderBanner = ({ item }) => {
+    if (item.image_url || item.mobile_image_url) {
+      const imgUrl = item.mobile_image_url || item.image_url;
+      const fullUrl = imgUrl.startsWith('http') ? imgUrl : `${API_DOMAIN}/${imgUrl}`;
+      return (
+        <TouchableOpacity activeOpacity={0.9} style={{ width: SCREEN_WIDTH * 0.85, marginRight: 16 }} onPress={() => item.cta_action_value && Linking.openURL(item.cta_action_value).catch(()=>{})}>
+          <View style={{ height: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E2E8F0' }}>
+            <Image source={{ uri: fullUrl }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+          </View>
+        </TouchableOpacity>
+      );
+    }
+    // Fallback for strip/text
+    return (
+      <TouchableOpacity activeOpacity={0.9} style={{ width: SCREEN_WIDTH * 0.85, marginRight: 16 }} onPress={() => item.cta_action_value && Linking.openURL(item.cta_action_value).catch(()=>{})}>
+        <View style={{ height: 140, borderRadius: 16, padding: 20, justifyContent: 'space-between', backgroundColor: item.bg_color || '#5B43EE' }}>
+          <View>
+            <Text style={{ fontSize: 20, fontFamily: 'Inter-Bold', color: item.text_color || '#FFF', marginBottom: 4 }}>{item.title}</Text>
+            {item.subtitle && <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: item.text_color || '#FFF', opacity: 0.9 }}>{item.subtitle}</Text>}
+          </View>
+          {item.cta_label && (
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.25)', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter-Bold', color: item.text_color || '#FFF' }}>{item.cta_label}</Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
   const customerOrders = React.useMemo(() => {
     if (!orders || orders.length === 0) return [];
-    return [...orders].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+    return [...orders].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).slice(0, 5);
   }, [orders]);
 
   // Metrics
@@ -153,6 +233,39 @@ const CustomerDashboardScreen = ({ navigation }) => {
     }
   ];
 
+  
+  const renderShopItem = ({ item }) => {
+    let imageUrl = null;
+    if (item.images) {
+      let firstUrl = item.images.split(',')[0].trim();
+      if (Platform.OS === 'android' && firstUrl.includes('localhost')) {
+        firstUrl = firstUrl.replace('localhost', '10.0.2.2');
+      }
+      const rootUrl = BASE_URL.replace('/mobile/', '/');
+      if (firstUrl.startsWith('http')) imageUrl = encodeURI(firstUrl);
+      else if (firstUrl.startsWith('/')) imageUrl = encodeURI(rootUrl + firstUrl.substring(1));
+      else imageUrl = encodeURI(rootUrl + firstUrl);
+    }
+    return (
+      <TouchableOpacity 
+        style={styles.dashShopCard}
+        onPress={() => navigation.navigate('CustomerShop')}
+      >
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.dashShopImg} />
+        ) : (
+          <View style={[styles.dashShopImg, { backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }]}>
+            <ShoppingBag color="#94A3B8" size={24} />
+          </View>
+        )}
+        <View style={styles.dashShopInfo}>
+          <Text style={styles.dashShopName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.dashShopPrice}>₹{item.price}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   const renderOrderItem = ({ item }) => {
     const isSale = item.order_type === 'SALE_ORDER';
     const orderLabel = item.billNo || item.order_number || (isSale ? `INV-${item.id}` : `ORD-${item.id}`);
@@ -247,17 +360,20 @@ const CustomerDashboardScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F3FF" />
-      {/* Welcome Banner */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greetingText}>Hello, {user?.name || 'Customer'}!</Text>
-          <Text style={styles.subGreetingText}>Check your custom stitching orders</Text>
-        </View>
-        <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('CustomerProfile')}>
-          <View style={styles.avatarInner}>
-            <User size={20} color={Colors.primary} />
+        <TouchableOpacity style={styles.boutiqueSelector}>
+          <Text style={styles.shoppingAtText}>Shopping At</Text>
+          <View style={styles.boutiqueDropdown}>
+            <Text style={styles.boutiqueNameText}>All Boutiques</Text>
+            <ChevronDown size={16} color={Colors.textPrimary} style={{ marginLeft: 4 }} />
           </View>
         </TouchableOpacity>
+        <View style={styles.headerActions}>
+          
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('NotificationsScreen')}>
+            <Bell size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -271,8 +387,64 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
         
 
+
+        {/* PROMO BANNERS */}
+        <View style={{ marginBottom: 24, marginTop: 8 }}>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={banners}
+            keyExtractor={item => item.id}
+            renderItem={renderBanner}
+            snapToInterval={SCREEN_WIDTH * 0.85 + 16}
+            decelerationRate="fast"
+            contentContainerStyle={{ paddingRight: 20 }}
+          />
+        </View>
+
+        {/* QUICK ACTIONS */}
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, marginHorizontal: -4 }}>
+          <QuickActionCard
+            title="Stitching"
+            icon={<Scissors size={20} color={Colors.primary} />}
+            primary={true}
+            onPress={() => navigation.navigate('NewStitchRequest')}
+          />
+          <QuickActionCard
+            title="Readymade"
+            icon={<ShoppingBag size={20} color={Colors.primary} />}
+            onPress={() => navigation.navigate('CustomerShop')}
+          />
+          <QuickActionCard
+            title="My Designs"
+            icon={<Camera size={20} color={Colors.primary} />}
+            onPress={() => navigation.navigate('CustomerGallery')}
+          />
+        </View>
+
+        
+        {shopItems.length > 0 && (
+          <>
+            <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop: 24, marginBottom: 16}}>
+              <Text style={[styles.sectionTitle, {marginBottom:0, marginTop:0}]}>Featured in Shop</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('CustomerShop')}>
+                <Text style={{color:Colors.primary, fontFamily:'Inter-SemiBold', fontSize:13}}>View All</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={shopItems}
+              keyExtractor={item => item.id.toString()}
+              renderItem={renderShopItem}
+              contentContainerStyle={{ paddingRight: 20 }}
+            />
+          </>
+        )}
+
         {/* ORDERS SECTION */}
-        <Text style={styles.sectionTitle}>Your Active Orders</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Your Active Orders</Text>
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -292,12 +464,31 @@ const CustomerDashboardScreen = ({ navigation }) => {
               style={styles.emptyImg}
               resizeMode="contain"
             />
-            <Text style={styles.emptyTitle}>No Active Orders</Text>
+            <Text style={styles.emptyTitle}>Welcome 👋</Text>
             <Text style={styles.emptySubtitle}>
-              When you place an order with your boutique, tracking updates and styling parameters will show up here.
+              Start your first stitching order.
             </Text>
+            <TouchableOpacity 
+              style={styles.newOrderButton}
+              onPress={() => { /* Navigate to new stitch order flow */ }}
+            >
+              <Text style={styles.newOrderButtonText}>New Stitch Order</Text>
+            </TouchableOpacity>
           </View>
         )}
+
+        {/* OFFERS / RECOMMENDED COLLECTIONS SECTION */}
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Recommended For You</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
+          <View style={[styles.offerCard, { backgroundColor: '#FEF3C7' }]}>
+            <Text style={styles.offerTitle}>Flat 20% Off</Text>
+            <Text style={styles.offerSubtitle}>On Bridal Lehengas</Text>
+          </View>
+          <View style={[styles.offerCard, { backgroundColor: '#E0E7FF' }]}>
+            <Text style={styles.offerTitle}>New Arrivals</Text>
+            <Text style={styles.offerSubtitle}>Check out the latest blouses</Text>
+          </View>
+        </ScrollView>
       </ScrollView>
       </View>
 
@@ -380,33 +571,37 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
-  greetingText: {
-    fontSize: 22,
+  boutiqueSelector: {
+    justifyContent: 'center',
+  },
+  shoppingAtText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  boutiqueDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  boutiqueNameText: {
+    fontSize: 18,
     fontFamily: 'Inter-Bold',
     color: Colors.textPrimary,
   },
-  subGreetingText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'Inter-Medium',
-    marginTop: 2,
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  avatarButton: {
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 12,
     ...Shadow.subtle,
-  },
-  avatarInner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EEF2FF',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   scrollContent: {
     padding: 20,
@@ -737,6 +932,69 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 18,
+    marginBottom: 20,
+  },
+  offerCard: {
+    width: 200,
+    height: 120,
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 16,
+    justifyContent: 'center',
+  },
+  offerTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: Colors.textPrimary,
+  },
+  offerSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Inter-Medium',
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  newOrderButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newOrderButtonText: {
+    color: Colors.white,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+  },
+
+  
+  dashShopCard: {
+    width: 140,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
+  },
+  dashShopImg: {
+    width: '100%',
+    height: 140,
+    resizeMode: 'cover',
+  },
+  dashShopInfo: {
+    padding: 12,
+  },
+  dashShopName: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  dashShopPrice: {
+    fontSize: 14,
+    fontFamily: 'Inter-Bold',
+    color: Colors.primary,
   },
 
   // INTRO MODAL STYLES
