@@ -85,7 +85,7 @@ const NewStitchRequestScreen = ({ navigation }) => {
           type: image.type,
           name: image.fileName || 'photo.jpg'
         });
-        formData.append('key_name', 'order_reference');
+        formData.append('key_name', 'order_photos');
         
         try {
           const uploadRes = await axios.post(URL_UPLOAD, formData, {

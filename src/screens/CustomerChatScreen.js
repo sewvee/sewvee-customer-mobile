@@ -10,12 +10,13 @@ import { BASE_URL } from '../config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CustomerChatScreen = ({ route, navigation }) => {
-  const { boutiqueId, boutiqueName: initBoutiqueName } = route.params;
+  const { boutiqueId, boutiqueName: initBoutiqueName, orderId: passedOrderId, orderNumber } = route.params;
   const { user } = useAuth();
   const { orders } = useData();
   
   const [messages, setMessages] = useState([]);
   const [boutiqueName, setBoutiqueName] = useState(initBoutiqueName || 'Boutique Chat');
+  const displayTitle = orderNumber ? `${boutiqueName} #${orderNumber}` : boutiqueName;
   const [loading, setLoading] = useState(true);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -26,14 +27,24 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const boutiqueOrders = orders.filter(o => o.boutiqueId?.toString() === boutiqueId?.toString());
   
   useEffect(() => {
-    if (!contextSelected && boutiqueOrders.length > 0) {
-      const order = boutiqueOrders[0];
-      const outfits = order.outfits || order.items || [];
-      if (outfits.length > 0) {
-        setContextSelected(`${order.id}_${outfits[0].id || outfits[0].order_outfit_id}`);
+    if (!contextSelected) {
+      if (passedOrderId) {
+        const order = orders.find(o => o.id?.toString() === passedOrderId?.toString());
+        if (order) {
+          const outfits = order.outfits || order.items || [];
+          if (outfits.length > 0) {
+            setContextSelected(`${order.id}_${outfits[0].id || outfits[0].order_outfit_id}`);
+          }
+        }
+      } else if (boutiqueOrders.length > 0) {
+        const order = boutiqueOrders[0];
+        const outfits = order.outfits || order.items || [];
+        if (outfits.length > 0) {
+          setContextSelected(`${order.id}_${outfits[0].id || outfits[0].order_outfit_id}`);
+        }
       }
     }
-  }, [boutiqueOrders, contextSelected]);
+  }, [boutiqueOrders, contextSelected, passedOrderId, orders]);
 
   useEffect(() => {
     fetchMessages();
@@ -44,10 +55,17 @@ const CustomerChatScreen = ({ route, navigation }) => {
     try {
       let token = await AsyncStorage.getItem('userToken');
       token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
-      const res = await axios.get(`${BASE_URL}customer-portal/chat/${boutiqueId}/messages`, {
-        params: { phone: user.mobile },
-        headers: { Authorization: token }
-      });
+      let res;
+      if (passedOrderId) {
+        res = await axios.get(`${BASE_URL}customer-portal/orders/${passedOrderId}/requests`, {
+          headers: { Authorization: token }
+        });
+      } else {
+        res = await axios.get(`${BASE_URL}customer-portal/chat/${boutiqueId}/messages`, {
+          params: { phone: user.mobile },
+          headers: { Authorization: token }
+        });
+      }
       if (res.data && res.data.success !== false) {
         setMessages(Array.isArray(res.data.data) ? res.data.data : []);
       }
@@ -115,7 +133,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
           <ChevronLeft size={24} color="#0F172A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{boutiqueName}</Text>
+        <Text style={styles.headerTitle}>{displayTitle}</Text>
         <View style={{ width: 40 }} />
       </View>
 

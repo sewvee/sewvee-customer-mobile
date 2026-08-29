@@ -34,8 +34,8 @@ const CustomerChatListScreen = ({ navigation }) => {
       ]);
 
       let activeThreads = [];
-      if (threadsRes?.data?.success !== false) {
-        activeThreads = Array.isArray(threadsRes?.data?.data) ? threadsRes.data.data : [];
+      if (threadsRes?.data) {
+        activeThreads = Array.isArray(threadsRes.data) ? threadsRes.data : (Array.isArray(threadsRes.data.data) ? threadsRes.data.data : []);
       }
 
       let allBoutiques = [];
@@ -44,22 +44,23 @@ const CustomerChatListScreen = ({ navigation }) => {
       }
 
       // Merge: if a boutique doesn't have an active thread, add it as an empty thread so the user can start a chat
-      const threadMap = new Map();
-      activeThreads.forEach(t => threadMap.set(t.boutique_id, t));
-
-      allBoutiques.forEach(b => {
-        if (!threadMap.has(b.id)) {
-          threadMap.set(b.id, {
-            boutique_id: b.id,
-            boutique_name: b.boutique_name || b.name,
-            profile_icon_url: b.profile_icon_url || null,
-            latest_message_text: 'Tap to start a conversation',
-            latest_message_timestamp: null
-          });
-        }
-      });
-
-      setThreads(Array.from(threadMap.values()));
+      // Instead of grouping by boutique, we show all active threads (orders) directly.
+      // And we append any boutique that has NO active thread so the user can start a new order/chat.
+      const activeBoutiqueIds = new Set(activeThreads.map(t => t.boutique_id));
+      
+      const newBoutiqueThreads = allBoutiques
+        .filter(b => !activeBoutiqueIds.has(b.id))
+        .map(b => ({
+          boutique_id: b.id,
+          boutique_name: b.boutique_name || b.name,
+          profile_icon_url: b.profile_icon_url || null,
+          latest_message_text: 'Tap to start a conversation',
+          latest_message_timestamp: null,
+          order_id: null,
+          order_number: ''
+        }));
+        
+      setThreads([...activeThreads, ...newBoutiqueThreads]);
     } catch (err) {
       console.warn('Failed to fetch chat data', err);
     } finally {
@@ -80,7 +81,12 @@ const CustomerChatListScreen = ({ navigation }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.chatItem}
-      onPress={() => navigation.navigate('CustomerChat', { boutiqueId: item.boutique_id, boutiqueName: item.boutique_name })}
+      onPress={() => navigation.navigate('CustomerChat', { 
+        boutiqueId: item.boutique_id, 
+        boutiqueName: item.boutique_name,
+        orderId: item.order_id,
+        orderNumber: item.order_number
+      })}
     >
       <View style={styles.avatar}>
         {item.profile_icon_url ? (
@@ -91,7 +97,9 @@ const CustomerChatListScreen = ({ navigation }) => {
       </View>
       <View style={styles.chatInfo}>
         <View style={styles.chatHeaderRow}>
-          <Text style={styles.boutiqueName} numberOfLines={1}>{item.boutique_name}</Text>
+          <Text style={styles.boutiqueName} numberOfLines={1}>
+            {item.boutique_name} {item.order_number ? `#${item.order_number}` : ''}
+          </Text>
           <Text style={styles.timeText}>{formatTime(item.latest_message_timestamp)}</Text>
         </View>
         <Text style={styles.lastMessage} numberOfLines={1}>
