@@ -66,9 +66,19 @@ const CustomerDashboardScreen = ({ navigation }) => {
       .then(res => res.json())
       .then(data => {
         console.log('Banners response:', data);
-        if (data && data.banners) setBanners(data.banners);
-        else if (data && Array.isArray(data.data)) setBanners(data.data);
-        else if (Array.isArray(data)) setBanners(data);
+        let fetchedBanners = [];
+        if (data && data.banners) fetchedBanners = data.banners;
+        else if (data && Array.isArray(data.data)) fetchedBanners = data.data;
+        else if (Array.isArray(data)) fetchedBanners = data;
+        
+        // Ensure backend isn't sending business app banners
+        const validBanners = fetchedBanners.filter(b => 
+          b.target_app === 'CUSTOMER_APP' || 
+          b.target_app === 'ALL' || 
+          !b.target_app
+        );
+        
+        setBanners(validBanners);
       })
       .catch((err) => {
         console.warn('Banner fetch error:', err.message);
