@@ -6,7 +6,12 @@ import { Colors } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import axios from 'axios';
-import { BASE_URL } from '../config/env';
+import { BASE_URL, URL_UPLOAD } from '../config/env';
+import CustomerFeedbackModal from '../components/CustomerFeedbackModal';
+import CollageMaker from '../components/CollageMaker';
+import * as ImagePicker from 'react-native-image-picker';
+import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star } from 'lucide-react-native';
+import { Modal, ActionSheetIOS, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CustomerChatScreen = ({ route, navigation }) => {
@@ -20,7 +25,11 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
-  const [contextSelected, setContextSelected] = useState(''); 
+  const [contextSelected, setContextSelected] = useState('');
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [collageMakerVisible, setCollageMakerVisible] = useState(false);
+  const [collageOutfitId, setCollageOutfitId] = useState(null); 
 
   const flatListRef = useRef(null);
 
@@ -76,6 +85,93 @@ const CustomerChatScreen = ({ route, navigation }) => {
     }
   };
 
+  
+  const uploadImageAndSend = async (uri, contextId, msgText = 'Uploaded Photos') => {
+    if (!uri || !contextId) return;
+    const [orderId, outfitId] = contextId.split('_');
+    try {
+      setSending(true);
+      let token = await AsyncStorage.getItem('userToken');
+      token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+      
+      const formData = new FormData();
+      formData.append('file', {
+        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+        name: `chat_${Date.now()}.jpg`,
+        type: 'image/jpeg'
+      });
+
+      const uploadRes = await axios.post(URL_UPLOAD, formData, {
+        headers: { 
+          Authorization: token,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      const fileUrl = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
+      if (fileUrl) {
+        await axios.post(`${BASE_URL}customer-portal/orders/${orderId}/outfits/${outfitId}/requests`, {
+          message: msgText,
+          attachment_url: fileUrl
+        }, {
+          headers: { Authorization: token }
+        });
+        fetchMessages();
+      }
+    } catch (e) {
+      console.warn('Upload failed', e);
+      Alert.alert('Error', 'Failed to upload photo.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleAttachment = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Library', 'Create Collage'],
+          cancelButtonIndex: 0,
+        },
+        buttonIndex => {
+          if (buttonIndex === 1) openCamera();
+          else if (buttonIndex === 2) openLibrary();
+          else if (buttonIndex === 3) {
+            setCollageOutfitId(contextSelected);
+            setCollageMakerVisible(true);
+          }
+        }
+      );
+    } else {
+      setShowAttachMenu(true);
+    }
+  };
+
+  const openCamera = () => {
+    setShowAttachMenu(false);
+    ImagePicker.launchCamera({ mediaType: 'photo', quality: 0.8 }, (res) => {
+      if (res.assets && res.assets.length > 0) {
+        uploadImageAndSend(res.assets[0].uri, contextSelected);
+      }
+    });
+  };
+
+  const openLibrary = () => {
+    setShowAttachMenu(false);
+    ImagePicker.launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, (res) => {
+      if (res.assets && res.assets.length > 0) {
+        uploadImageAndSend(res.assets[0].uri, contextSelected);
+      }
+    });
+  };
+
+  const handleCollageComplete = (uri) => {
+    setCollageMakerVisible(false);
+    if (uri && collageOutfitId) {
+      uploadImageAndSend(uri, collageOutfitId);
+    }
+  };
+
   const handleSend = async () => {
     if (!inputText.trim() || !contextSelected) return;
     const [orderId, outfitId] = contextSelected.split('_');
@@ -105,6 +201,90 @@ const CustomerChatScreen = ({ route, navigation }) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  
+  const renderMessageContent = (item, isCustomer) => {
+    const msgText = item.message || '';
+    
+    if (msgText.startsWith("⭐ Feedback Submitted!")) {
+      const lines = msgText.split("\n");
+      const ratingsStr = lines[1] || "";
+      const commentsStr = lines.slice(2).join("\n").replace("Comments: ", "").trim();
+
+      const parseRating = (section) => {
+        const match = section.match(/(\d+)★/);
+        return match ? parseInt(match[1]) : 0;
+      };
+
+      const parts = ratingsStr.split("|").map(s => s.trim());
+      const stitching = parts.find(p => p.startsWith("Stitching:")) ? parseRating(parts.find(p => p.startsWith("Stitching:"))) : 0;
+      const staff = parts.find(p => p.startsWith("Staff:")) ? parseRating(parts.find(p => p.startsWith("Staff:"))) : 0;
+      const overall = parts.find(p => p.startsWith("Overall:")) ? parseRating(parts.find(p => p.startsWith("Overall:"))) : 0;
+
+      const StarRow = ({ label, count }) => (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
+          <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569' }}>{label}</Text>
+          <View style={{ flexDirection: 'row' }}>
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Text key={s} style={{ fontSize: 12, color: s <= count ? '#FACC15' : 'rgba(0,0,0,0.1)' }}>★</Text>
+            ))}
+          </View>
+        </View>
+      );
+
+      return (
+        <View style={[{ padding: 12, borderRadius: 12, marginTop: 4 }, isCustomer ? { backgroundColor: 'rgba(255,255,255,0.1)' } : { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5', borderWidth: 1 }]}>
+          <Text style={{ fontWeight: 'bold', marginBottom: 8, color: isCustomer ? '#FFF' : '#047857' }}>⭐ Feedback Received</Text>
+          <StarRow label="Stitching Quality" count={stitching} />
+          <StarRow label="Staff Behavior" count={staff} />
+          <StarRow label="Overall Experience" count={overall} />
+          {!!commentsStr && (
+            <Text style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: isCustomer ? 'rgba(255,255,255,0.2)' : 'rgba(4,120,87,0.2)', fontSize: 13, fontStyle: 'italic', color: isCustomer ? '#E0E7FF' : '#065F46' }}>
+              "{commentsStr}"
+            </Text>
+          )}
+        </View>
+      );
+    }
+    
+    if (msgText.startsWith("Category:")) {
+      const lines = msgText.split("\n");
+      const category = lines.find(l => l.startsWith("Category:"))?.replace("Category:", "").trim() || "";
+      const description = lines.find(l => l.startsWith("Description:"))?.replace("Description:", "").trim() || "";
+      const measurement = lines.find(l => l.startsWith("Measurement:"))?.replace("Measurement:", "").trim() || "";
+      const delivery = lines.find(l => l.startsWith("Delivery Date:"))?.replace("Delivery Date:", "").trim() || lines.find(l => l.startsWith("Expected Date:"))?.replace("Expected Date:", "").trim() || "";
+      
+      return (
+        <View style={[{ padding: 12, borderRadius: 12, marginTop: 4 }, isCustomer ? { backgroundColor: 'rgba(255,255,255,0.1)' } : { backgroundColor: '#EEF2FF', borderColor: '#E0E7FF', borderWidth: 1 }]}>
+          {!!category && <Text style={{ fontWeight: 'bold', color: isCustomer ? '#FFF' : '#4F46E5', marginBottom: 4 }}>{category}</Text>}
+          {!!description && <Text style={{ fontStyle: 'italic', color: isCustomer ? '#E0E7FF' : '#334155', marginBottom: 8 }}>"{description}"</Text>}
+          <View style={{ borderTopWidth: 1, borderTopColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#E0E7FF', paddingTop: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Measurements:</Text>
+              <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569', flex: 1, textAlign: 'right' }}>{measurement}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Expected By:</Text>
+              <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569' }}>{delivery}</Text>
+            </View>
+          </View>
+        </View>
+      );
+    }
+    
+    return (
+      <>
+        {!!item.attachment_url && (
+          <Image source={{ uri: item.attachment_url }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: 8 }} />
+        )}
+        {!!msgText && (
+          <Text style={[styles.msgText, isCustomer ? styles.msgTextCustomer : styles.msgTextBusiness]}>
+            {msgText}
+          </Text>
+        )}
+      </>
+    );
+  };
+
   const renderMessage = ({ item }) => {
     const isCustomer = item.sender_type === 'CUSTOMER';
     return (
@@ -116,9 +296,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         )}
         <View style={[styles.bubble, isCustomer ? styles.bubbleCustomer : styles.bubbleBusiness]}>
           <Text style={styles.contextTag}>{item.order_number} - {item.outfit_name}</Text>
-          <Text style={[styles.msgText, isCustomer ? styles.msgTextCustomer : styles.msgTextBusiness]}>
-            {item.message}
-          </Text>
+          {renderMessageContent(item, isCustomer)}
           <Text style={[styles.msgTime, isCustomer ? styles.msgTimeCustomer : styles.msgTimeBusiness]}>
             {formatTime(item.created_at)}
           </Text>
@@ -134,10 +312,13 @@ const CustomerChatScreen = ({ route, navigation }) => {
           <ChevronLeft size={24} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{displayTitle}</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setFeedbackModalVisible(true)} style={{ padding: 8 }}>
+          <Star size={20} color="#F59E0B" fill="#F59E0B" />
+        </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : null}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -153,6 +334,13 @@ const CustomerChatScreen = ({ route, navigation }) => {
           />
         )}
         <View style={styles.inputContainer}>
+          <TouchableOpacity 
+            style={{ padding: 8, marginRight: 4 }} 
+            onPress={handleAttachment}
+            disabled={!contextSelected || sending}
+          >
+            <Paperclip size={24} color={!contextSelected || sending ? "#CBD5E1" : "#94A3B8"} />
+          </TouchableOpacity>
           <TextInput
             style={styles.input}
             placeholder="Type a message..."
@@ -169,6 +357,38 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+    
+      {/* Android Attach Menu */}
+      <Modal visible={showAttachMenu} transparent={true} animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
+        <TouchableOpacity style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center'}} onPress={() => setShowAttachMenu(false)}>
+          <View style={{backgroundColor: '#FFF', borderRadius: 16, width: '80%', padding: 16}}>
+            <Text style={{fontSize: 16, fontWeight: 'bold', marginBottom: 16}}>Attach File</Text>
+            <TouchableOpacity style={{paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} onPress={openCamera}><Text>Take Photo</Text></TouchableOpacity>
+            <TouchableOpacity style={{paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} onPress={openLibrary}><Text>Choose from Library</Text></TouchableOpacity>
+            <TouchableOpacity style={{paddingVertical: 12}} onPress={() => {setShowAttachMenu(false); setCollageOutfitId(contextSelected); setCollageMakerVisible(true);}}><Text>Create Collage</Text></TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Collage Maker */}
+      <Modal visible={collageMakerVisible} animationType="slide" onRequestClose={() => setCollageMakerVisible(false)}>
+        <SafeAreaView style={{flex: 1, backgroundColor: '#000'}}>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', padding: 16}}>
+            <TouchableOpacity onPress={() => setCollageMakerVisible(false)}>
+              <Text style={{color: '#FFF'}}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+          <CollageMaker visible={collageMakerVisible} onClose={() => setCollageMakerVisible(false)} onSaveReference={handleCollageComplete} />
+        </SafeAreaView>
+      </Modal>
+
+      <CustomerFeedbackModal 
+        visible={feedbackModalVisible} 
+        onClose={() => setFeedbackModalVisible(false)} 
+        orderId={passedOrderId || (boutiqueOrders[0]?.id)}
+        onSubmitSuccess={() => fetchMessages()}
+      />
+
     </SafeAreaView>
   );
 };
