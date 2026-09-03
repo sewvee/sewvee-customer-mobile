@@ -47,7 +47,7 @@ const CustomerShopScreen = () => {
   const { orders, refreshData } = useData();
 
   const [selectedBoutique, setSelectedBoutique] = useState(null);
-  const [boutiques, setBoutiques] = useState([]);
+  const [boutiques, setBoutique] = useState([]);
   const [activeTab, setActiveTab] = useState('sewvee'); // 'sewvee' | 'boutique'
   
   const [products, setProducts] = useState([]);
@@ -83,16 +83,16 @@ const CustomerShopScreen = () => {
 
   useEffect(() => {
     if (orders && orders.length > 0) {
-      const uniqueBoutiques = [];
+      const uniqueBoutique = [];
       const map = new Map();
       orders.forEach(o => {
         if (o.boutiqueId && !map.has(o.boutiqueId)) {
           map.set(o.boutiqueId, true);
-          uniqueBoutiques.push({ id: o.boutiqueId, name: o.boutiqueName, mobile: o.boutiqueMobile || '' });
+          uniqueBoutique.push({ id: o.boutiqueId, name: o.boutiqueName, mobile: o.boutiqueMobile || '' });
         }
       });
-      setBoutiques(uniqueBoutiques);
-      if (uniqueBoutiques.length > 0 && !selectedBoutique) {
+      setBoutique(uniqueBoutique);
+      if (uniqueBoutique.length > 0 && !selectedBoutique) {
         setSelectedBoutique(SEWVEE_DIRECT);
       }
     } else if (!selectedBoutique) {
@@ -395,12 +395,12 @@ const CustomerShopScreen = () => {
             }}
           >
             <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'boutique' ? Colors.primary : '#64748B' }}>
-              My Boutique
+              Boutique
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Boutique selector — only shown under My Boutique tab */}
+        {/* Boutique selector — only shown under Boutique tab */}
         {activeTab === 'boutique' && (
           <TouchableOpacity
             onPress={() => setIsBoutiqueModalVisible(true)}
