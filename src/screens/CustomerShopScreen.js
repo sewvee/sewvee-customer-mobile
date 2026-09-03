@@ -395,12 +395,12 @@ const CustomerShopScreen = () => {
             }}
           >
             <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'boutique' ? Colors.primary : '#64748B' }}>
-              My Boutiques
+              My Boutique
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Boutique selector — only shown under My Boutiques tab */}
+        {/* Boutique selector — only shown under My Boutique tab */}
         {activeTab === 'boutique' && (
           <TouchableOpacity
             onPress={() => setIsBoutiqueModalVisible(true)}
