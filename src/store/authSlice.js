@@ -13,7 +13,7 @@ import {
     URL_GET_STATE,
     URL_GET_CITY,
     URL_REFRESH_TOKEN,
-    URL_FCM_TOKEN
+    URL_CUSTOMER_FCM_TOKEN
 } from '../config/env';
 
 export const loginUser = createAsyncThunk(
@@ -198,7 +198,7 @@ export const saveFcmTokenAction = createAsyncThunk(
 
             console.log('FCM Token API Request Payload:', fcmData);
 
-            const response = await axios.post(URL_FCM_TOKEN, fcmData, {
+            const response = await axios.post(URL_CUSTOMER_FCM_TOKEN, fcmData, {
                 headers: {
                     'Content-Type': 'application/json',
                     'accept': '*/*',

@@ -13,6 +13,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +30,7 @@ const LoginScreen = ({ navigation }) => {
   const { showToast } = useToast();
 
   const [phone, setPhone] = useState('');
+    const [countryCode, setCountryCode] = useState('+91');
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -118,13 +120,27 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.formSection}>
             <Text style={styles.label}>MOBILE NUMBER</Text>
             <View style={[styles.inputRow, errorMsg.includes('number') && styles.inputRowError]}>
-              <Ionicons name="call-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Picker
+                    selectedValue={countryCode}
+                    onValueChange={(itemValue) => setCountryCode(itemValue)}
+                    style={{ width: 110, height: 50, color: '#0F172A', marginLeft: -10 }}
+                    dropdownIconColor="#94A3B8"
+                >
+                    <Picker.Item label="🇮🇳 +91" value="+91" />
+                    <Picker.Item label="🇺🇸 +1" value="+1" />
+                    <Picker.Item label="🇬🇧 +44" value="+44" />
+                    <Picker.Item label="🇦🇺 +61" value="+61" />
+                    <Picker.Item label="🇦🇪 +971" value="+971" />
+                </Picker>
+                <View style={{ width: 1, height: 24, backgroundColor: '#E2E8F0', marginRight: 10 }} />
+              </View>
               <TextInput
-                style={styles.textInput}
-                placeholder="10-digit number"
+                style={[styles.textInput, { flex: 1, paddingLeft: 0 }]}
+                placeholder="Mobile number"
                 placeholderTextColor="#94A3B8"
                 keyboardType="number-pad"
-                maxLength={10}
+                maxLength={15}
                 value={phone}
                 onChangeText={(val) => {
                   setPhone(val.replace(/[^0-9]/g, ''));
