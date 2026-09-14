@@ -762,7 +762,7 @@ const CustomerDetailScreen = ({ route, navigation }) => {
                 <FlatList
                     data={orders}
                     renderItem={renderItem}
-                    keyExtractor={item => item.id.toString()}
+                    keyExtractor={item => item.id?.toString() || Math.random().toString()}
                     contentContainerStyle={{ paddingBottom: 20, paddingTop: 15 }}
                     onEndReached={handleLoadMore}
                     onEndReachedThreshold={0.5}

@@ -16,7 +16,11 @@
         "EXPO_PUBLIC_API_URL": "https://api-stage.sewvee.com"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.sewvee.com"
+      }
+    }
   },
   "submit": {
     "production": {}

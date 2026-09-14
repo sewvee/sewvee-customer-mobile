@@ -327,7 +327,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           <FlatList
             ref={flatListRef}
             data={messages}
-            keyExtractor={item => item.id.toString()}
+            keyExtractor={item => item.id?.toString() || Math.random().toString()}
             renderItem={renderMessage}
             contentContainerStyle={styles.listContent}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}

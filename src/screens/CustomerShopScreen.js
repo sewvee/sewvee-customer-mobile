@@ -461,7 +461,7 @@ const CustomerShopScreen = () => {
         <FlatList
           data={filteredProducts}
           renderItem={renderProductItem}
-          keyExtractor={item => item.id.toString()}
+          keyExtractor={item => item.id?.toString() || Math.random().toString()}
           numColumns={2}
           contentContainerStyle={styles.listContent}
           columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
