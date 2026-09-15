@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, Image, Alert, Platform, KeyboardAvoidingView,
+  TextInput, Image, Alert, Platform, KeyboardAvoidingView, Modal,
   StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { URL_UPLOAD, URL_ORDERS } from '../config/env';
 import CollageMaker from '../components/CollageMaker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const CATEGORIES = ['Blouse', 'Chudithar', 'Kurta / Kurti', 'Lehenga', 'Suit / Salwar', 'Dress / Gown', 'Pants / Trousers', 'Other'];
 const MEASUREMENT_OPTIONS = ['Use Previous Measurements', 'I will provide later', 'Take measurements at store', 'Send sample dress via courier', 'Measurement dress given'];
@@ -37,7 +38,8 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
   const [deliveryDate, setDeliveryDate] = useState('');
   
   // Accordion & Features State
-  const [expandedOutfitId, setExpandedOutfitId] = useState(null);
+  const [editingOutfitId, setEditingOutfitId] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [collageMakerVisible, setCollageMakerVisible] = useState(false);
   const [activeCollageOutfitId, setActiveCollageOutfitId] = useState(null);
 
@@ -183,13 +185,6 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
             console.warn('Failed to upload collage', err);
           }
         }
-            });
-            const url = uploadRes.data?.file_url || uploadRes.data?.data?.file_url || uploadRes.data?.url;
-            if (url) uploadedUrls.push(url);
-          } catch (err) {
-            console.warn('Failed to upload image', err);
-          }
-        }
         
         const lines = [];
         lines.push(`Category: ${outfit.category}`);
@@ -237,20 +232,24 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       <Text style={styles.stepTitle}>What would you like to stitch?</Text>
       <Text style={styles.stepSubtitle}>Select the number of outfits for each category.</Text>
       
-      {CATEGORIES.map(cat => (
-        <View key={cat} style={styles.categoryCard}>
-          <Text style={styles.categoryName}>{cat}</Text>
-          <View style={styles.counterBox}>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateCount(cat, -1)}>
-              <Minus size={16} color="#64748B" />
-            </TouchableOpacity>
-            <Text style={styles.counterText}>{categoryCounts[cat] || 0}</Text>
-            <TouchableOpacity style={styles.counterBtn} onPress={() => updateCount(cat, 1)}>
-              <Plus size={16} color="#64748B" />
-            </TouchableOpacity>
+      {CATEGORIES.map(cat => {
+        const count = categoryCounts[cat] || 0;
+        const isActive = count > 0;
+        return (
+          <View key={cat} style={[styles.categoryCard, isActive && styles.categoryCardActive]}>
+            <Text style={[styles.categoryName, isActive && styles.categoryNameActive]}>{cat}</Text>
+            <View style={styles.counterBox}>
+              <TouchableOpacity style={[styles.counterBtn, isActive && styles.counterBtnActive]} onPress={() => updateCount(cat, -1)}>
+                <Minus size={16} color={isActive ? "#5B43EE" : "#64748B"} />
+              </TouchableOpacity>
+              <Text style={styles.counterText}>{count}</Text>
+              <TouchableOpacity style={[styles.counterBtn, isActive && styles.counterBtnActive]} onPress={() => updateCount(cat, 1)}>
+                <Plus size={16} color={isActive ? "#5B43EE" : "#64748B"} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 
@@ -259,126 +258,24 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       <Text style={styles.stepTitle}>Configure Outfits</Text>
       <Text style={styles.stepSubtitle}>Tap each outfit to provide design references, details, and measurements.</Text>
       
-      {outfits.map((outfit, index) => {
-        const isExpanded = expandedOutfitId === outfit.id;
-        
-        return (
-          <View key={outfit.id} style={[styles.outfitCard, isExpanded && styles.outfitCardExpanded]}>
-            <TouchableOpacity 
-              style={styles.accordionHeader} 
-              onPress={() => setExpandedOutfitId(isExpanded ? null : outfit.id)}
-            >
-              <View style={styles.accordionHeaderLeft}>
-                <View style={styles.accordionIndexCircle}>
-                  <Text style={styles.accordionIndexText}>{index + 1}</Text>
-                </View>
-                <View>
-                  <Text style={styles.outfitTitle}>{outfit.name}</Text>
-                  <Text style={styles.outfitSubtitle}>Tap to add details</Text>
-                </View>
-              </View>
-              {isExpanded ? <ChevronDown size={20} color="#CBD5E1" /> : <ChevronRight size={20} color="#CBD5E1" />}
-            </TouchableOpacity>
-            
-            {isExpanded && (
-              <View style={styles.accordionBody}>
-                
-                {/* 1. Build a Collage */}
-                <View style={styles.dashedBox}>
-                  <View style={styles.iconCircle}>
-                    <ImageIconLucide size={24} color="#5B43EE" />
-                  </View>
-                  <Text style={styles.boxTitle}>Build a Collage</Text>
-                  <Text style={styles.boxSubtitle}>Combine your fabric photos with design references in one image.</Text>
-                  <TouchableOpacity 
-                    style={styles.btnCollage}
-                    onPress={() => {
-                      setActiveCollageOutfitId(outfit.id);
-                      setCollageMakerVisible(true);
-                    }}
-                  >
-                    <Text style={styles.btnCollageText}>Open Collage Maker</Text>
-                  </TouchableOpacity>
-                  
-                  {/* Show collage thumbnail if it exists */}
-                  {outfit.collageUrl && (
-                    <View style={{marginTop: 12, position: 'relative'}}>
-                      <Image source={{uri: outfit.collageUrl}} style={{width: '100%', height: 150, borderRadius: 8}} resizeMode="cover" />
-                      <TouchableOpacity 
-                        style={styles.removeImageBtn} 
-                        onPress={() => updateOutfit(outfit.id, 'collageUrl', null)}
-                      >
-                        <X size={12} color="#FFF" />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-
-                {/* Legacy Photo Grid (keeping it as backup) */}
-                {outfit.images.length > 0 && (
-                  <View style={styles.imagesGrid}>
-                    {outfit.images.map((img, idx) => (
-                      <View key={idx} style={styles.imageWrapper}>
-                        <Image source={{ uri: img.uri }} style={styles.previewImage} />
-                        <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(outfit.id, idx)}>
-                          <X size={12} color="#FFF" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* 2. Description & Voice Note */}
-                <Text style={styles.sectionHeading}>2. Description & Voice Note</Text>
-                <TextInput
-                  style={styles.textArea}
-                  multiline
-                  numberOfLines={4}
-                  placeholder="Describe your design, specific requirements, fabric details..."
-                  value={outfit.description}
-                  onChangeText={(text) => updateOutfit(outfit.id, 'description', text)}
-                  textAlignVertical="top"
-                />
-                
-                <Text style={styles.orText}>Or record a voice note</Text>
-                <TouchableOpacity 
-                  style={styles.btnVoiceNote}
-                  onPress={() => Alert.alert('Coming Soon', 'Voice recording will be available in the next app update.')}
-                >
-                  <Mic size={18} color="#5B43EE" style={{marginRight: 8}} />
-                  <Text style={styles.btnVoiceNoteText}>Record Voice Note</Text>
-                </TouchableOpacity>
-
-                {/* 3. Measurement Option */}
-                <Text style={styles.sectionHeading}>3. Measurement Option</Text>
-                {MEASUREMENT_OPTIONS.map(opt => {
-                  const isActive = outfit.measurement === opt;
-                  return (
-                    <TouchableOpacity
-                      key={opt}
-                      style={[styles.measurementOptionBox, isActive && styles.measurementOptionBoxActive]}
-                      onPress={() => updateOutfit(outfit.id, 'measurement', opt)}
-                    >
-                      <View style={styles.measurementOptionHeader}>
-                        <Text style={[styles.measurementOptionText, isActive && styles.measurementOptionTextActive]}>{opt}</Text>
-                        {isActive && <CheckCircle2 size={20} color="#5B43EE" />}
-                      </View>
-                      
-                      {/* Tap to select an order... input if "Use Previous Measurements" */}
-                      {isActive && opt === 'Use Previous Measurements' && (
-                        <View style={styles.subInputBox}>
-                          <Text style={styles.subInputText}>Tap to select an order...</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-
-              </View>
-            )}
+      {outfits.map((outfit, index) => (
+        <TouchableOpacity 
+          key={outfit.id} 
+          style={styles.outfitDrawerCard} 
+          onPress={() => setEditingOutfitId(outfit.id)}
+        >
+          <View style={styles.accordionHeaderLeft}>
+            <View style={styles.accordionIndexCircle}>
+              <Text style={styles.accordionIndexText}>{index + 1}</Text>
+            </View>
+            <View>
+              <Text style={styles.outfitTitle}>{outfit.name}</Text>
+              <Text style={styles.outfitSubtitle}>Tap to add details</Text>
+            </View>
           </View>
-        );
-      })}
+          <ChevronRight size={20} color="#CBD5E1" />
+        </TouchableOpacity>
+      ))}
       
       <CollageMaker
         visible={collageMakerVisible}
@@ -398,21 +295,44 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       <Text style={styles.stepTitle}>Final Details</Text>
       
       <Text style={styles.fieldLabel}>Preferred Delivery Date (Optional)</Text>
-      <View style={styles.dateInputWrapper}>
+      <TouchableOpacity 
+        style={styles.dateInputWrapper}
+        onPress={() => setShowDatePicker(true)}
+      >
         <Calendar size={20} color="#64748B" style={{ marginRight: 10 }} />
-        <TextInput
-          style={styles.dateInput}
-          placeholder="e.g. 15th October"
-          value={deliveryDate}
-          onChangeText={setDeliveryDate}
+        <Text style={[styles.dateInput, !deliveryDate && { color: '#94A3B8' }]}>
+          {deliveryDate || 'e.g. 15th October'}
+        </Text>
+      </TouchableOpacity>
+      
+      {showDatePicker && (
+        <DateTimePicker
+          value={new Date()}
+          mode="date"
+          display="default"
+          minimumDate={new Date()}
+          onChange={(event, date) => {
+            setShowDatePicker(Platform.OS === 'ios');
+            if (date) {
+              const formattedDate = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+              setDeliveryDate(formattedDate);
+            }
+          }}
         />
-      </View>
+      )}
       
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Order Summary</Text>
         <Text style={styles.summaryText}>Total Outfits: {outfits.length}</Text>
         <Text style={styles.summaryText}>Boutique: {boutiqueName}</Text>
       </View>
+      
+      {selectedBoutique?.terms_and_conditions ? (
+        <View style={styles.termsCard}>
+          <Text style={styles.termsTitle}>Terms & Conditions</Text>
+          <Text style={styles.termsText}>{selectedBoutique.terms_and_conditions}</Text>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -450,6 +370,116 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
         </ScrollView>
+
+        {/* OUTFIT CONFIGURATION DRAWER (BOTTOM SHEET) */}
+        <Modal
+          visible={!!editingOutfitId}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setEditingOutfitId(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setEditingOutfitId(null)} />
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalContainer}>
+              {(() => {
+                const activeOutfit = outfits.find(o => o.id === editingOutfitId);
+                if (!activeOutfit) return null;
+                return (
+                  <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>{activeOutfit.name}</Text>
+                      <TouchableOpacity onPress={() => setEditingOutfitId(null)} style={styles.closeBtn}>
+                        <X size={24} color="#0F172A" />
+                      </TouchableOpacity>
+                    </View>
+                    <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 40 }}>
+                      
+                      {/* 1. Build a Collage */}
+                      <View style={styles.dashedBox}>
+                        <View style={styles.iconCircle}>
+                          <ImageIconLucide size={24} color="#5B43EE" />
+                        </View>
+                        <Text style={styles.boxTitle}>Build a Collage</Text>
+                        <Text style={styles.boxSubtitle}>Combine your fabric photos with design references in one image.</Text>
+                        <TouchableOpacity 
+                          style={styles.btnCollage}
+                          onPress={() => {
+                            setActiveCollageOutfitId(activeOutfit.id);
+                            setCollageMakerVisible(true);
+                          }}
+                        >
+                          <Text style={styles.btnCollageText}>Open Collage Maker</Text>
+                        </TouchableOpacity>
+                        
+                        {activeOutfit.collageUrl && (
+                          <View style={{marginTop: 12, position: 'relative'}}>
+                            <Image source={{uri: activeOutfit.collageUrl}} style={{width: '100%', height: 150, borderRadius: 8}} resizeMode="cover" />
+                            <TouchableOpacity 
+                              style={styles.removeImageBtn} 
+                              onPress={() => updateOutfit(activeOutfit.id, 'collageUrl', null)}
+                            >
+                              <X size={12} color="#FFF" />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* 2. Description & Voice Note */}
+                      <Text style={styles.sectionHeading}>2. Description & Voice Note</Text>
+                      <TextInput
+                        style={styles.textArea}
+                        multiline
+                        numberOfLines={4}
+                        placeholder="Describe your design, specific requirements, fabric details..."
+                        value={activeOutfit.description}
+                        onChangeText={(text) => updateOutfit(activeOutfit.id, 'description', text)}
+                        textAlignVertical="top"
+                      />
+                      
+                      <Text style={styles.orText}>Or record a voice note</Text>
+                      <TouchableOpacity 
+                        style={styles.btnVoiceNote}
+                        onPress={() => Alert.alert('Coming Soon', 'Voice recording will be available in the next app update.')}
+                      >
+                        <Mic size={18} color="#5B43EE" style={{marginRight: 8}} />
+                        <Text style={styles.btnVoiceNoteText}>Record Voice Note</Text>
+                      </TouchableOpacity>
+
+                      {/* 3. Measurement Option */}
+                      <Text style={styles.sectionHeading}>3. Measurement Option</Text>
+                      {MEASUREMENT_OPTIONS.map(opt => {
+                        const isActive = activeOutfit.measurement === opt;
+                        return (
+                          <TouchableOpacity
+                            key={opt}
+                            style={[styles.measurementOptionBox, isActive && styles.measurementOptionBoxActive]}
+                            onPress={() => updateOutfit(activeOutfit.id, 'measurement', opt)}
+                          >
+                            <View style={styles.measurementOptionHeader}>
+                              <Text style={[styles.measurementOptionText, isActive && styles.measurementOptionTextActive]}>{opt}</Text>
+                              {isActive && <CheckCircle2 size={20} color="#5B43EE" />}
+                            </View>
+                            
+                            {isActive && opt === 'Use Previous Measurements' && (
+                              <View style={styles.subInputBox}>
+                                <Text style={styles.subInputText}>Tap to select an order...</Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+
+                      <TouchableOpacity style={styles.btnSaveDrawer} onPress={() => setEditingOutfitId(null)}>
+                        <Text style={styles.btnSaveDrawerText}>Done</Text>
+                      </TouchableOpacity>
+
+                    </ScrollView>
+                  </View>
+                );
+              })()}
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
 
         <View style={styles.footer}>
           <TouchableOpacity 
@@ -649,6 +679,31 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   btnPrimaryText: { fontSize: 15, fontFamily: 'Inter-Bold', color: '#FFF' },
+  categoryCardActive: { borderColor: '#5B43EE', backgroundColor: '#EEF2FF' },
+  categoryNameActive: { color: '#5B43EE' },
+  counterBtnActive: { borderColor: '#5B43EE', backgroundColor: '#FFF' },
+  outfitDrawerCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0',
+    borderRadius: 16, marginBottom: 16,
+  },
+  
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject },
+  modalContainer: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%' },
+  modalContent: { padding: 20, flexShrink: 1 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontFamily: 'Inter-Bold', color: '#0F172A' },
+  closeBtn: { padding: 4 },
+  modalScroll: { flexGrow: 0 },
+  btnSaveDrawer: {
+    backgroundColor: '#5B43EE', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 20
+  },
+  btnSaveDrawerText: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#FFF' },
+  
+  termsCard: { marginTop: 24, padding: 16, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  termsTitle: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#475569', marginBottom: 8 },
+  termsText: { fontSize: 13, fontFamily: 'Inter-Medium', color: '#64748B', lineHeight: 20 },
 });
 
 export default NewStitchRequestScreen;
