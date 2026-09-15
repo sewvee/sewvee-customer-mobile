@@ -14,6 +14,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Shadow } from '../constants/theme';
 import { 
@@ -48,6 +49,7 @@ const DEFAULT_FOLDERS = [
 ];
 
 const CustomerGalleryScreen = () => {
+  const navigation = useNavigation();
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -304,6 +306,9 @@ const CustomerGalleryScreen = () => {
           </>
         ) : (
           <>
+            <TouchableOpacity style={[styles.iconBtn, { marginRight: 12 }]} onPress={() => navigation.goBack()}>
+              <ArrowLeft size={24} color="#0F172A" />
+            </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>My Gallery</Text>
             </View>
