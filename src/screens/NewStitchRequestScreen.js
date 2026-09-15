@@ -404,35 +404,53 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
                     </View>
                     <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 40 }}>
                       
-                      {/* 1. Build a Collage */}
-                      <View style={styles.dashedBox}>
-                        <View style={styles.iconCircle}>
-                          <ImageIconLucide size={24} color="#5B43EE" />
-                        </View>
-                        <Text style={styles.boxTitle}>Build a Collage</Text>
-                        <Text style={styles.boxSubtitle}>Combine your fabric photos with design references in one image.</Text>
-                        <TouchableOpacity 
-                          style={styles.btnCollage}
-                          onPress={() => {
-                            setActiveCollageOutfitId(activeOutfit.id);
-                            setCollageMakerVisible(true);
-                          }}
-                        >
-                          <Text style={styles.btnCollageText}>Open Collage Maker</Text>
-                        </TouchableOpacity>
-                        
-                        {activeOutfit.collageUrl && (
-                          <View style={{marginTop: 12, position: 'relative'}}>
-                            <Image source={{uri: activeOutfit.collageUrl}} style={{width: '100%', height: 150, borderRadius: 8}} resizeMode="cover" />
+                      {/* 1. Reference Photos (Collage) */}
+                      <Text style={styles.sectionHeading}>1. Reference Photos</Text>
+                      <Text style={styles.sectionSubheading}>Add your fabric & design inspiration. 1) Collage your saree/outfit material, any embroidery or patterns, and reference images.</Text>
+                      
+                      {activeOutfit.collageUrl ? (
+                        <View style={styles.collagePreviewContainer}>
+                          <Image 
+                            source={{ uri: (activeOutfit.collageUrl.startsWith('file://') || activeOutfit.collageUrl.startsWith('http')) ? activeOutfit.collageUrl : `file://${activeOutfit.collageUrl}` }} 
+                            style={styles.collagePreviewImage} 
+                            resizeMode="cover" 
+                          />
+                          <View style={styles.collageActionRow}>
                             <TouchableOpacity 
-                              style={styles.removeImageBtn} 
+                              style={styles.btnEditCollage}
+                              onPress={() => {
+                                setActiveCollageOutfitId(activeOutfit.id);
+                                setCollageMakerVisible(true);
+                              }}
+                            >
+                              <Text style={styles.btnEditCollageText}>Edit Collage</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={styles.btnRemoveCollage}
                               onPress={() => updateOutfit(activeOutfit.id, 'collageUrl', null)}
                             >
-                              <X size={12} color="#FFF" />
+                              <Text style={styles.btnRemoveCollageText}>Remove</Text>
                             </TouchableOpacity>
                           </View>
-                        )}
-                      </View>
+                        </View>
+                      ) : (
+                        <View style={styles.dashedBox}>
+                          <View style={styles.iconCircle}>
+                            <ImageIconLucide size={24} color="#5B43EE" />
+                          </View>
+                          <Text style={styles.boxTitle}>Build a Collage</Text>
+                          <Text style={styles.boxSubtitle}>Combine your fabric photos with design references in one image.</Text>
+                          <TouchableOpacity 
+                            style={styles.btnCollage}
+                            onPress={() => {
+                              setActiveCollageOutfitId(activeOutfit.id);
+                              setCollageMakerVisible(true);
+                            }}
+                          >
+                            <Text style={styles.btnCollageText}>Open Collage Maker</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
 
                       {/* 2. Description & Voice Note */}
                       <Text style={styles.sectionHeading}>2. Description & Voice Note</Text>
@@ -623,7 +641,16 @@ const styles = StyleSheet.create({
   },
   btnCollageText: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#FFF' },
 
-  sectionHeading: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 12 },
+  sectionHeading: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 4 },
+  sectionSubheading: { fontSize: 13, fontFamily: 'Inter-Medium', color: '#64748B', marginBottom: 16, lineHeight: 20 },
+  
+  collagePreviewContainer: { marginBottom: 24 },
+  collagePreviewImage: { width: '100%', height: 350, borderRadius: 12, backgroundColor: '#F1F5F9' },
+  collageActionRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  btnEditCollage: { flex: 1, borderWidth: 1, borderColor: '#5B43EE', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  btnEditCollageText: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#5B43EE' },
+  btnRemoveCollage: { flex: 1, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  btnRemoveCollageText: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#EF4444' },
   textArea: {
     backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0',
     borderRadius: 12, padding: 16, fontSize: 14, fontFamily: 'Inter-Medium', color: '#64748B',
