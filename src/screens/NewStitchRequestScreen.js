@@ -282,7 +282,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       });
       
       Alert.alert('Success', 'Stitch Request Sent Successfully!');
-      navigation.navigate('CustomerOrders');
+      navigation.navigate('Main', { screen: 'CustomerOrders' });
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Failed to submit request');
