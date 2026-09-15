@@ -1,32 +1,75 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors, Shadow } from '../constants/theme';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Colors } from '../constants/theme';
 import LinearGradient from 'react-native-linear-gradient';
 
 const QuickActionCard = ({ title, subtitle, icon, onPress, primary, badge, customBg }) => {
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (badge) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0,
+            duration: 1200,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+    }
+  }, [badge]);
+
+  const borderColor = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#E2E8F0', '#818CF8']
+  });
+
+  const shadowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.05, 0.4]
+  });
+
   return (
     <TouchableOpacity
-      style={[styles.card, styles.shadow]}
       activeOpacity={0.8}
       onPress={onPress}
+      style={{ flex: 1, marginHorizontal: 4 }}
     >
-      {badge && (
-        <View style={styles.badgeContainer}>
-          <LinearGradient
-            colors={['#4F46E5', '#818cf8', '#4F46E5']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.badgeBg}
-          >
-            <Text style={styles.badgeText}>{badge}</Text>
-          </LinearGradient>
+      <Animated.View style={[
+        styles.card,
+        {
+          borderColor: badge ? borderColor : '#E2E8F0',
+          shadowColor: badge ? '#4F46E5' : '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: badge ? shadowOpacity : 0.05,
+          shadowRadius: badge ? 8 : 2,
+          elevation: badge ? 4 : 1,
+        }
+      ]}>
+        {badge && (
+          <View style={styles.badgeContainer}>
+            <LinearGradient
+              colors={['#4F46E5', '#818cf8', '#4F46E5']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.badgeBg}
+            >
+              <Text style={styles.badgeText}>{badge}</Text>
+            </LinearGradient>
+          </View>
+        )}
+        <View style={[styles.iconContainer, { backgroundColor: customBg || '#EEF2FF' }]}>
+          {icon}
         </View>
-      )}
-      <View style={[styles.iconContainer, { backgroundColor: customBg || '#EEF2FF' }]}>
-        {icon}
-      </View>
-      <Text style={styles.title} numberOfLines={1}>{title}</Text>
-      {subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        {subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+      </Animated.View>
     </TouchableOpacity>
   );
 };
@@ -35,24 +78,14 @@ export default QuickActionCard;
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    marginHorizontal: 4,
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     position: 'relative',
     height: 110,
-  },
-  shadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   iconContainer: {
     width: 40,
