@@ -11,7 +11,7 @@ import { BASE_URL, URL_UPLOAD } from '../config/env';
 import CustomerFeedbackModal from '../components/CustomerFeedbackModal';
 import CollageMaker from '../components/CollageMaker';
 import * as ImagePicker from 'react-native-image-picker';
-import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X } from 'lucide-react-native';
+import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText } from 'lucide-react-native';
 import { Modal, ActionSheetIOS, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -318,15 +318,39 @@ const CustomerChatScreen = ({ route, navigation }) => {
       );
     }
     
+    const isPdf = item.attachment_url && item.attachment_url.toLowerCase().endsWith('.pdf');
     return (
       <>
-        {!!item.attachment_url && (
+        {!!item.attachment_url && !isPdf && (
           <Image source={{ uri: item.attachment_url }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: 8 }} />
+        )}
+        {!!item.attachment_url && isPdf && (
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#EEF2FF', padding: 12, borderRadius: 8, marginBottom: 8 }}
+            onPress={() => navigation.navigate('InvoicePreview', { previewMode: 'remote_pdf', pdfUrl: item.attachment_url })}
+          >
+            <FileText size={24} color={isCustomer ? '#FFF' : '#4F46E5'} style={{ marginRight: 8 }} />
+            <Text style={{ color: isCustomer ? '#FFF' : '#4F46E5', fontWeight: 'bold' }}>View Invoice (PDF)</Text>
+          </TouchableOpacity>
         )}
         {!!msgText && (
           <Text style={[styles.msgText, isCustomer ? styles.msgTextCustomer : styles.msgTextBusiness]}>
             {formatChatMessage(msgText)}
           </Text>
+        )}
+        {!isCustomer && msgText === "📷 Photo requested" && (
+           <TouchableOpacity 
+             style={{ backgroundColor: '#4F46E5', padding: 12, borderRadius: 8, marginTop: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
+             onPress={() => {
+               if (item.order_id && item.outfit_id) {
+                 setContextSelected(item.order_id + '_' + item.outfit_id);
+               }
+               handleAttachment();
+             }}
+           >
+             <Camera size={16} color="#FFF" style={{ marginRight: 6 }} />
+             <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Upload Photo</Text>
+           </TouchableOpacity>
         )}
       </>
     );
