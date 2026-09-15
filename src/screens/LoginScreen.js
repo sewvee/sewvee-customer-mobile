@@ -49,7 +49,7 @@ const LoginScreen = ({ navigation }) => {
       const response = await fetch(`${API_DOMAIN}/mobile/customer-auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: phone, pin })
+        body: JSON.stringify({ mobile: countryCode === '+91' ? phone : countryCode + phone, pin })
       });
       const data = await response.json();
 
@@ -125,7 +125,7 @@ const LoginScreen = ({ navigation }) => {
             <View style={[styles.inputRow, errorMsg.includes('number') && styles.inputRowError]}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity 
-                    style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10, minWidth: 85 }}
                     onPress={() => setShowCountryPicker(true)}
                 >
                     <Text style={{ fontSize: 16, color: '#0F172A', marginRight: 4 }}>

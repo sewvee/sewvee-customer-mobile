@@ -154,7 +154,7 @@ export default function CustomerSignupScreen({ navigation }) {
               <View style={styles.inputRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <TouchableOpacity 
-                      style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10 }}
+                      style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10, minWidth: 85 }}
                       onPress={() => setShowCountryPicker(true)}
                   >
                       <Text style={{ fontSize: 16, color: '#0F172A', marginRight: 4 }}>
