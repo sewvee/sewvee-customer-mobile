@@ -575,7 +575,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
             badge="Online Order"
             icon={<Scissors size={20} color={'#4F46E5'} />}
             customBg={'#EEF2FF'}
-            onPress={() => navigation.navigate('NewStitchRequest')}
+            onPress={() => navigation.navigate('NewStitchRequest', { selectedBoutique })}
           />
           <QuickActionCard
             title="Readymade"

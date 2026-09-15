@@ -556,7 +556,7 @@ const CustomerOrdersScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={styles.newOrderButton}
                 onPress={() => {
-                  /* Navigate to new stitch order flow */
+                  navigation.navigate('NewStitchRequest');
                 }}
               >
                 <Text style={styles.newOrderButtonText}>New Stitch Order</Text>
