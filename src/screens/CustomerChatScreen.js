@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Activity
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
+import { formatChatMessage } from '../utils/chatUtils';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import axios from 'axios';
@@ -324,7 +325,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         )}
         {!!msgText && (
           <Text style={[styles.msgText, isCustomer ? styles.msgTextCustomer : styles.msgTextBusiness]}>
-            {msgText}
+            {formatChatMessage(msgText)}
           </Text>
         )}
       </>

@@ -132,7 +132,7 @@ const CustomerChatListScreen = ({ navigation }) => {
              <Ionicons name="camera" size={14} color="#64748B" style={{marginRight: 4}} />
           )}
           <Text style={styles.lastMessage} numberOfLines={1}>
-            {item.latest_message_text || (item.latest_message_attachment ? 'Image' : 'Started a conversation')}
+            {item.latest_message_text ? formatChatMessage(item.latest_message_text) : (item.latest_message_attachment ? 'Image' : 'Started a conversation')}
           </Text>
         </View>
       </View>
