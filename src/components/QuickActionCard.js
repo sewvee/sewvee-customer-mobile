@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     position: 'relative',
-    height: 110,
+    height: 130,
   },
   iconContainer: {
     width: 40,
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   title: {
     fontSize: 13,
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     color: '#64748B',
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 4,
     letterSpacing: -0.2,
   },
   badgeContainer: {

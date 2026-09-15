@@ -575,8 +575,8 @@ const CustomerDashboardScreen = ({ navigation }) => {
         )}
 
         {/* QUICK ACTIONS */}
-        
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, marginHorizontal: -4, marginTop: 16 }}>
+        <Text style={[styles.sectionTitle, {marginTop: 24, marginBottom: 12}]}>Quick Actions</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, marginHorizontal: -4, marginTop: 4 }}>
           <QuickActionCard
             title="Stitching"
             subtitle="Online stitching"
