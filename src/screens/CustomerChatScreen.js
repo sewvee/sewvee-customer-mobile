@@ -603,12 +603,18 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </SafeAreaView>
       </Modal>
 
-      <CustomerFeedbackModal 
-        visible={feedbackModalVisible} 
-        onClose={() => setFeedbackModalVisible(false)} 
-        orderId={passedOrderId || (boutiqueOrders[0]?.id)}
-        onSubmitSuccess={() => fetchMessages()}
-      />
+      {(() => {
+        const [ctxOrderId, ctxOutfitId] = (contextSelected || '').split('_');
+        return (
+          <CustomerFeedbackModal 
+            visible={feedbackModalVisible} 
+            onClose={() => setFeedbackModalVisible(false)} 
+            orderId={ctxOrderId || passedOrderId || (boutiqueOrders[0]?.id)}
+            outfitId={ctxOutfitId}
+            onSubmitSuccess={() => fetchMessages()}
+          />
+        );
+      })()}
 
       <Modal visible={messageOptionsVisible} transparent animationType="fade" onRequestClose={() => setMessageOptionsVisible(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setMessageOptionsVisible(false)}>

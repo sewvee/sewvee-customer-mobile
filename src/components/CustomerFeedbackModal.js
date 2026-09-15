@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BASE_URL } from '../config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CustomerFeedbackModal = ({ visible, onClose, orderId, onSubmitSuccess }) => {
+const CustomerFeedbackModal = ({ visible, onClose, orderId, outfitId, onSubmitSuccess }) => {
   const [stitchingRating, setStitchingRating] = useState(0);
   const [staffRating, setStaffRating] = useState(0);
   const [overallRating, setOverallRating] = useState(0);
@@ -24,14 +24,24 @@ const CustomerFeedbackModal = ({ visible, onClose, orderId, onSubmitSuccess }) =
       let token = await AsyncStorage.getItem('userToken');
       token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
       
-      const payload = {
+            const payload = {
         stitching_rating: stitchingRating,
         staff_rating: staffRating,
-        overall_rating: overallRating,
+        overall_rating: overallRating, // API probably accepts this since mobile used it, but let's send both to be safe
+        boutiqueRating: overallRating,
         comments: comments.trim()
       };
 
-      await axios.post(`${BASE_URL}customer-portal/orders/${orderId}/feedback`, payload, {
+      if (!outfitId) {
+        throw new Error('Outfit ID is required for feedback');
+      }
+
+      await axios.post(`${BASE_URL}customer-portal/orders/${orderId}/outfits/${outfitId}/feedback`, payload, {
+        headers: { Authorization: token }
+      });
+      
+      const ratingMsg = `⭐ Feedback Submitted!\nStitching: ${stitchingRating}★ | Staff: ${staffRating}★ | Overall: ${overallRating}★${comments.trim() ? `\nComments: ${comments.trim()}` : ''}`;
+      await axios.post(`${BASE_URL}customer-portal/orders/${orderId}/outfits/${outfitId}/requests`, { message: ratingMsg }, {
         headers: { Authorization: token }
       });
       
