@@ -332,7 +332,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
     }
 
     // 3. PWA-style Photo Request Card
-    if (!isCustomer && msgText && msgText.includes("Photo requested")) {
+    if (!isCustomer && msgText && (msgText.includes("[ACTION_REQUIRED:PHOTO_REQUEST]") || msgText.toLowerCase().includes("photo requested"))) {
       return (
         <View style={{ 
           backgroundColor: '#FFF7ED', 
@@ -370,7 +370,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
     }
 
     // 4. PWA-style Feedback Request Card (Action required)
-    if (!isCustomer && msgText && msgText.includes("Action required")) {
+    if (!isCustomer && msgText && ((msgText.includes("[ACTION_REQUIRED:") && !msgText.includes("PHOTO_REQUEST")) || msgText.toLowerCase().includes("action required"))) {
       return (
         <View style={{ 
           backgroundColor: '#F5F3FF', 
