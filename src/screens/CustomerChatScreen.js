@@ -318,7 +318,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
       );
     }
     
-    const isPdf = item.attachment_url && item.attachment_url.toLowerCase().endsWith('.pdf');
+    const isPdf = item.attachment_url && (item.attachment_url.toLowerCase().includes('.pdf') || item.attachment_type === 'application/pdf' || msgText.includes('invoice/receipt'));
     return (
       <>
         {!!item.attachment_url && !isPdf && (
@@ -338,7 +338,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             {formatChatMessage(msgText)}
           </Text>
         )}
-        {!isCustomer && msgText === "📷 Photo requested" && (
+        {!isCustomer && msgText && msgText.includes("Photo requested") && (
            <TouchableOpacity 
              style={{ backgroundColor: '#4F46E5', padding: 12, borderRadius: 8, marginTop: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
              onPress={() => {
