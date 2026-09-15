@@ -445,8 +445,14 @@ const CustomerOrdersScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F3FF" />
+    <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+      {/* Header */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, backgroundColor: '#fff' }}>
+        <Text style={{ fontSize: 22, fontFamily: 'Inter-Bold', color: '#0F172A' }}>My Orders</Text>
+      </View>
+      
       {/* Welcome Banner */}
 
       <View
@@ -635,7 +641,7 @@ export default CustomerOrdersScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#FFF',
   },
   header: {
     flexDirection: 'row',
