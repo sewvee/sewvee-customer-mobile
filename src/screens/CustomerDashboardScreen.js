@@ -1,3 +1,4 @@
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import React, { useState, useEffect } from 'react';
 import {
   Platform,
