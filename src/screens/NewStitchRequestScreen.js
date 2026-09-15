@@ -130,6 +130,16 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
     }));
   };
 
+  const removeOutfit = (outfitId) => {
+    setOutfits(prev => {
+      const outfitToRemove = prev.find(o => o.id === outfitId);
+      if (outfitToRemove) {
+        updateCount(outfitToRemove.category, -1);
+      }
+      return prev.filter(o => o.id !== outfitId);
+    });
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -259,22 +269,30 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       <Text style={styles.stepSubtitle}>Tap each outfit to provide design references, details, and measurements.</Text>
       
       {outfits.map((outfit, index) => (
-        <TouchableOpacity 
-          key={outfit.id} 
-          style={styles.outfitDrawerCard} 
-          onPress={() => setEditingOutfitId(outfit.id)}
-        >
-          <View style={styles.accordionHeaderLeft}>
-            <View style={styles.accordionIndexCircle}>
-              <Text style={styles.accordionIndexText}>{index + 1}</Text>
+        <View key={outfit.id} style={styles.outfitDrawerCard}>
+          <TouchableOpacity 
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} 
+            onPress={() => setEditingOutfitId(outfit.id)}
+          >
+            <View style={styles.accordionHeaderLeft}>
+              <View style={styles.accordionIndexCircle}>
+                <Text style={styles.accordionIndexText}>{index + 1}</Text>
+              </View>
+              <View>
+                <Text style={styles.outfitTitle}>{outfit.name}</Text>
+                <Text style={styles.outfitSubtitle}>Tap to add details</Text>
+              </View>
             </View>
-            <View>
-              <Text style={styles.outfitTitle}>{outfit.name}</Text>
-              <Text style={styles.outfitSubtitle}>Tap to add details</Text>
-            </View>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity onPress={() => removeOutfit(outfit.id)} style={{ padding: 4, backgroundColor: '#FEE2E2', borderRadius: 12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
+              <X size={14} color="#EF4444" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditingOutfitId(outfit.id)}>
+              <ChevronRight size={20} color="#CBD5E1" />
+            </TouchableOpacity>
           </View>
-          <ChevronRight size={20} color="#CBD5E1" />
-        </TouchableOpacity>
+        </View>
       ))}
       
       <CollageMaker
@@ -682,7 +700,7 @@ const styles = StyleSheet.create({
   
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject },
-  modalContainer: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%' },
+  modalContainer: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
   modalContent: { padding: 20, flexShrink: 1 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontFamily: 'Inter-Bold', color: '#0F172A' },
