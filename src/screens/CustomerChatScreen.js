@@ -381,9 +381,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setFeedbackModalVisible(true)} style={{ padding: 8, marginRight: 8 }}>
-            <Star size={20} color="#F59E0B" fill="#F59E0B" />
-          </TouchableOpacity>
+          
           {passedOrderId && (
             <TouchableOpacity 
               onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: passedOrderId })}
