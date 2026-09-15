@@ -8,10 +8,10 @@ const QuickActionCard = ({ title, subtitle, icon, onPress, primary, badge, custo
   const scaleAnim = useRef(new Animated.Value(1)).current;
   
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 20 }).start();
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: false, speed: 20 }).start();
   };
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: false, speed: 20 }).start();
   };
 
   useEffect(() => {
