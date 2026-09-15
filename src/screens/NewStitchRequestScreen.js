@@ -378,18 +378,15 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       </TouchableOpacity>
       
       {showDatePicker && (
-        <DateTimePicker
-          value={new Date()}
-          mode="date"
-          display="default"
-          minimumDate={new Date()}
-          onChange={(event, date) => {
-            setShowDatePicker(Platform.OS === 'ios');
-            if (date) {
-              const formattedDate = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-              setDeliveryDate(formattedDate);
-            }
+        <CalendarModal
+          visible={showDatePicker}
+          onClose={() => setShowDatePicker(false)}
+          onSelect={(date) => {
+            const dateObj = new Date(date);
+            const formattedDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            setDeliveryDate(formattedDate);
           }}
+          disablePastDates={true}
         />
       )}
       
