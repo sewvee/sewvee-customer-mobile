@@ -127,7 +127,7 @@ const CustomerChatListScreen = ({ navigation }) => {
       ) : (
         <FlatList
           data={threads}
-          keyExtractor={item => item.boutique_id?.toString() || Math.random().toString()}
+          keyExtractor={(item, index) => `${item.boutique_id}_${item.order_id}_${index}`}
           renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 20 }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
