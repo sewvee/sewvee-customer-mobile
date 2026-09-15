@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { URL_UPLOAD, URL_ORDERS } from '../config/env';
 import AudioRecord from 'react-native-audio-record';
 import CollageMaker from '../components/CollageMaker';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import CalendarModal from '../components/CalendarModal';
 
 const CATEGORIES = ['Blouse', 'Chudithar', 'Kurta / Kurti', 'Lehenga', 'Suit / Salwar', 'Dress / Gown', 'Pants / Trousers', 'Other'];
 const MEASUREMENT_OPTIONS = ['Use Previous Measurements', 'I will provide later', 'Take measurements at store', 'Send sample dress via courier', 'Measurement dress given'];
