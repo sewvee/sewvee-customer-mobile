@@ -10,7 +10,7 @@ import { BASE_URL, URL_UPLOAD } from '../config/env';
 import CustomerFeedbackModal from '../components/CustomerFeedbackModal';
 import CollageMaker from '../components/CollageMaker';
 import * as ImagePicker from 'react-native-image-picker';
-import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star } from 'lucide-react-native';
+import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X } from 'lucide-react-native';
 import { Modal, ActionSheetIOS, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -27,6 +27,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const [sending, setSending] = useState(false);
   const [contextSelected, setContextSelected] = useState('');
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [messageOptionsVisible, setMessageOptionsVisible] = useState(false);
+  const [editingMessage, setEditingMessage] = useState(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [collageMakerVisible, setCollageMakerVisible] = useState(false);
   const [collageOutfitId, setCollageOutfitId] = useState(null); 
@@ -172,7 +175,50 @@ const CustomerChatScreen = ({ route, navigation }) => {
     }
   };
 
+  
+  const handleUpdateMessage = async () => {
+    if (!inputText.trim() || !editingMessage) return;
+    try {
+      setSending(true);
+      let token = await AsyncStorage.getItem('userToken');
+      token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+      await axios.put(`${BASE_URL}customer-portal/orders/${editingMessage.order_id}/requests/${editingMessage.id}`, {
+        message: inputText.trim()
+      }, {
+        headers: { Authorization: token }
+      });
+      setInputText('');
+      setEditingMessage(null);
+      fetchMessages();
+    } catch (err) {
+      console.warn('Failed to update message', err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDeleteMessage = async (msgId) => {
+    try {
+      setSending(true);
+      let token = await AsyncStorage.getItem('userToken');
+      token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+      await axios.delete(`${BASE_URL}customer-portal/orders/${selectedMessage ? selectedMessage.order_id : passedOrderId}/requests/${msgId}`, {
+        headers: { Authorization: token }
+      });
+      fetchMessages();
+    } catch (err) {
+      console.warn('Failed to delete message', err);
+    } finally {
+      setSending(false);
+      setMessageOptionsVisible(false);
+    }
+  };
+
   const handleSend = async () => {
+    if (editingMessage) {
+      return handleUpdateMessage();
+    }
+
     if (!inputText.trim() || !contextSelected) return;
     const [orderId, outfitId] = contextSelected.split('_');
     if (!orderId || !outfitId) return;
@@ -294,6 +340,14 @@ const CustomerChatScreen = ({ route, navigation }) => {
             <Store size={14} color="#FFF" />
           </View>
         )}
+        {isCustomer && (
+          <TouchableOpacity 
+             style={{ padding: 8, alignSelf: 'center', marginRight: 4 }} 
+             onPress={() => { setSelectedMessage(item); setMessageOptionsVisible(true); }}
+          >
+             <MoreVertical size={16} color="#94A3B8" />
+          </TouchableOpacity>
+        )}
         <View style={[styles.bubble, isCustomer ? styles.bubbleCustomer : styles.bubbleBusiness]}>
           <Text style={styles.contextTag}>{item.order_number} - {item.outfit_name}</Text>
           {renderMessageContent(item, isCustomer)}
@@ -356,6 +410,18 @@ const CustomerChatScreen = ({ route, navigation }) => {
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           />
         )}
+
+        {editingMessage && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#EEF2FF', borderTopWidth: 1, borderTopColor: '#E0E7FF' }}>
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#4F46E5' }}>Editing message</Text>
+              <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={1}>{editingMessage.message}</Text>
+            </View>
+            <TouchableOpacity onPress={() => { setEditingMessage(null); setInputText(''); }}>
+              <X size={20} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.inputContainer}>
           <TouchableOpacity 
             style={{ padding: 8, marginRight: 4 }} 
@@ -412,6 +478,48 @@ const CustomerChatScreen = ({ route, navigation }) => {
         onSubmitSuccess={() => fetchMessages()}
       />
 
+      <Modal visible={messageOptionsVisible} transparent animationType="fade" onRequestClose={() => setMessageOptionsVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setMessageOptionsVisible(false)}>
+          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
+            <View style={{ width: 40, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            
+            {selectedMessage && (
+              <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 20 }} numberOfLines={1}>
+                "{selectedMessage.message}"
+              </Text>
+            )}
+
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}
+              onPress={() => {
+                setEditingMessage(selectedMessage);
+                setInputText(selectedMessage.message);
+                setMessageOptionsVisible(false);
+              }}
+            >
+              <Edit2 size={20} color="#475569" style={{ marginRight: 16 }} />
+              <Text style={{ fontSize: 16, color: '#0F172A', fontWeight: '500' }}>Edit message</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}
+              onPress={() => {
+                Alert.alert(
+                  'Delete Message',
+                  'Are you sure you want to delete this message?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => handleDeleteMessage(selectedMessage.id) }
+                  ]
+                );
+              }}
+            >
+              <Trash2 size={20} color="#EF4444" style={{ marginRight: 16 }} />
+              <Text style={{ fontSize: 16, color: '#EF4444', fontWeight: '500' }}>Delete message</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
