@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import { View, Text, StyleSheet, StatusBar, 
   FlatList, 
   TouchableOpacity, 
   Image, 

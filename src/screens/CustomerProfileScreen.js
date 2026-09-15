@@ -16,7 +16,7 @@ const CustomerProfileScreen = () => {
   const { user, logout } = useAuth();
   useFocusEffect(
     React.useCallback(() => {
-      StatusBar.setBackgroundColor('#FFF');
+      StatusBar.setBackgroundColor('#F8FAFC');
       StatusBar.setBarStyle('dark-content');
     }, [])
   );
