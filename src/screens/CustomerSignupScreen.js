@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Image, ScrollView, Dimensions, Keyboard, Animated } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../context/ToastContext';
+import CountryPickerBottomSheet from '../components/CountryPickerBottomSheet';
+import { COUNTRY_CODES } from '../constants/countryCodes';
 import { useAuth } from '../context/AuthContext';
 import { API_DOMAIN } from '../config/env';
 // We'll use Lottie for the animation later if they have it, but for now we can mock it or use an ActivityIndicator
@@ -17,11 +20,13 @@ export default function CustomerSignupScreen({ navigation }) {
   
   const [step, setStep] = useState(1); // 1: Info, 2: PIN
   const [loading, setLoading] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   
   // Step 1
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+    const [countryCode, setCountryCode] = useState('+91');
   const [email, setEmail] = useState('');
   
   // Step 2
@@ -49,7 +54,7 @@ export default function CustomerSignupScreen({ navigation }) {
       const response = await fetch(`${API_DOMAIN}/mobile/customer-auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, mobile: phone, email, pin })
+        body: JSON.stringify({ name, mobile: countryCode === '+91' ? phone : countryCode + phone, email, pin })
       });
       const data = await response.json();
       
@@ -147,8 +152,19 @@ export default function CustomerSignupScreen({ navigation }) {
 
               <Text style={styles.label}>MOBILE NUMBER</Text>
               <View style={styles.inputRow}>
-                <Ionicons name="call-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput style={styles.textInput} placeholder="10-digit number" placeholderTextColor="#94A3B8" keyboardType="number-pad" maxLength={10} value={phone} onChangeText={(v) => {setPhone(v.replace(/[^0-9]/g, '')); setErrorMsg('');}} />
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity 
+                      style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10 }}
+                      onPress={() => setShowCountryPicker(true)}
+                  >
+                      <Text style={{ fontSize: 16, color: '#0F172A', marginRight: 4 }}>
+                          {COUNTRY_CODES.find(c => c.code === countryCode)?.flag || '🌍'} {countryCode}
+                      </Text>
+                      <Text style={{ color: '#94A3B8', fontSize: 12 }}>▼</Text>
+                  </TouchableOpacity>
+                  <View style={{ width: 1, height: 24, backgroundColor: '#E2E8F0', marginRight: 10 }} />
+                </View>
+                <TextInput style={[styles.textInput, { flex: 1, paddingLeft: 0 }]} placeholder="Mobile number" placeholderTextColor="#94A3B8" keyboardType="number-pad" maxLength={15} value={phone} onChangeText={(v) => {setPhone(v.replace(/[^0-9]/g, '')); setErrorMsg('');}} />
               </View>
 
               <Text style={styles.label}>EMAIL ADDRESS</Text>

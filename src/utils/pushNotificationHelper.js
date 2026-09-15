@@ -154,40 +154,19 @@ export const notificationListener = async () => {
                 }, 3500);
             }
 
-            if (page === 'TRIAL_STARTED' || page === 'SUBSCRIPTION') {
+            if (page === 'ORDER_DETAILS') {
                 setTimeout(() => {
                     import('./navigationService').then((navigationService) => {
-                        navigationService.navigate('Dashboard');
+                        navigationService.navigate('OrderDetails', { id: data.orderId || innerData.orderId });
                     });
                 }, 3000);
-            } else if (page === 'TRIAL_EXPIRING') {
+            } else if (page === 'CHAT') {
                 setTimeout(() => {
                     import('./navigationService').then((navigationService) => {
-                        navigationService.navigate('Subscription');
-                    });
-                }, 3000);
-            } else if (page === 'TRIAL_EXPIRED') {
-                setTimeout(() => {
-                    import('./navigationService').then((navigationService) => {
-                        navigationService.navigate('TrialEndedScreen');
-                    });
-                }, 3000);
-            } else if (page === 'SUBSCRIPTION_PAYMENT' || page === 'SUBSCRIPTION_SUCCESS') {
-                setTimeout(() => {
-                    import('./navigationService').then((navigationService) => {
-                        navigationService.navigate('SubscriptionHistoryScreen');
-                    });
-                }, 3000);
-            } else if (page === 'SUBSCRIPTION_EXPIRED') {
-                setTimeout(() => {
-                    import('./navigationService').then((navigationService) => {
-                        navigationService.navigate('TrialExpiredScreen');
-                    });
-                }, 3000);
-            } else if (page === 'LOW_STOCK') {
-                setTimeout(() => {
-                    import('./navigationService').then((navigationService) => {
-                        navigationService.navigate('InventoryScreen');
+                        navigationService.navigate('CustomerChat', { 
+                            orderId: data.orderId || innerData.orderId,
+                            boutiqueId: data.boutiqueId || innerData.boutiqueId
+                        });
                     });
                 }, 3000);
             } else {

@@ -178,7 +178,7 @@ const CustomerRequestedOrdersScreen = () => {
       ) : (
         <FlatList
           data={requestedOrders}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
           renderItem={renderOrderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

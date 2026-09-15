@@ -26,22 +26,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PAGE_LIMIT = 10;
 
-const COUNTRY_CODES = [
-    { code: '+91', name: 'India', flag: '🇮🇳' },
-    { code: '+1', name: 'USA/Canada', flag: '🇺🇸' },
-    { code: '+44', name: 'UK', flag: '🇬🇧' },
-    { code: '+971', name: 'UAE', flag: '🇦🇪' },
-    { code: '+61', name: 'Australia', flag: '🇦🇺' },
-    { code: '+65', name: 'Singapore', flag: '🇸🇬' },
-    { code: '+60', name: 'Malaysia', flag: '🇲🇾' },
-    { code: '+94', name: 'Sri Lanka', flag: '🇱🇰' },
-    { code: '+977', name: 'Nepal', flag: '🇳🇵' },
-    { code: '+880', name: 'Bangladesh', flag: '🇧🇩' },
-    { code: '+27', name: 'South Africa', flag: '🇿🇦' },
-    { code: '+353', name: 'Ireland', flag: '🇮🇪' },
-    { code: '+31', name: 'Netherlands', flag: '🇳🇱' },
-    { code: '+960', name: 'Maldives', flag: '🇲🇻' },
-];
+import { COUNTRY_CODES } from '../constants/countryCodes';
+import CountryPickerBottomSheet from './CountryPickerBottomSheet';
 
 // interface CustomerSelectionModalProps {
 //     visible: boolean;
@@ -452,46 +438,15 @@ const CustomerSelectionModal = ({ visible, onClose, onSelect }) => {
                 </KeyboardAvoidingView>
 
                 {/* Country Code Picker Modal */}
-                {showCountryPicker && (
-                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }]}>
-                        <View style={{ width: '85%', maxHeight: '70%', backgroundColor: '#FFF', borderRadius: 12, padding: 16, ...Shadow.medium }}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                                <Text style={{ fontSize: 18, fontFamily: 'Inter-SemiBold', color: Colors.textPrimary }}>Select Country</Text>
-                                <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
-                                    <X size={24} color={Colors.textSecondary} />
-                                </TouchableOpacity>
-                            </View>
-                            
-                            <ScrollView style={{ flexShrink: 1 }}>
-                                {COUNTRY_CODES.map((country, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            paddingVertical: 12,
-                                            borderBottomWidth: index === COUNTRY_CODES.length - 1 ? 0 : 1,
-                                            borderBottomColor: Colors.border
-                                        }}
-                                        onPress={() => {
-                                            setNewCustomer(prev => ({ ...prev, countryCode: country.code }));
-                                            setSelectedFlag(country.flag);
-                                            setShowCountryPicker(false);
-                                        }}
-                                    >
-                                        <Text style={{ fontSize: 24, marginRight: 12 }}>{country.flag}</Text>
-                                        <Text style={{ flex: 1, fontFamily: 'Inter-Medium', fontSize: 16, color: Colors.textPrimary }}>
-                                            {country.name}
-                                        </Text>
-                                        <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 16, color: Colors.textSecondary }}>
-                                            {country.code}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    </View>
-                )}
+                <CountryPickerBottomSheet
+                    visible={showCountryPicker}
+                    onClose={() => setShowCountryPicker(false)}
+                    onSelect={(code, flag) => {
+                        setNewCustomer(prev => ({ ...prev, countryCode: code }));
+                        setSelectedFlag(flag);
+                    }}
+                    selectedCode={newCustomer.countryCode}
+                />
 
             </View>
         </Modal>

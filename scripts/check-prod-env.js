@@ -20,7 +20,8 @@ if (fs.existsSync(ENV_FILE_PATH)) {
 if (fs.existsSync(EAS_JSON_PATH)) {
     const easContent = fs.readFileSync(EAS_JSON_PATH, 'utf8');
     
-    if (easContent.includes('api-stage.sewvee.com') && easContent.includes('"production"')) {
+    const eas = JSON.parse(easContent);
+    if (eas.build?.production?.env?.EXPO_PUBLIC_API_URL?.includes('api-stage')) {
         console.error('❌ ERROR: Staging URL found in production profile of eas.json!');
         hasError = true;
     }

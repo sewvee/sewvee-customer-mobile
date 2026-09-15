@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 3.8.1"
+    "version": ">= 3.8.1",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -16,7 +17,12 @@
         "EXPO_PUBLIC_API_URL": "https://api-stage.sewvee.com"
       }
     },
-    "production": {}
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.sewvee.com"
+      }
+    }
   },
   "submit": {
     "production": {}

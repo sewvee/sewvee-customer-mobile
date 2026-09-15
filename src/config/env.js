@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-export const API_DOMAIN = process.env.EXPO_PUBLIC_API_URL || "https://api-stage.sewvee.com";
+export const API_DOMAIN = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "https://api-stage.sewvee.com" : "https://api.sewvee.com");
 export const BASE_URL = `${API_DOMAIN}/mobile/`;
 export const APP_VERSION = "1.41";
 
@@ -102,3 +102,4 @@ export const URL_CUSTOMER_AUTH_REGISTER = `${BASE_URL}customer-auth/register`;
 export const URL_CUSTOMER_AUTH_LOGIN = `${BASE_URL}customer-auth/login`;
 export const URL_CUSTOMER_AUTH_PROFILE = `${BASE_URL}customer-auth/profile`;
 export const URL_CUSTOMER_AUTH_CHANGE_PIN = `${BASE_URL}customer-auth/change-pin`;
+export const URL_CUSTOMER_FCM_TOKEN = `${BASE_URL}customer-auth/fcm-token`;

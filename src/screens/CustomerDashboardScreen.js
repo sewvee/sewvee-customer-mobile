@@ -535,7 +535,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
               horizontal
               showsHorizontalScrollIndicator={false}
               data={shopItems}
-              keyExtractor={item => item.id.toString()}
+              keyExtractor={item => item.id?.toString() || Math.random().toString()}
               renderItem={renderShopItem}
               contentContainerStyle={{ paddingRight: 20 }}
             />

@@ -13,9 +13,12 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CountryPickerBottomSheet from '../components/CountryPickerBottomSheet';
+import { COUNTRY_CODES } from '../constants/countryCodes';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { API_DOMAIN } from '../config/env';
@@ -29,9 +32,11 @@ const LoginScreen = ({ navigation }) => {
   const { showToast } = useToast();
 
   const [phone, setPhone] = useState('');
+    const [countryCode, setCountryCode] = useState('+91');
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const handleContinue = async () => {
     Keyboard.dismiss();
@@ -118,13 +123,24 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.formSection}>
             <Text style={styles.label}>MOBILE NUMBER</Text>
             <View style={[styles.inputRow, errorMsg.includes('number') && styles.inputRowError]}>
-              <Ionicons name="call-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity 
+                    style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10 }}
+                    onPress={() => setShowCountryPicker(true)}
+                >
+                    <Text style={{ fontSize: 16, color: '#0F172A', marginRight: 4 }}>
+                        {COUNTRY_CODES.find(c => c.code === countryCode)?.flag || '🌍'} {countryCode}
+                    </Text>
+                    <Text style={{ color: '#94A3B8', fontSize: 12 }}>▼</Text>
+                </TouchableOpacity>
+                <View style={{ width: 1, height: 24, backgroundColor: '#E2E8F0', marginRight: 10 }} />
+              </View>
               <TextInput
-                style={styles.textInput}
-                placeholder="10-digit number"
+                style={[styles.textInput, { flex: 1, paddingLeft: 0 }]}
+                placeholder="Mobile number"
                 placeholderTextColor="#94A3B8"
                 keyboardType="number-pad"
-                maxLength={10}
+                maxLength={15}
                 value={phone}
                 onChangeText={(val) => {
                   setPhone(val.replace(/[^0-9]/g, ''));

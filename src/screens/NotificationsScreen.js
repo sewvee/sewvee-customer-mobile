@@ -220,7 +220,7 @@ const NotificationsScreen = ({ navigation }) => {
                 <FlatList
                     data={flatData}
                     renderItem={renderItem}
-                    keyExtractor={(item) => item.id ? item.id.toString() : item.title}
+                    keyExtractor={(item) => item.id ? item.id?.toString() || Math.random().toString() : item.title}
                     contentContainerStyle={styles.listContent}
                     onEndReached={handleLoadMore}
                     onEndReachedThreshold={0.2}
