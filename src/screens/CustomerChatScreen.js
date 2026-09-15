@@ -7,11 +7,11 @@ import { formatChatMessage } from '../utils/chatUtils';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import axios from 'axios';
-import { BASE_URL, URL_UPLOAD } from '../config/env';
+import { BASE_URL, URL_UPLOAD, API_DOMAIN } from '../config/env';
 import CustomerFeedbackModal from '../components/CustomerFeedbackModal';
 import CollageMaker from '../components/CollageMaker';
 import * as ImagePicker from 'react-native-image-picker';
-import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText, ShoppingBag as Shirt } from 'lucide-react-native';
+import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText, ShoppingBag as Shirt, Scissors } from 'lucide-react-native';
 import { Modal, ActionSheetIOS, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -249,6 +249,13 @@ const CustomerChatScreen = ({ route, navigation }) => {
   };
 
   
+  
+  const getFullImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('file://')) return url;
+    return `${API_DOMAIN}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const renderMessageContent = (item, isCustomer) => {
     const msgText = item.message || '';
     
@@ -351,7 +358,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </View>
           <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#9A3412', marginBottom: 8, textAlign: 'center' }}>📸 Photos Requested</Text>
           <Text style={{ fontSize: 13, color: '#C2410C', textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
-            Your boutique needs reference photos for this outfit. Please upload them so they can get started!
+            {boutiqueName} needs reference photos for this outfit. Please upload them so they can get started!
           </Text>
           <TouchableOpacity 
             style={{ backgroundColor: '#EA580C', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
@@ -413,12 +420,12 @@ const CustomerChatScreen = ({ route, navigation }) => {
     return (
       <>
         {!!item.attachment_url && !isPdf && (
-          <Image source={{ uri: item.attachment_url }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: 8 }} />
+          <Image source={{ uri: getFullImageUrl(item.attachment_url) }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: 8 }} />
         )}
         {!!item.attachment_url && isPdf && (
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#EEF2FF', padding: 12, borderRadius: 8, marginBottom: 8, width: 220 }}
-            onPress={() => Linking.openURL(item.attachment_url).catch(err => console.error("Couldn't load page", err))}
+            onPress={() => Linking.openURL(getFullImageUrl(item.attachment_url)).catch(err => console.error("Couldn't load page", err))}
           >
             <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: isCustomer ? 'rgba(255,255,255,0.3)' : '#C7D2FE', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
               <FileText size={20} color={isCustomer ? '#FFF' : '#4F46E5'} />
@@ -592,16 +599,11 @@ const CustomerChatScreen = ({ route, navigation }) => {
       </Modal>
 
       {/* Collage Maker */}
-      <Modal visible={collageMakerVisible} animationType="slide" onRequestClose={() => setCollageMakerVisible(false)}>
-        <SafeAreaView style={{flex: 1, backgroundColor: '#000'}}>
-          <View style={{flexDirection: 'row', justifyContent: 'space-between', padding: 16}}>
-            <TouchableOpacity onPress={() => setCollageMakerVisible(false)}>
-              <Text style={{color: '#FFF'}}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-          <CollageMaker visible={collageMakerVisible} onClose={() => setCollageMakerVisible(false)} onSaveReference={handleCollageComplete} />
-        </SafeAreaView>
-      </Modal>
+      <CollageMaker 
+        visible={collageMakerVisible} 
+        onClose={() => setCollageMakerVisible(false)} 
+        onSaveReference={handleCollageComplete} 
+      />
 
       {(() => {
         const [ctxOrderId, ctxOutfitId] = (contextSelected || '').split('_');
