@@ -177,7 +177,7 @@ const CustomerShopScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       if (selectedBoutique) {
-        fetchProducts(selectedBoutique.id);
+        fetchProducts(selectedBoutique);
       }
     }, [selectedBoutique])
   );
@@ -185,7 +185,7 @@ const CustomerShopScreen = () => {
   const onRefresh = async () => {
     if (selectedBoutique) {
       setRefreshing(true);
-      await fetchProducts(selectedBoutique.id);
+      await fetchProducts(selectedBoutique);
       setRefreshing(false);
     }
   };
