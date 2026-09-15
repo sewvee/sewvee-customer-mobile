@@ -17,6 +17,8 @@ import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CountryPickerBottomSheet from '../components/CountryPickerBottomSheet';
+import { COUNTRY_CODES } from '../constants/countryCodes';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { API_DOMAIN } from '../config/env';
@@ -34,6 +36,7 @@ const LoginScreen = ({ navigation }) => {
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const handleContinue = async () => {
     Keyboard.dismiss();
@@ -121,18 +124,15 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.label}>MOBILE NUMBER</Text>
             <View style={[styles.inputRow, errorMsg.includes('number') && styles.inputRowError]}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Picker
-                    selectedValue={countryCode}
-                    onValueChange={(itemValue) => setCountryCode(itemValue)}
-                    style={{ width: 110, height: 50, color: '#0F172A', marginLeft: -10 }}
-                    dropdownIconColor="#94A3B8"
+                <TouchableOpacity 
+                    style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10 }}
+                    onPress={() => setShowCountryPicker(true)}
                 >
-                    <Picker.Item label="🇮🇳 +91" value="+91" />
-                    <Picker.Item label="🇺🇸 +1" value="+1" />
-                    <Picker.Item label="🇬🇧 +44" value="+44" />
-                    <Picker.Item label="🇦🇺 +61" value="+61" />
-                    <Picker.Item label="🇦🇪 +971" value="+971" />
-                </Picker>
+                    <Text style={{ fontSize: 16, color: '#0F172A', marginRight: 4 }}>
+                        {COUNTRY_CODES.find(c => c.code === countryCode)?.flag || '🌍'} {countryCode}
+                    </Text>
+                    <Text style={{ color: '#94A3B8', fontSize: 12 }}>▼</Text>
+                </TouchableOpacity>
                 <View style={{ width: 1, height: 24, backgroundColor: '#E2E8F0', marginRight: 10 }} />
               </View>
               <TextInput
