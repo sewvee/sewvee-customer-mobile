@@ -512,7 +512,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
         {/* INLINE BANNERS */}
         {inlineBanners.length > 0 && (
-          <View style={{ marginBottom: 8, marginTop: 16, marginHorizontal: -4 }}>
+          <View style={{ marginBottom: 8, marginTop: 0, marginHorizontal: -4 }}>
             <FlatList
               horizontal
               showsHorizontalScrollIndicator={false}
