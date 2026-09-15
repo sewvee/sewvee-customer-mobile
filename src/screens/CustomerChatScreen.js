@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
+import { View, Linking, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
@@ -11,7 +11,7 @@ import { BASE_URL, URL_UPLOAD } from '../config/env';
 import CustomerFeedbackModal from '../components/CustomerFeedbackModal';
 import CollageMaker from '../components/CollageMaker';
 import * as ImagePicker from 'react-native-image-picker';
-import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText } from 'lucide-react-native';
+import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText, ShoppingBag as Shirt } from 'lucide-react-native';
 import { Modal, ActionSheetIOS, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -252,6 +252,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const renderMessageContent = (item, isCustomer) => {
     const msgText = item.message || '';
     
+    // 1. Feedback Submitted
     if (msgText.startsWith("⭐ Feedback Submitted!")) {
       const lines = msgText.split("\n");
       const ratingsStr = lines[1] || "";
@@ -293,6 +294,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
       );
     }
     
+    // 2. Category / Details
     if (msgText.startsWith("Category:")) {
       const lines = msgText.split("\n");
       const category = lines.find(l => l.startsWith("Category:"))?.replace("Category:", "").trim() || "";
@@ -301,11 +303,22 @@ const CustomerChatScreen = ({ route, navigation }) => {
       const delivery = lines.find(l => l.startsWith("Delivery Date:"))?.replace("Delivery Date:", "").trim() || lines.find(l => l.startsWith("Expected Date:"))?.replace("Expected Date:", "").trim() || "";
       
       return (
-        <View style={[{ padding: 12, borderRadius: 12, marginTop: 4 }, isCustomer ? { backgroundColor: 'rgba(255,255,255,0.1)' } : { backgroundColor: '#EEF2FF', borderColor: '#E0E7FF', borderWidth: 1 }]}>
-          {!!category && <Text style={{ fontWeight: 'bold', color: isCustomer ? '#FFF' : '#4F46E5', marginBottom: 4 }}>{category}</Text>}
-          {!!description && <Text style={{ fontStyle: 'italic', color: isCustomer ? '#E0E7FF' : '#334155', marginBottom: 8 }}>"{description}"</Text>}
-          <View style={{ borderTopWidth: 1, borderTopColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#E0E7FF', paddingTop: 8 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+        <View style={[{ padding: 12, borderRadius: 12, marginTop: 4 }, isCustomer ? { backgroundColor: 'rgba(255,255,255,0.1)' } : { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#E2E8F0' }}>
+            <Shirt size={16} color={isCustomer ? '#FFF' : '#475569'} style={{ marginRight: 6 }} />
+            <Text style={{ fontWeight: 'bold', color: isCustomer ? '#FFF' : '#334155' }}>Outfit Details</Text>
+          </View>
+          
+          <View style={{ gap: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Category:</Text>
+              <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569' }}>{category}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Description:</Text>
+              <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569', flex: 1, textAlign: 'right', marginLeft: 16 }}>{description}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Measurements:</Text>
               <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569', flex: 1, textAlign: 'right' }}>{measurement}</Text>
             </View>
@@ -317,8 +330,86 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </View>
       );
     }
-    
+
+    // 3. PWA-style Photo Request Card
+    if (!isCustomer && msgText && msgText.includes("Photo requested")) {
+      return (
+        <View style={{ 
+          backgroundColor: '#FFF7ED', 
+          borderRadius: 12, 
+          marginTop: 4, 
+          borderWidth: 1, 
+          borderColor: '#FFEDD5',
+          borderTopWidth: 4,
+          borderTopColor: '#F97316',
+          padding: 16,
+          alignItems: 'center',
+          width: 260
+        }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFEDD5', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+            <ImageIcon size={20} color="#EA580C" />
+          </View>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#9A3412', marginBottom: 8, textAlign: 'center' }}>📸 Photos Requested</Text>
+          <Text style={{ fontSize: 13, color: '#C2410C', textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
+            Your boutique needs reference photos for this outfit. Please upload them so they can get started!
+          </Text>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#EA580C', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+            onPress={() => {
+              if (item.order_id && item.outfit_id) {
+                setContextSelected(item.order_id + '_' + item.outfit_id);
+              }
+              handleAttachment();
+            }}
+          >
+            <ImageIcon size={16} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Upload Reference Photos</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // 4. PWA-style Feedback Request Card (Action required)
+    if (!isCustomer && msgText && msgText.includes("Action required")) {
+      return (
+        <View style={{ 
+          backgroundColor: '#F5F3FF', 
+          borderRadius: 12, 
+          marginTop: 4, 
+          borderWidth: 1, 
+          borderColor: '#EDE9FE',
+          borderTopWidth: 4,
+          borderTopColor: '#7C3AED',
+          padding: 16,
+          alignItems: 'center',
+          width: 260
+        }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#EDE9FE', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+            <Star size={20} color="#7C3AED" />
+          </View>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#5B21B6', marginBottom: 8, textAlign: 'center' }}>⚠️ Action Required</Text>
+          <Text style={{ fontSize: 13, color: '#6D28D9', textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
+            Your outfit is ready! We would love to hear your feedback on the stitching and overall experience.
+          </Text>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+            onPress={() => {
+              if (item.order_id && item.outfit_id) {
+                setContextSelected(item.order_id + '_' + item.outfit_id);
+              }
+              setFeedbackModalVisible(true);
+            }}
+          >
+            <Star size={16} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Submit Feedback</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // 5. Standard Message + Attachments
     const isPdf = item.attachment_url && (item.attachment_url.toLowerCase().includes('.pdf') || item.attachment_type === 'application/pdf' || msgText.includes('invoice/receipt'));
+    
     return (
       <>
         {!!item.attachment_url && !isPdf && (
@@ -326,31 +417,22 @@ const CustomerChatScreen = ({ route, navigation }) => {
         )}
         {!!item.attachment_url && isPdf && (
           <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#EEF2FF', padding: 12, borderRadius: 8, marginBottom: 8 }}
-            onPress={() => navigation.navigate('InvoicePreview', { previewMode: 'remote_pdf', pdfUrl: item.attachment_url })}
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#EEF2FF', padding: 12, borderRadius: 8, marginBottom: 8, width: 220 }}
+            onPress={() => Linking.openURL(item.attachment_url).catch(err => console.error("Couldn't load page", err))}
           >
-            <FileText size={24} color={isCustomer ? '#FFF' : '#4F46E5'} style={{ marginRight: 8 }} />
-            <Text style={{ color: isCustomer ? '#FFF' : '#4F46E5', fontWeight: 'bold' }}>View Invoice (PDF)</Text>
+            <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: isCustomer ? 'rgba(255,255,255,0.3)' : '#C7D2FE', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+              <FileText size={20} color={isCustomer ? '#FFF' : '#4F46E5'} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: isCustomer ? '#FFF' : '#1E293B', fontWeight: 'bold', fontSize: 14 }}>Invoice.pdf</Text>
+              <Text style={{ color: isCustomer ? 'rgba(255,255,255,0.7)' : '#64748B', fontSize: 12, marginTop: 2 }}>Tap to view</Text>
+            </View>
           </TouchableOpacity>
         )}
         {!!msgText && (
           <Text style={[styles.msgText, isCustomer ? styles.msgTextCustomer : styles.msgTextBusiness]}>
             {formatChatMessage(msgText)}
           </Text>
-        )}
-        {!isCustomer && msgText && msgText.includes("Photo requested") && (
-           <TouchableOpacity 
-             style={{ backgroundColor: '#4F46E5', padding: 12, borderRadius: 8, marginTop: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
-             onPress={() => {
-               if (item.order_id && item.outfit_id) {
-                 setContextSelected(item.order_id + '_' + item.outfit_id);
-               }
-               handleAttachment();
-             }}
-           >
-             <Camera size={16} color="#FFF" style={{ marginRight: 6 }} />
-             <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Upload Photo</Text>
-           </TouchableOpacity>
         )}
       </>
     );
