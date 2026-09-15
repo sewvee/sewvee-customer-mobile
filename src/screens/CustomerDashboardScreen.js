@@ -58,6 +58,8 @@ const CustomerDashboardScreen = ({ navigation }) => {
   
   const [shopItems, setShopItems] = useState([]);
   const [loadingShop, setLoadingShop] = useState(false);
+  const [isBoutiqueModalVisible, setIsBoutiqueModalVisible] = useState(false);
+  const [selectedBoutique, setSelectedBoutique] = useState(null);
   const [banners, setBanners] = useState([]);
   const [stripIndex, setStripIndex] = useState(0);
 
@@ -101,6 +103,28 @@ const CustomerDashboardScreen = ({ navigation }) => {
   useEffect(() => {
     fetchInitialShopItems();
   }, [user, orders]);
+
+  const availableBoutiques = React.useMemo(() => {
+    const boutiques = [];
+    const ids = new Set();
+    if (orders) {
+      orders.forEach(o => {
+        const bId = o.boutiqueId || o.company_id;
+        if (bId && !ids.has(bId)) {
+          ids.add(bId);
+          boutiques.push({ id: bId, name: o.boutiqueName || 'Unknown Boutique' });
+        }
+      });
+    }
+    return boutiques;
+  }, [orders]);
+
+  useEffect(() => {
+    if (availableBoutiques.length > 0 && !selectedBoutique) {
+      setSelectedBoutique(availableBoutiques[0]);
+      fetchShopItems(availableBoutiques[0].id);
+    }
+  }, [availableBoutiques]);
 
   const fetchInitialShopItems = async () => {
     try {
@@ -404,18 +428,13 @@ const CustomerDashboardScreen = ({ navigation }) => {
     );
   };
 
-  const selectedBoutiqueName = React.useMemo(() => {
-    if (orders && orders.length > 0 && orders[0].boutiqueName) {
-      return orders[0].boutiqueName;
-    }
-    return 'Techno Genesis';
-  }, [orders]);
+  const selectedBoutiqueName = selectedBoutique ? selectedBoutique.name : 'All Boutiques';
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F3FF" />
       <View style={styles.header}>
-        <TouchableOpacity style={[styles.boutiqueSelector, {flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', flex: 1, marginRight: 16}]}>
+        <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(true)} style={[styles.boutiqueSelector, {flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', flex: 1, marginRight: 16}]}>
           <View style={{width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginRight: 12}}>
             <Ionicons name="home" size={18} color="#5B43EE" />
           </View>
@@ -658,6 +677,41 @@ const CustomerDashboardScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+    
+      {/* BOUTIQUE SELECTION MODAL */}
+      <Modal visible={isBoutiqueModalVisible} transparent={true} animationType="fade">
+        <View style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end'}}>
+          <View style={{backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: Dimensions.get('window').height * 0.7}}>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20}}>
+              <Text style={{fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A'}}>Select Boutique</Text>
+              <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(false)} style={{padding: 4}}>
+                <Text style={{fontSize: 16, fontFamily: 'Inter-Bold', color: '#64748B'}}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {availableBoutiques.length > 0 ? availableBoutiques.map((b) => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={{padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}
+                  onPress={() => {
+                    setSelectedBoutique(b);
+                    fetchShopItems(b.id);
+                    setIsBoutiqueModalVisible(false);
+                  }}
+                >
+                  <Text style={{fontSize: 16, fontFamily: selectedBoutique?.id === b.id ? 'Inter-Bold' : 'Inter-Medium', color: selectedBoutique?.id === b.id ? '#4F46E5' : '#1E293B'}}>
+                    {b.name}
+                  </Text>
+                  {selectedBoutique?.id === b.id && <Ionicons name="checkmark-circle" size={24} color="#4F46E5" />}
+                </TouchableOpacity>
+              )) : (
+                <Text style={{textAlign: 'center', color: '#64748B', fontFamily: 'Inter-Medium', padding: 20}}>No boutiques available</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };
