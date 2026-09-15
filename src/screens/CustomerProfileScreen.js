@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight, LogOut } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 
@@ -13,6 +14,12 @@ const DANGER = '#EF4444';
 
 const CustomerProfileScreen = () => {
   const { user, logout } = useAuth();
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBackgroundColor('#FFF');
+      StatusBar.setBarStyle('dark-content');
+    }, [])
+  );
   const navigation = useNavigation();
   const { orders } = useData();
 

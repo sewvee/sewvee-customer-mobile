@@ -33,6 +33,7 @@ import {
   Scissors,
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 import { formatDate } from '../utils/dateUtils';
 import { formatOrderNumber } from '../utils/orderIdFormatter';
@@ -41,6 +42,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CustomerOrdersScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBackgroundColor('#FFF');
+      StatusBar.setBarStyle('dark-content');
+    }, [])
+  );
   const { orders, refreshData, loading } = useData();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState('stitching');
@@ -446,7 +454,7 @@ const CustomerOrdersScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
       
       {/* Header */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, backgroundColor: '#fff' }}>

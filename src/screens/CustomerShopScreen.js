@@ -32,6 +32,7 @@ import {
 } from 'lucide-react-native';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 import { URL_CUSTOMER_PORTAL_ORDERS, URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
 import axios from 'axios';

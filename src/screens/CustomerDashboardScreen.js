@@ -40,6 +40,7 @@ import {
 import axios from 'axios';
 import { URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 import { formatDate } from '../utils/dateUtils';
 import { formatOrderNumber } from '../utils/orderIdFormatter';
@@ -436,7 +437,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F3FF" />
+      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(true)} style={[styles.boutiqueSelector, {flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', flex: 1, marginRight: 16}]}>
           <View style={{width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginRight: 12}}>

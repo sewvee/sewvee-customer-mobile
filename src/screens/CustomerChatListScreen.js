@@ -5,6 +5,7 @@ import { Colors, Shadow } from '../constants/theme';
 import { Store, MessageSquarePlus } from 'lucide-react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { BASE_URL } from '../config/env';
 
@@ -12,6 +13,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CustomerChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBackgroundColor('#FFF');
+      StatusBar.setBarStyle('dark-content');
+    }, [])
+  );
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
 
