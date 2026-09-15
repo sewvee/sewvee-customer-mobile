@@ -355,15 +355,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressLine} />
-          {[1, 2, 3].map(num => (
-            <View key={num} style={[styles.progressDot, step >= num && styles.progressDotActive]}>
-              <Text style={[styles.progressDotText, step >= num && styles.progressDotTextActive]}>{num}</Text>
-            </View>
-          ))}
-        </View>
+
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
           {step === 1 && renderStep1()}
