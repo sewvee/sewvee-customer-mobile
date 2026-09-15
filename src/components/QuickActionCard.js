@@ -1,10 +1,18 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Colors } from '../constants/theme';
 import LinearGradient from 'react-native-linear-gradient';
 
 const QuickActionCard = ({ title, subtitle, icon, onPress, primary, badge, customBg }) => {
   const glowAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 20 }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+  };
 
   useEffect(() => {
     if (badge) {
@@ -36,12 +44,14 @@ const QuickActionCard = ({ title, subtitle, icon, onPress, primary, badge, custo
   });
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
+    <Pressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       onPress={onPress}
       style={{ flex: 1, marginHorizontal: 4 }}
     >
       <Animated.View style={[
+        { transform: [{ scale: scaleAnim }] },
         styles.card,
         {
           borderColor: badge ? borderColor : '#E2E8F0',
@@ -70,7 +80,7 @@ const QuickActionCard = ({ title, subtitle, icon, onPress, primary, badge, custo
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         {subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
