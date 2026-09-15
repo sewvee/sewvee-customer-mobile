@@ -648,17 +648,6 @@ const CustomerDashboardScreen = ({ navigation }) => {
         )}
 
         {/* OFFERS / RECOMMENDED COLLECTIONS SECTION */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Recommended For You</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-          <View style={[styles.offerCard, { backgroundColor: '#FEF3C7' }]}>
-            <Text style={styles.offerTitle}>Flat 20% Off</Text>
-            <Text style={styles.offerSubtitle}>On Bridal Lehengas</Text>
-          </View>
-          <View style={[styles.offerCard, { backgroundColor: '#E0E7FF' }]}>
-            <Text style={styles.offerTitle}>New Arrivals</Text>
-            <Text style={styles.offerSubtitle}>Check out the latest blouses</Text>
-          </View>
-        </ScrollView>
       </ScrollView>
       </View>
 
