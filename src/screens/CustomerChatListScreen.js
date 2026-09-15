@@ -10,6 +10,7 @@ import axios from 'axios';
 import { BASE_URL } from '../config/env';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { formatChatMessage } from '../utils/chatUtils';
 
 const CustomerChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
