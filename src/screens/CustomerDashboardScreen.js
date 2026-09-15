@@ -53,6 +53,14 @@ const API_DOMAIN = BASE_URL.replace('/mobile/', '');
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CustomerDashboardScreen = ({ navigation }) => {
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBarStyle('dark-content');
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('#F5F3FF');
+      }
+    }, [])
+  );
   const { user, logout } = useAuth();
   const { orders, refreshData, loading } = useData();
   const [refreshing, setRefreshing] = useState(false);
