@@ -332,7 +332,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
     }
 
     // 3. PWA-style Photo Request Card
-    if (!isCustomer && msgText && (msgText.includes("[ACTION_REQUIRED:PHOTO_REQUEST]") || msgText.toLowerCase().includes("photo requested"))) {
+    if (!isCustomer && msgText && (msgText.includes("PHOTO_REQUEST") || msgText.toLowerCase().includes("photo requested"))) {
       return (
         <View style={{ 
           backgroundColor: '#FFF7ED', 
@@ -370,7 +370,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
     }
 
     // 4. PWA-style Feedback Request Card (Action required)
-    if (!isCustomer && msgText && ((msgText.includes("[ACTION_REQUIRED:") && !msgText.includes("PHOTO_REQUEST")) || msgText.toLowerCase().includes("action required"))) {
+    if (!isCustomer && msgText && ((msgText.includes("[ACTION_REQUIRED:") && !msgText.includes("PHOTO_REQUEST")) || msgText.toLowerCase().includes("action required") || msgText.toLowerCase().includes("feedback requested"))) {
       return (
         <View style={{ 
           backgroundColor: '#F5F3FF', 
@@ -387,9 +387,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#EDE9FE', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
             <Star size={20} color="#7C3AED" />
           </View>
-          <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#5B21B6', marginBottom: 8, textAlign: 'center' }}>⚠️ Action Required</Text>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#5B21B6', marginBottom: 8, textAlign: 'center' }}>⭐ Feedback Requested</Text>
           <Text style={{ fontSize: 13, color: '#6D28D9', textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
-            Your outfit is ready! We would love to hear your feedback on the stitching and overall experience.
+            We'd love to hear about your experience! Please leave your feedback.
           </Text>
           <TouchableOpacity 
             style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
@@ -401,7 +401,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             }}
           >
             <Star size={16} color="#FFF" style={{ marginRight: 8 }} />
-            <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Submit Feedback</Text>
+            <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14 }}>Leave Feedback</Text>
           </TouchableOpacity>
         </View>
       );
