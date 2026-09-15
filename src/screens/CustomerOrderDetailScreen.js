@@ -14,7 +14,6 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import CustomerRequestsTab from '../components/CustomerRequestsTab';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Spacing, Shadow } from '../constants/theme';
@@ -82,6 +81,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+  const isOutfitChatActive = false;
   const [uploadingOutfitId, setUploadingOutfitId] = useState(null);
   const [submittingOutfitId, setSubmittingOutfitId] = useState(null);
   const [showCollageMaker, setShowCollageMaker] = useState(false);
@@ -100,8 +100,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
 
   const [customerAddedRefPhotos, setCustomerAddedRefPhotos] = useState([]);
   const [galleryFolders, setGalleryFolders] = useState([]);
-  const [isOutfitChatActive, setIsOutfitChatActive] = useState(false);
-
+  
   // Fetch Sewvee gallery folders so customer can pick from their saved photos
   useEffect(() => {
     const fetchGallery = async () => {
@@ -422,15 +421,6 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
               <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Details</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
-              onPress={() => setActiveTab('requests')}
-            >
-              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'requests' ? Colors.primary : '#64748B' }}>Requests</Text>
-              {order?.has_unread_messages ? (
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', marginLeft: 6 }} />
-              ) : null}
-            </TouchableOpacity>
-            <TouchableOpacity 
               style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'payment' ? Colors.primary : 'transparent' }}
               onPress={() => setActiveTab('payment')}
             >
@@ -440,9 +430,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
         </>
       )}
 
-      {activeTab === 'requests' ? (
-        <CustomerRequestsTab order={order} onUpdateStatus={refreshData} onChatActive={setIsOutfitChatActive} />
-      ) : activeTab === 'payment' ? (
+      {activeTab === 'payment' ? (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionHeading, { marginTop: 16 }]}>ORDER BILLING SUMMARY</Text>
         <View style={styles.pricingCard}>
