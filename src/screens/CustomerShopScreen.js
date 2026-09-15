@@ -36,7 +36,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 import { URL_CUSTOMER_PORTAL_ORDERS, URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
 import axios from 'axios';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
