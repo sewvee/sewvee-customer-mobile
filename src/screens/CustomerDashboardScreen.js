@@ -1,5 +1,5 @@
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Platform,
   View,
@@ -63,6 +63,8 @@ const CustomerDashboardScreen = ({ navigation }) => {
   const [selectedBoutique, setSelectedBoutique] = useState(null);
   const [banners, setBanners] = useState([]);
   const [stripIndex, setStripIndex] = useState(0);
+  const bannerListRef = useRef(null);
+  const [bannerIndex, setBannerIndex] = useState(0);
 
   // Fetch banners from marketing API
   useEffect(() => {
@@ -92,6 +94,22 @@ const CustomerDashboardScreen = ({ navigation }) => {
   // Auto-rotate strip banners
   const stripBanners = React.useMemo(() => banners.filter(b => b.type === 'STRIP'), [banners]);
   const inlineBanners = React.useMemo(() => banners.filter(b => b.type !== 'STRIP'), [banners]);
+
+  useEffect(() => {
+    if (inlineBanners.length <= 1) return;
+    const interval = setInterval(() => {
+      setBannerIndex(prev => {
+        const next = (prev + 1) % inlineBanners.length;
+        if (bannerListRef.current) {
+          try {
+            bannerListRef.current.scrollToIndex({ index: next, animated: true });
+          } catch(e) {}
+        }
+        return next;
+      });
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [inlineBanners.length]);
 
   useEffect(() => {
     if (stripBanners.length <= 1) return;
@@ -514,6 +532,8 @@ const CustomerDashboardScreen = ({ navigation }) => {
         {inlineBanners.length > 0 && (
           <View style={{ marginBottom: 8, marginTop: 0, marginHorizontal: -4 }}>
             <FlatList
+              ref={bannerListRef}
+              getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + 16, offset: (SCREEN_WIDTH * 0.85 + 16) * index, index })}
               horizontal
               showsHorizontalScrollIndicator={false}
               data={inlineBanners}
