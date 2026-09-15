@@ -37,6 +37,7 @@ const CustomerRequestedOrdersScreen = () => {
 
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   const handleCancelOrder = (order) => {
     setOrderToCancel(order);
@@ -49,7 +50,7 @@ const CustomerRequestedOrdersScreen = () => {
     setCancelling(orderToCancel.id);
     try {
       const token = await AsyncStorage.getItem('userToken');
-      await axios.patch(`${URL_ORDERS}/${orderToCancel.id}/status`, { status_id: 4 }, {
+      await axios.patch(`${URL_ORDERS}/${orderToCancel.id}/status`, { status_id: 4, cancel_reason: cancelReason }, {
         headers: { Authorization: token, 'Content-Type': 'application/json' }
       });
       showToast('Order cancelled successfully', 'success');
@@ -59,6 +60,7 @@ const CustomerRequestedOrdersScreen = () => {
     } finally {
       setCancelling(null);
       setOrderToCancel(null);
+      setCancelReason('');
     }
   };
 
@@ -194,9 +196,18 @@ const CustomerRequestedOrdersScreen = () => {
               <XCircle size={32} color="#EF4444" />
             </View>
             <Text style={{ fontFamily: 'Inter-Bold', fontSize: 20, color: '#111827', marginBottom: 8 }}>Cancel Order</Text>
-            <Text style={{ fontFamily: 'Inter-Regular', fontSize: 15, color: '#6B7280', textAlign: 'center', marginBottom: 24 }}>
+            <Text style={{ fontFamily: 'Inter-Regular', fontSize: 15, color: '#6B7280', textAlign: 'center', marginBottom: 16 }}>
               Are you sure you want to cancel this order request? This action cannot be undone.
             </Text>
+            
+            <TextInput
+              style={{ width: '100%', backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, minHeight: 80, textAlignVertical: 'top', fontFamily: 'Inter-Regular', fontSize: 14, color: '#1F2937', marginBottom: 24 }}
+              placeholder="Reason for cancellation (optional)"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              value={cancelReason}
+              onChangeText={setCancelReason}
+            />
             
             <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
               <TouchableOpacity 
@@ -204,6 +215,7 @@ const CustomerRequestedOrdersScreen = () => {
                 onPress={() => {
                   setCancelModalVisible(false);
                   setOrderToCancel(null);
+                  setCancelReason('');
                 }}
               >
                 <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 15, color: '#4B5563' }}>No, Keep it</Text>
