@@ -201,8 +201,12 @@ const CustomerDashboardScreen = ({ navigation }) => {
   };
   const customerOrders = React.useMemo(() => {
     if (!orders || orders.length === 0) return [];
-    return [...orders].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).slice(0, 5);
-  }, [orders]);
+    let filtered = orders;
+    if (selectedBoutique) {
+      filtered = orders.filter(o => String(o.boutiqueId || o.company_id) === String(selectedBoutique.id));
+    }
+    return [...filtered].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).slice(0, 5);
+  }, [orders, selectedBoutique]);
 
   // Metrics
   
@@ -522,7 +526,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
         )}
 
         {/* QUICK ACTIONS */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, marginHorizontal: -4 }}>
           <QuickActionCard
             title="Stitching"
