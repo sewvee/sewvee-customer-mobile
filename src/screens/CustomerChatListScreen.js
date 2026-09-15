@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadow } from '../constants/theme';
-import { Store, ChevronLeft } from 'lucide-react-native';
+import { Store, MessageSquarePlus } from 'lucide-react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { BASE_URL } from '../config/env';
@@ -27,7 +28,6 @@ const CustomerChatListScreen = ({ navigation }) => {
       let token = await AsyncStorage.getItem('userToken');
       token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
       
-      // Fetch both active threads and all boutiques
       const [threadsRes, boutiquesRes] = await Promise.all([
         axios.get(`${BASE_URL}customer-portal/chat/threads`, { params: { phone: user.mobile }, headers: { Authorization: token } }).catch(() => null),
         axios.get(`${BASE_URL}customer-portal/boutiques`, { headers: { Authorization: token } }).catch(() => null)
@@ -43,9 +43,6 @@ const CustomerChatListScreen = ({ navigation }) => {
         allBoutiques = Array.isArray(boutiquesRes?.data?.data) ? boutiquesRes.data.data : [];
       }
 
-      // Merge: if a boutique doesn't have an active thread, add it as an empty thread so the user can start a chat
-      // Instead of grouping by boutique, we show all active threads (orders) directly.
-      // And we append any boutique that has NO active thread so the user can start a new order/chat.
       const activeBoutiqueIds = new Set(activeThreads.map(t => t.boutique_id));
       
       const newBoutiqueThreads = allBoutiques
@@ -54,7 +51,7 @@ const CustomerChatListScreen = ({ navigation }) => {
           boutique_id: b.id,
           boutique_name: b.boutique_name || b.name,
           profile_icon_url: b.profile_icon_url || null,
-          latest_message_text: 'Tap to start a conversation',
+          latest_message_text: 'Started a conversation',
           latest_message_timestamp: null,
           order_id: null,
           order_number: ''
@@ -78,6 +75,13 @@ const CustomerChatListScreen = ({ navigation }) => {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  const getBadgeStyle = (orderNumber) => {
+    if (!orderNumber) return { bg: '#F1F5F9', text: '#475569' };
+    if (orderNumber.startsWith('INV')) return { bg: '#F1F5F9', text: '#475569' };
+    if (orderNumber.startsWith('ENQ')) return { bg: '#FFF7ED', text: '#EA580C' };
+    return { bg: '#F1F5F9', text: '#475569' }; 
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.chatItem}
@@ -97,14 +101,33 @@ const CustomerChatListScreen = ({ navigation }) => {
       </View>
       <View style={styles.chatInfo}>
         <View style={styles.chatHeaderRow}>
-          <Text style={styles.boutiqueName} numberOfLines={1}>
-            {item.boutique_name} {item.order_number ? `#${item.order_number}` : ''}
-          </Text>
-          <Text style={styles.timeText}>{formatTime(item.latest_message_timestamp)}</Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8}}>
+            <Text style={styles.boutiqueName} numberOfLines={1}>
+              {item.boutique_name}
+            </Text>
+            {item.order_number ? (
+              <View style={[styles.badge, { backgroundColor: getBadgeStyle(item.order_number).bg }]}>
+                <Text style={[styles.badgeText, { color: getBadgeStyle(item.order_number).text }]}>
+                  #{item.order_number}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <Text style={styles.timeText}>{formatTime(item.latest_message_timestamp)}</Text>
+            <TouchableOpacity style={{marginLeft: 8, paddingHorizontal: 4}}>
+              <Ionicons name="ellipsis-vertical" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text style={styles.lastMessage} numberOfLines={1}>
-          {item.latest_message_text || (item.latest_message_attachment ? '📷 Image' : 'Started a conversation')}
-        </Text>
+        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+          {item.latest_message_attachment && (
+             <Ionicons name="camera" size={14} color="#64748B" style={{marginRight: 4}} />
+          )}
+          <Text style={styles.lastMessage} numberOfLines={1}>
+            {item.latest_message_text || (item.latest_message_attachment ? 'Image' : 'Started a conversation')}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -125,13 +148,18 @@ const CustomerChatListScreen = ({ navigation }) => {
           <Text style={styles.emptySubtitle}>When you interact with a boutique, your messages will appear here.</Text>
         </View>
       ) : (
-        <FlatList
-          data={threads}
-          keyExtractor={(item, index) => `${item.boutique_id}_${item.order_id}_${index}`}
-          renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
+        <View style={{flex: 1}}>
+          <FlatList
+            data={threads}
+            keyExtractor={(item, index) => `${item.boutique_id}_${item.order_id}_${index}`}
+            renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+          <TouchableOpacity style={styles.fab}>
+            <MessageSquarePlus size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -142,7 +170,7 @@ export default CustomerChatListScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#fff',
   },
   header: {
     padding: 16,
@@ -182,7 +210,9 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -203,16 +233,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   boutiqueName: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
-    color: '#0F172A',
-    flex: 1,
+    color: '#1E293B',
+    marginRight: 8,
+  },
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontFamily: 'Inter-Bold',
   },
   timeText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter-Regular',
     color: '#94A3B8',
-    marginLeft: 8,
   },
   lastMessage: {
     fontSize: 14,
@@ -223,4 +261,20 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#F1F5F9',
   },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#5B43EE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#5B43EE',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  }
 });
