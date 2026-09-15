@@ -12,7 +12,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { URL_UPLOAD, URL_ORDERS } from '../config/env';
 
-const CATEGORIES = ['Blouse', 'Kurta / Kurti', 'Lehenga', 'Suit / Salwar', 'Dress / Gown', 'Pants / Trousers', 'Other'];
+const CATEGORIES = ['Blouse', 'Chudithar', 'Kurta / Kurti', 'Lehenga', 'Suit / Salwar', 'Dress / Gown', 'Pants / Trousers', 'Other'];
 const MEASUREMENT_OPTIONS = ['Use Previous Measurements', 'I will provide later', 'Take measurements at store', 'Send sample dress via courier', 'Measurement dress given'];
 
 const NewStitchRequestScreen = ({ navigation, route }) => {
