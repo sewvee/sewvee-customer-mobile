@@ -382,7 +382,8 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
           visible={showDatePicker}
           onClose={() => setShowDatePicker(false)}
           onSelect={(date) => {
-            const dateObj = new Date(date);
+            const parts = date.split('/');
+            const dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
             const formattedDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
             setDeliveryDate(formattedDate);
           }}
