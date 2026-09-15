@@ -206,7 +206,16 @@ export default function CustomerSignupScreen({ navigation }) {
 
         </View>
       </ScrollView>
-    </View>
+
+      <CountryPickerBottomSheet
+          visible={showCountryPicker}
+          onClose={() => setShowCountryPicker(false)}
+          onSelect={(code) => {
+              setCountryCode(code);
+              setShowCountryPicker(false);
+          }}
+      />
+      </View>
   );
 }
 
