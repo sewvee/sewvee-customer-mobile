@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
@@ -361,6 +361,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar backgroundColor="#5B43EE" barStyle="light-content" />
       <View style={[styles.header, { backgroundColor: '#5B43EE', borderBottomWidth: 0, paddingVertical: 12, paddingHorizontal: 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12, paddingVertical: 8, paddingRight: 8 }}>
           <ChevronLeft size={24} color="#FFF" />
