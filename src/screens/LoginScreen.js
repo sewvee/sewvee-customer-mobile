@@ -36,6 +36,7 @@ const LoginScreen = ({ navigation }) => {
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isPinFocused, setIsPinFocused] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const handleContinue = async () => {
@@ -72,7 +73,7 @@ const LoginScreen = ({ navigation }) => {
   const renderPinBoxes = () => (
     <View style={styles.pinBoxRow}>
       {[0, 1, 2, 3].map((i) => (
-        <View key={i} style={[styles.pinBox, pin.length > i && styles.pinBoxFilled, pin.length === i && styles.pinBoxActive]}>
+        <View key={i} style={[styles.pinBox, pin.length > i && styles.pinBoxFilled, isPinFocused && pin.length === i && styles.pinBoxActive]}>
           <Text style={styles.pinBoxText}>{pin.length > i ? '●' : ''}</Text>
         </View>
       ))}
@@ -80,6 +81,8 @@ const LoginScreen = ({ navigation }) => {
         style={styles.hiddenInput}
         keyboardType="number-pad"
         maxLength={4}
+        onFocus={() => setIsPinFocused(true)}
+        onBlur={() => setIsPinFocused(false)}
         value={pin}
         onChangeText={(val) => {
           setPin(val.replace(/[^0-9]/g, ''));
