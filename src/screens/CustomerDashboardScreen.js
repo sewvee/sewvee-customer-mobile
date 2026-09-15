@@ -95,11 +95,21 @@ const CustomerDashboardScreen = ({ navigation }) => {
   const stripBanners = React.useMemo(() => banners.filter(b => b.type === 'STRIP'), [banners]);
   const inlineBanners = React.useMemo(() => banners.filter(b => b.type !== 'STRIP'), [banners]);
 
+  const infiniteBanners = React.useMemo(() => {
+    if (inlineBanners.length <= 1) return inlineBanners;
+    const copies = [];
+    for (let i = 0; i < 200; i++) {
+      copies.push(...inlineBanners.map((b, idx) => ({ ...b, uniqueId: `${b.id}-${i}-${idx}` })));
+    }
+    return copies;
+  }, [inlineBanners]);
+
   useEffect(() => {
     if (inlineBanners.length <= 1) return;
     const interval = setInterval(() => {
       setBannerIndex(prev => {
-        const next = (prev + 1) % inlineBanners.length;
+        const next = prev + 1;
+        if (next >= infiniteBanners.length) return 0;
         if (bannerListRef.current) {
           try {
             bannerListRef.current.scrollToIndex({ index: next, animated: true });
@@ -188,6 +198,15 @@ const CustomerDashboardScreen = ({ navigation }) => {
   // Filter orders matching logged in customer's mobile
 
   
+
+  const handleScrollEnd = (e) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const itemWidth = SCREEN_WIDTH * 0.85 + 16;
+    const newIndex = Math.round(offsetX / itemWidth);
+    if (newIndex >= 0 && newIndex < infiniteBanners.length) {
+      setBannerIndex(newIndex);
+    }
+  };
 
   const renderBanner = ({ item }) => {
     if (item.image_url || item.mobile_image_url) {
@@ -536,9 +555,10 @@ const CustomerDashboardScreen = ({ navigation }) => {
               getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + 16, offset: (SCREEN_WIDTH * 0.85 + 16) * index, index })}
               horizontal
               showsHorizontalScrollIndicator={false}
-              data={inlineBanners}
-              keyExtractor={item => item.id?.toString() || Math.random().toString()}
+              data={infiniteBanners}
+              keyExtractor={item => item.uniqueId || item.id?.toString() || Math.random().toString()}
               renderItem={renderBanner}
+              onMomentumScrollEnd={handleScrollEnd}
               snapToInterval={SCREEN_WIDTH * 0.85 + 16}
               decelerationRate="fast"
               contentContainerStyle={{ paddingRight: 20 }}
