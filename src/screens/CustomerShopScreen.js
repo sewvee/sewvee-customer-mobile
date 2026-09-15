@@ -380,6 +380,7 @@ const CustomerShopScreen = () => {
 
         </SafeAreaView>
 
+      {categories.length > 1 && (
       <View style={styles.categoriesWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
           {categories.map(cat => {
@@ -398,6 +399,7 @@ const CustomerShopScreen = () => {
           })}
         </ScrollView>
       </View>
+      )}
 
       {loadingProducts ? (
         <View style={styles.emptyContainer}>
