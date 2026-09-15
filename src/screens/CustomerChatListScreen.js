@@ -18,7 +18,8 @@ const CustomerChatListScreen = ({ navigation }) => {
     React.useCallback(() => {
       StatusBar.setBackgroundColor('#FFF');
       StatusBar.setBarStyle('dark-content');
-    }, [])
+      fetchThreads();
+    }, [user])
   );
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,7 @@ const CustomerChatListScreen = ({ navigation }) => {
     fetchThreads();
   }, [user]);
 
-  const fetchThreads = async () => {
+  async function fetchThreads() {
     if (!user?.mobile) {
       setLoading(false);
       return;

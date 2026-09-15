@@ -547,6 +547,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             renderItem={renderMessage}
             contentContainerStyle={styles.listContent}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
           />
         )}
 
