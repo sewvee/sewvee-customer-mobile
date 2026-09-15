@@ -110,7 +110,7 @@ const CustomerShopScreen = () => {
       if (boutique && !boutique.isSewveeDirect) {
         url = `${URL_CUSTOMER_PORTAL_SHOP}?companyId=${boutique.id}`;
       } else if (boutique && boutique.isSewveeDirect) {
-        url = `${BASE_URL}customer/store/catalogue`;
+        url = `${BASE_URL}marketing/customer/store/catalogue`;
       } else {
         setProducts([]);
         setLoadingProducts(false);
