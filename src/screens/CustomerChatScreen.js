@@ -14,12 +14,31 @@ import * as ImagePicker from 'react-native-image-picker';
 import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText, ShoppingBag as Shirt, Scissors } from 'lucide-react-native';
 import { Modal, ActionSheetIOS, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch } from 'react-redux';
+import { resetChatUnread } from '../store/chatSlice';
 
 const CustomerChatScreen = ({ route, navigation }) => {
   const { boutiqueId, boutiqueName: initBoutiqueName, orderId: passedOrderId, orderNumber } = route.params;
   const { user } = useAuth();
   const { orders } = useData();
-  
+  const dispatch = useDispatch();
+
+  // On mount: clear the unread badge and record last-visited time for this boutique
+  useEffect(() => {
+    dispatch(resetChatUnread());
+    const saveLastVisited = async () => {
+      try {
+        const existing = await AsyncStorage.getItem('chat_last_visited');
+        const map = existing ? JSON.parse(existing) : {};
+        map[String(boutiqueId)] = new Date().toISOString();
+        await AsyncStorage.setItem('chat_last_visited', JSON.stringify(map));
+      } catch (e) {
+        console.warn('Failed to save lastVisited', e);
+      }
+    };
+    saveLastVisited();
+  }, [boutiqueId, dispatch]);
+
   const [messages, setMessages] = useState([]);
   const [boutiqueName, setBoutiqueName] = useState(initBoutiqueName || 'Boutique Chat');
   const displayTitle = orderNumber ? `${boutiqueName} #${orderNumber}` : boutiqueName;
@@ -542,12 +561,12 @@ const CustomerChatScreen = ({ route, navigation }) => {
         ) : (
           <FlatList
             ref={flatListRef}
-            data={messages}
+            data={[...messages].reverse()}
+            inverted={true}
             keyExtractor={item => item.id?.toString() || Math.random().toString()}
             renderItem={renderMessage}
             contentContainerStyle={styles.listContent}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            
           />
         )}
 
@@ -672,7 +691,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', padding: 8, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContent: { padding: 16, flexGrow: 1, justifyContent: 'flex-end' },
+  listContent: { padding: 16, flexGrow: 1 },
   msgWrapper: { flexDirection: 'row', marginBottom: 16, alignItems: 'flex-end' },
   msgWrapperRight: { justifyContent: 'flex-end' },
   msgWrapperLeft: { justifyContent: 'flex-start' },
