@@ -5,12 +5,13 @@ import {
   StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Plus, Minus, Camera, ImageIcon, Calendar, X } from 'lucide-react-native';
+import { ArrowLeft, Plus, Minus, Camera, ImageIcon, Calendar, X, ChevronRight, ChevronDown, Mic, Image as ImageIconLucide, CheckCircle2 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { URL_UPLOAD, URL_ORDERS } from '../config/env';
+import CollageMaker from '../components/CollageMaker';
 
 const CATEGORIES = ['Blouse', 'Chudithar', 'Kurta / Kurti', 'Lehenga', 'Suit / Salwar', 'Dress / Gown', 'Pants / Trousers', 'Other'];
 const MEASUREMENT_OPTIONS = ['Use Previous Measurements', 'I will provide later', 'Take measurements at store', 'Send sample dress via courier', 'Measurement dress given'];
@@ -34,6 +35,11 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
   
   // Step 3 State
   const [deliveryDate, setDeliveryDate] = useState('');
+  
+  // Accordion & Features State
+  const [expandedOutfitId, setExpandedOutfitId] = useState(null);
+  const [collageMakerVisible, setCollageMakerVisible] = useState(false);
+  const [activeCollageOutfitId, setActiveCollageOutfitId] = useState(null);
 
   const handleNext = () => {
     if (step === 1) {
@@ -155,6 +161,36 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
           }
         }
         
+        if (outfit.collageUrl) {
+          const formData = new FormData();
+          formData.append('file', {
+            uri: outfit.collageUrl,
+            type: 'image/jpeg',
+            name: 'collage.jpg'
+          });
+          formData.append('key_name', 'order_photos');
+          
+          try {
+            const uploadRes = await axios.post(URL_UPLOAD, formData, {
+              headers: { 
+                Authorization: formattedToken,
+                'Content-Type': 'multipart/form-data'
+              }
+            });
+            const url = uploadRes.data?.file_url || uploadRes.data?.data?.file_url || uploadRes.data?.url;
+            if (url) uploadedUrls.push(url);
+          } catch (err) {
+            console.warn('Failed to upload collage', err);
+          }
+        }
+            });
+            const url = uploadRes.data?.file_url || uploadRes.data?.data?.file_url || uploadRes.data?.url;
+            if (url) uploadedUrls.push(url);
+          } catch (err) {
+            console.warn('Failed to upload image', err);
+          }
+        }
+        
         const lines = [];
         lines.push(`Category: ${outfit.category}`);
         if (outfit.description) lines.push(`Description: ${outfit.description}`);
@@ -221,54 +257,139 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
   const renderStep2 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>Configure Outfits</Text>
-      <Text style={styles.stepSubtitle}>Add details and references for your outfits.</Text>
+      <Text style={styles.stepSubtitle}>Tap each outfit to provide design references, details, and measurements.</Text>
       
-      {outfits.map((outfit, index) => (
-        <View key={outfit.id} style={styles.outfitCard}>
-          <Text style={styles.outfitTitle}>{outfit.name}</Text>
-          
-          <Text style={styles.fieldLabel}>Description</Text>
-          <TextInput
-            style={styles.textArea}
-            multiline
-            numberOfLines={3}
-            placeholder="E.g. I need a 3/4th sleeve with deep neck."
-            value={outfit.description}
-            onChangeText={(text) => updateOutfit(outfit.id, 'description', text)}
-            textAlignVertical="top"
-          />
-          
-          <Text style={styles.fieldLabel}>Measurements</Text>
-          {MEASUREMENT_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt}
-              style={[styles.radioRow, outfit.measurement === opt && styles.radioRowActive]}
-              onPress={() => updateOutfit(outfit.id, 'measurement', opt)}
+      {outfits.map((outfit, index) => {
+        const isExpanded = expandedOutfitId === outfit.id;
+        
+        return (
+          <View key={outfit.id} style={[styles.outfitCard, isExpanded && styles.outfitCardExpanded]}>
+            <TouchableOpacity 
+              style={styles.accordionHeader} 
+              onPress={() => setExpandedOutfitId(isExpanded ? null : outfit.id)}
             >
-              <View style={[styles.radioCircle, outfit.measurement === opt && styles.radioCircleActive]}>
-                {outfit.measurement === opt && <View style={styles.radioDot} />}
+              <View style={styles.accordionHeaderLeft}>
+                <View style={styles.accordionIndexCircle}>
+                  <Text style={styles.accordionIndexText}>{index + 1}</Text>
+                </View>
+                <View>
+                  <Text style={styles.outfitTitle}>{outfit.name}</Text>
+                  <Text style={styles.outfitSubtitle}>Tap to add details</Text>
+                </View>
               </View>
-              <Text style={styles.radioText}>{opt}</Text>
+              {isExpanded ? <ChevronDown size={20} color="#CBD5E1" /> : <ChevronRight size={20} color="#CBD5E1" />}
             </TouchableOpacity>
-          ))}
-          
-          <Text style={styles.fieldLabel}>Reference Photos</Text>
-          <View style={styles.imagesGrid}>
-            {outfit.images.map((img, idx) => (
-              <View key={idx} style={styles.imageWrapper}>
-                <Image source={{ uri: img.uri }} style={styles.previewImage} />
-                <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(outfit.id, idx)}>
-                  <X size={12} color="#FFF" />
+            
+            {isExpanded && (
+              <View style={styles.accordionBody}>
+                
+                {/* 1. Build a Collage */}
+                <View style={styles.dashedBox}>
+                  <View style={styles.iconCircle}>
+                    <ImageIconLucide size={24} color="#5B43EE" />
+                  </View>
+                  <Text style={styles.boxTitle}>Build a Collage</Text>
+                  <Text style={styles.boxSubtitle}>Combine your fabric photos with design references in one image.</Text>
+                  <TouchableOpacity 
+                    style={styles.btnCollage}
+                    onPress={() => {
+                      setActiveCollageOutfitId(outfit.id);
+                      setCollageMakerVisible(true);
+                    }}
+                  >
+                    <Text style={styles.btnCollageText}>Open Collage Maker</Text>
+                  </TouchableOpacity>
+                  
+                  {/* Show collage thumbnail if it exists */}
+                  {outfit.collageUrl && (
+                    <View style={{marginTop: 12, position: 'relative'}}>
+                      <Image source={{uri: outfit.collageUrl}} style={{width: '100%', height: 150, borderRadius: 8}} resizeMode="cover" />
+                      <TouchableOpacity 
+                        style={styles.removeImageBtn} 
+                        onPress={() => updateOutfit(outfit.id, 'collageUrl', null)}
+                      >
+                        <X size={12} color="#FFF" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                {/* Legacy Photo Grid (keeping it as backup) */}
+                {outfit.images.length > 0 && (
+                  <View style={styles.imagesGrid}>
+                    {outfit.images.map((img, idx) => (
+                      <View key={idx} style={styles.imageWrapper}>
+                        <Image source={{ uri: img.uri }} style={styles.previewImage} />
+                        <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(outfit.id, idx)}>
+                          <X size={12} color="#FFF" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* 2. Description & Voice Note */}
+                <Text style={styles.sectionHeading}>2. Description & Voice Note</Text>
+                <TextInput
+                  style={styles.textArea}
+                  multiline
+                  numberOfLines={4}
+                  placeholder="Describe your design, specific requirements, fabric details..."
+                  value={outfit.description}
+                  onChangeText={(text) => updateOutfit(outfit.id, 'description', text)}
+                  textAlignVertical="top"
+                />
+                
+                <Text style={styles.orText}>Or record a voice note</Text>
+                <TouchableOpacity 
+                  style={styles.btnVoiceNote}
+                  onPress={() => Alert.alert('Coming Soon', 'Voice recording will be available in the next app update.')}
+                >
+                  <Mic size={18} color="#5B43EE" style={{marginRight: 8}} />
+                  <Text style={styles.btnVoiceNoteText}>Record Voice Note</Text>
                 </TouchableOpacity>
+
+                {/* 3. Measurement Option */}
+                <Text style={styles.sectionHeading}>3. Measurement Option</Text>
+                {MEASUREMENT_OPTIONS.map(opt => {
+                  const isActive = outfit.measurement === opt;
+                  return (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.measurementOptionBox, isActive && styles.measurementOptionBoxActive]}
+                      onPress={() => updateOutfit(outfit.id, 'measurement', opt)}
+                    >
+                      <View style={styles.measurementOptionHeader}>
+                        <Text style={[styles.measurementOptionText, isActive && styles.measurementOptionTextActive]}>{opt}</Text>
+                        {isActive && <CheckCircle2 size={20} color="#5B43EE" />}
+                      </View>
+                      
+                      {/* Tap to select an order... input if "Use Previous Measurements" */}
+                      {isActive && opt === 'Use Previous Measurements' && (
+                        <View style={styles.subInputBox}>
+                          <Text style={styles.subInputText}>Tap to select an order...</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+
               </View>
-            ))}
-            <TouchableOpacity style={styles.addPhotoBtn} onPress={() => pickImageForOutfit(outfit.id)}>
-              <Camera size={24} color="#64748B" />
-              <Text style={styles.addPhotoText}>Add</Text>
-            </TouchableOpacity>
+            )}
           </View>
-        </View>
-      ))}
+        );
+      })}
+      
+      <CollageMaker
+        visible={collageMakerVisible}
+        onClose={() => setCollageMakerVisible(false)}
+        onSaveReference={(url) => {
+          if (activeCollageOutfitId) {
+            updateOutfit(activeCollageOutfitId, 'collageUrl', url);
+          }
+          setCollageMakerVisible(false);
+        }}
+      />
     </View>
   );
 
@@ -423,28 +544,73 @@ const styles = StyleSheet.create({
   counterText: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', width: 32, textAlign: 'center' },
 
   // Step 2
+  // Step 2 (Accordion)
   outfitCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFF',
     borderWidth: 1, borderColor: '#E2E8F0',
-    borderRadius: 16, padding: 16, marginBottom: 20,
+    borderRadius: 16, marginBottom: 16,
   },
-  outfitTitle: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontFamily: 'Inter-Bold', color: '#64748B', marginBottom: 8, marginTop: 12 },
+  outfitCardExpanded: {
+    borderColor: '#CBD5E1',
+  },
+  accordionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16,
+  },
+  accordionHeaderLeft: { flexDirection: 'row', alignItems: 'center' },
+  accordionIndexCircle: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9',
+    alignItems: 'center', justifyContent: 'center', marginRight: 16,
+  },
+  accordionIndexText: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#64748B' },
+  outfitTitle: { fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A' },
+  outfitSubtitle: { fontSize: 13, fontFamily: 'Inter-Medium', color: '#94A3B8', marginTop: 2 },
+  
+  accordionBody: { padding: 16, paddingTop: 0 },
+  
+  dashedBox: {
+    borderWidth: 1, borderColor: '#CBD5E1', borderStyle: 'dashed', borderRadius: 16,
+    padding: 24, alignItems: 'center', marginBottom: 24, backgroundColor: '#F8FAFC',
+  },
+  iconCircle: {
+    width: 48, height: 48, borderRadius: 24, backgroundColor: '#EEF2FF',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+  },
+  boxTitle: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 8 },
+  boxSubtitle: { fontSize: 13, fontFamily: 'Inter-Medium', color: '#64748B', textAlign: 'center', marginBottom: 16, paddingHorizontal: 12 },
+  btnCollage: {
+    backgroundColor: '#5B43EE', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12,
+  },
+  btnCollageText: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#FFF' },
+
+  sectionHeading: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 12 },
   textArea: {
     backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0',
-    borderRadius: 12, padding: 12, fontSize: 14, fontFamily: 'Inter-Medium', color: '#1E293B',
-    minHeight: 80,
+    borderRadius: 12, padding: 16, fontSize: 14, fontFamily: 'Inter-Medium', color: '#64748B',
+    minHeight: 120, marginBottom: 12,
   },
-  radioRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-  radioCircle: {
-    width: 20, height: 20, borderRadius: 10,
-    borderWidth: 2, borderColor: '#CBD5E1',
-    alignItems: 'center', justifyContent: 'center', marginRight: 12,
+  orText: { fontSize: 13, fontFamily: 'Inter-Medium', color: '#64748B', marginBottom: 12 },
+  btnVoiceNote: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#CBD5E1', borderStyle: 'dashed', borderRadius: 12,
+    paddingVertical: 14, marginBottom: 24,
   },
-  radioCircleActive: { borderColor: '#5B43EE' },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#5B43EE' },
-  radioText: { fontSize: 14, fontFamily: 'Inter-Medium', color: '#334155' },
-  
+  btnVoiceNoteText: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#5B43EE' },
+
+  measurementOptionBox: {
+    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 16, marginBottom: 12,
+    backgroundColor: '#FFF',
+  },
+  measurementOptionBoxActive: { borderColor: '#5B43EE', backgroundColor: '#EEF2FF' },
+  measurementOptionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  measurementOptionText: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#475569' },
+  measurementOptionTextActive: { color: '#5B43EE' },
+  subInputBox: {
+    marginTop: 12, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0',
+    borderRadius: 8, padding: 12,
+  },
+  subInputText: { fontSize: 13, fontFamily: 'Inter-Medium', color: '#5B43EE' },
+
   imagesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
   imageWrapper: { width: 70, height: 70, borderRadius: 8, overflow: 'hidden', position: 'relative' },
   previewImage: { width: '100%', height: '100%' },
@@ -453,13 +619,6 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center', justifyContent: 'center'
   },
-  addPhotoBtn: {
-    width: 70, height: 70, borderRadius: 8,
-    borderWidth: 1, borderColor: '#CBD5E1', borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FFF',
-  },
-  addPhotoText: { fontSize: 10, fontFamily: 'Inter-Medium', color: '#64748B', marginTop: 4 },
 
   // Step 3
   dateInputWrapper: {
