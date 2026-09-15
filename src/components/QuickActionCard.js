@@ -3,35 +3,30 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, Shadow } from '../constants/theme';
 import LinearGradient from 'react-native-linear-gradient';
 
-const QuickActionCard = ({ title, icon, onPress, primary }) => {
-  if (primary) {
-    return (
-      <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={[styles.card, styles.shadow]}>
-        <LinearGradient
-          colors={['#F5F3FF', '#EDE9FE']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientBg}
-        >
-          <View style={styles.iconContainerPrimary}>
-            {icon}
-          </View>
-          <Text style={styles.titlePrimary} numberOfLines={2} textAlign="center">{title}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    );
-  }
-
+const QuickActionCard = ({ title, subtitle, icon, onPress, primary, badge, customBg }) => {
   return (
     <TouchableOpacity
-      style={[styles.card, styles.secondaryCard, styles.shadow]}
+      style={[styles.card, styles.shadow]}
       activeOpacity={0.8}
       onPress={onPress}
     >
-      <View style={styles.iconContainerSecondary}>
+      {badge && (
+        <View style={styles.badgeContainer}>
+          <LinearGradient
+            colors={['#4F46E5', '#818cf8', '#4F46E5']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.badgeBg}
+          >
+            <Text style={styles.badgeText}>{badge}</Text>
+          </LinearGradient>
+        </View>
+      )}
+      <View style={[styles.iconContainer, { backgroundColor: customBg || '#EEF2FF' }]}>
         {icon}
       </View>
-      <Text style={styles.titleSecondary} numberOfLines={2} textAlign="center">{title}</Text>
+      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      {subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
     </TouchableOpacity>
   );
 };
@@ -41,66 +36,61 @@ export default QuickActionCard;
 const styles = StyleSheet.create({
   card: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     marginHorizontal: 4,
-    height: 100,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    position: 'relative',
+    height: 110,
   },
   shadow: {
-    shadowColor: '#5B43EE',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  gradientBg: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryCard: {
-    backgroundColor: Colors.white,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  iconContainerPrimary: {
+  iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E7FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
-  iconContainerSecondary: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  titlePrimary: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: Colors.textPrimary,
+  title: {
+    fontSize: 13,
+    fontFamily: 'Inter-Bold',
+    color: '#0F172A',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
   },
-  titleSecondary: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: Colors.textPrimary,
+  subtitle: {
+    fontSize: 10,
+    fontFamily: 'Inter-Medium',
+    color: '#64748B',
     textAlign: 'center',
-    lineHeight: 16,
+    marginTop: 2,
+    letterSpacing: -0.2,
   },
+  badgeContainer: {
+    position: 'absolute',
+    top: -10,
+    zIndex: 10,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  badgeBg: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontFamily: 'Inter-Bold',
+  }
 });

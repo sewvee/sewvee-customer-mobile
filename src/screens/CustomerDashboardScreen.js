@@ -306,7 +306,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
         )}
         <View style={styles.dashShopInfo}>
           <Text style={styles.dashShopName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.dashShopPrice}>₹{item.price}</Text>
+          <Text style={styles.dashShopPrice}>₹{item.selling_price || item.price}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -416,7 +416,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
       <View style={styles.header}>
         <TouchableOpacity style={[styles.boutiqueSelector, {flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', flex: 1, marginRight: 16}]}>
           <View style={{width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginRight: 12}}>
-            <ShoppingBag size={18} color="#5B43EE" />
+            <Ionicons name="home" size={18} color="#5B43EE" />
           </View>
           <View style={{flex: 1}}>
             <Text style={[styles.shoppingAtText, {fontSize: 10, textTransform: 'uppercase', color: '#64748B', fontFamily: 'Inter-Bold', marginBottom: 0}]}>SHOPPING AT</Text>
@@ -502,22 +502,28 @@ const CustomerDashboardScreen = ({ navigation }) => {
         )}
 
         {/* QUICK ACTIONS */}
-        <Text style={styles.sectionTitle}>Quick Actions (Banners: {banners.length}, Shop: {shopItems.length}, Orders: {orders?.length})</Text>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, marginHorizontal: -4 }}>
           <QuickActionCard
             title="Stitching"
-            icon={<Scissors size={20} color={Colors.primary} />}
-            primary={true}
+            subtitle="Online stitching"
+            badge="Online Order"
+            icon={<Scissors size={20} color={'#4F46E5'} />}
+            customBg={'#EEF2FF'}
             onPress={() => navigation.navigate('NewStitchRequest')}
           />
           <QuickActionCard
             title="Readymade"
-            icon={<ShoppingBag size={20} color={Colors.primary} />}
+            subtitle="Shop readymades"
+            icon={<ShoppingBag size={20} color={'#D97706'} />}
+            customBg={'#FEF3C7'}
             onPress={() => navigation.navigate('CustomerShop')}
           />
           <QuickActionCard
             title="My Designs"
-            icon={<Camera size={20} color={Colors.primary} />}
+            subtitle="View my designs"
+            icon={<Camera size={20} color={'#059669'} />}
+            customBg={'#ECFDF5'}
             onPress={() => navigation.navigate('CustomerGallery')}
           />
         </View>
@@ -528,7 +534,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
             <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop: 24, marginBottom: 16}}>
               <Text style={[styles.sectionTitle, {marginBottom:0, marginTop:0}]}>Featured in Shop</Text>
               <TouchableOpacity onPress={() => navigation.navigate('CustomerShop')}>
-                <Text style={{color:Colors.primary, fontFamily:'Inter-SemiBold', fontSize:13}}>View All</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}><Text style={{color:Colors.primary, fontFamily:'Inter-SemiBold', fontSize:13}}>View All</Text><Ionicons name="arrow-forward" size={14} color={Colors.primary} style={{marginLeft: 4}} /></View>
               </TouchableOpacity>
             </View>
             <FlatList
