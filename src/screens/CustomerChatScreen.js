@@ -4,8 +4,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const KeyboardView = Platform.OS === 'ios' ? KeyboardAvoidingView : ({ style, children }) => <View style={style}>{children}</View>;
-
 import { Colors } from '../constants/theme';
 import { formatChatMessage } from '../utils/chatUtils';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +26,7 @@ import { resetChatUnread, setChatUnread } from '../store/chatSlice';
 import io from 'socket.io-client';
 import chatSocketService from '../utils/chatSocketService';
 
+const KeyboardView = Platform.OS === 'ios' ? KeyboardAvoidingView : ({ style, children }) => <View style={style}>{children}</View>;
 
 const AudioPlayerBubble = ({ uri, isCustomer }) => {
   const [isPlaying, setIsPlaying] = useState(false);
