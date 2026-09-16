@@ -763,8 +763,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
               <Scissors size={20} color="#475569" style={{ marginRight: 16 }} />
               <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>Create Collage</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
       {/* Collage Maker */}

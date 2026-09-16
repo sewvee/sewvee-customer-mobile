@@ -186,15 +186,23 @@ export const saveFcmTokenAction = createAsyncThunk(
     'auth/saveFcmToken',
     async (fcmData, { getState, rejectWithValue }) => {
         try {
-            const authState = getState().auth;
-            const user = authState.user;
-            let token = user?.token || user?.data?.token || user?.accessToken || user?.data?.accessToken || user?.access_token || user?.data?.access_token || user?.jwt || user?.data?.jwt;
+            // The Customer app stores its JWT under 'userToken' in AsyncStorage.
+            // Always try AsyncStorage first since Redux may not be hydrated yet (e.g., called from SplashScreen).
+            let token = await AsyncStorage.getItem('userToken');
 
+            // Fallback: try Redux state if AsyncStorage is empty
             if (!token) {
-                token = await AsyncStorage.getItem('userToken');
+                const authState = getState().auth;
+                const user = authState.user;
+                token = user?.token || user?.data?.token || user?.accessToken || user?.data?.accessToken || user?.access_token || user?.data?.access_token || user?.jwt || user?.data?.jwt;
             }
 
-            const formattedToken = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+            if (!token) {
+                console.warn('saveFcmTokenAction: No auth token found — skipping FCM token save');
+                return rejectWithValue('No auth token');
+            }
+
+            const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 
             console.log('FCM Token API Request Payload:', fcmData);
 
@@ -209,11 +217,11 @@ export const saveFcmTokenAction = createAsyncThunk(
             return response.data;
         } catch (error) {
             console.warn('Save FCM Token Error Response:', error.response?.data || error.message);
-            console.log('Save FCM Token Error Response:', error.response?.data || error.message);
             return rejectWithValue(error.response?.data || error.message);
         }
     }
 );
+
 
 export const getCountries = createAsyncThunk(
     'location/countries',
