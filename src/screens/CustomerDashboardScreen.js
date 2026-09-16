@@ -592,10 +592,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
             customBg={'#FEF3C7'}
             onPress={() => navigation.navigate('CustomerShop')}
           />
-          <QuickActionCard
-            title="My Designs"
-            subtitle="View my designs"
-            icon={<Camera size={20} color={'#059669'} />}
+          }
             customBg={'#ECFDF5'}
             onPress={() => navigation.navigate('CustomerGallery')}
           />

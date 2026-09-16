@@ -448,11 +448,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
               <View style={{ flex: 1 }}><Text style={s.pickerOptionTitle}>Phone Gallery</Text></View>
               <ChevronRight size={18} color={Colors.textSecondary} />
             </TouchableOpacity>
-            <TouchableOpacity style={s.pickerOption} onPress={() => { setSourcePickerVisible(false); setGalleryBrowserVisible(true); }}>
-              <View style={s.pickerOptionIcon}><Folder size={24} color={Colors.primary} /></View>
-              <View style={{ flex: 1 }}><Text style={s.pickerOptionTitle}>Sewvee Gallery</Text></View>
-              <ChevronRight size={18} color={Colors.textSecondary} />
-            </TouchableOpacity>
+            
             <TouchableOpacity style={s.cancelPickerBtn} onPress={() => setSourcePickerVisible(false)}>
               <Text style={s.cancelPickerText}>Cancel</Text>
             </TouchableOpacity>
@@ -460,47 +456,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
         </View>
       </Modal>
 
-      {/* Sewvee Gallery Modal */}
-      <Modal visible={galleryBrowserVisible} animationType="slide">
-        <View style={s.galleryBrowserContainer}>
-          <View style={s.galleryBrowserHeader}>
-            <TouchableOpacity onPress={() => selectedFolder ? setSelectedFolder(null) : setGalleryBrowserVisible(false)} style={{ padding: 6 }}>
-              <ArrowLeft size={22} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            <Text style={s.galleryBrowserTitle}>{selectedFolder ? selectedFolder.name : 'My Gallery'}</Text>
-            <TouchableOpacity onPress={() => { setGalleryBrowserVisible(false); setSelectedFolder(null); }} style={{ padding: 6 }}>
-              <X size={22} color={Colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          {!selectedFolder ? (
-            <FlatList
-              data={galleryFolders}
-              keyExtractor={item => item.id}
-              contentContainerStyle={{ padding: 16 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={s.folderPickerRow} onPress={() => setSelectedFolder(item)}>
-                  <View style={s.folderPickerIcon}><Folder size={22} color={Colors.primary} fill="#EEF2FF" /></View>
-                  <View style={{ flex: 1 }}><Text style={s.folderPickerName}>{item.name}</Text></View>
-                  <ChevronRight size={18} color={Colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-            />
-          ) : (
-            <FlatList
-              data={selectedFolder.images}
-              keyExtractor={item => item.id}
-              numColumns={3}
-              contentContainerStyle={{ padding: 12 }}
-              columnWrapperStyle={{ gap: 6, marginBottom: 6 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={s.galleryThumb} onPress={() => handleGalleryImageSelect(item.url)}>
-                  <Image source={{ uri: item.url }} style={s.galleryThumbImage} />
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </View>
-      </Modal>
+      
 
       {/* Text input overlay */}
       <Modal visible={addingText} transparent animationType="slide" onRequestClose={() => setAddingText(false)}>
