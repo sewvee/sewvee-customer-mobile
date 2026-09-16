@@ -592,10 +592,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
             customBg={'#FEF3C7'}
             onPress={() => navigation.navigate('CustomerShop')}
           />
-          }
-            customBg={'#ECFDF5'}
-            onPress={() => navigation.navigate('CustomerGallery')}
-          />
+
         </View>
 
         
