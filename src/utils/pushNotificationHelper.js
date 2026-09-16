@@ -103,21 +103,30 @@ export const requestUserPermission = async () => {
 
 
 const getFcmToken = async () => {
-    let fcmToken = await AsyncStorage.getItem('fcmToken');
-    console.log('Old FCM Token:', fcmToken);
-    if (!fcmToken) {
-        try {
-            const messaging = getMessaging();
-            const token = await getToken(messaging);
-            if (token) {
-                console.log('New FCM Token:', token);
-                await AsyncStorage.setItem('fcmToken', token);
-            }
-        } catch (error) {
-            console.log('Error in getting FCM Token, retrying in 5s...', error);
-            // Retry after 5 seconds if service is not available
-            setTimeout(getFcmToken, 5000);
+    let token = await AsyncStorage.getItem('fcmToken');
+    try {
+        const messaging = getMessaging();
+        const newToken = await getToken(messaging);
+        if (newToken) {
+            token = newToken;
+            await AsyncStorage.setItem('fcmToken', newToken);
         }
+    } catch (error) {
+        console.log('Error in getting FCM Token, using old token or retrying in 5s...', error);
+        if (!token) {
+            setTimeout(getFcmToken, 5000);
+            return;
+        }
+    }
+
+    if (token) {
+        console.log('Syncing FCM Token to backend:', token);
+        import('../store').then(({ store }) => {
+            import('../store/authSlice').then(({ saveFcmTokenAction }) => {
+                const state = store.getState();
+                store.dispatch(saveFcmTokenAction({ fcm_token: token })).catch(err => console.log('FCM token dispatch error:', err));
+            }).catch(err => console.log('Could not import saveFcmTokenAction', err));
+        }).catch(err => console.log('Could not import store', err));
     }
 }
 
@@ -161,11 +170,18 @@ export const notificationListener = async () => {
                     });
                 }, 3000);
             } else if (page === 'CHAT') {
+                // Increment unread badge counter
+                import('../store').then(({ store }) => {
+                    import('../store/chatSlice').then(({ incrementChatUnread }) => {
+                        store.dispatch(incrementChatUnread());
+                    });
+                });
                 setTimeout(() => {
                     import('./navigationService').then((navigationService) => {
                         navigationService.navigate('CustomerChat', { 
                             orderId: data.orderId || innerData.orderId,
-                            boutiqueId: data.boutiqueId || innerData.boutiqueId
+                            boutiqueId: data.boutiqueId || innerData.boutiqueId,
+                            boutiqueName: data.boutiqueName || innerData.boutiqueName,
                         });
                     });
                 }, 3000);
@@ -206,6 +222,17 @@ export const notificationListener = async () => {
     // Foreground state messages
     onMessage(messaging, async remoteMessage => {
         console.log('Foreground notification received:', remoteMessage);
+        
+        // Immediately update chat badge if it's a chat message
+        const data = remoteMessage.data || {};
+        if (data.page === 'CHAT') {
+            import('../store').then(({ store }) => {
+                import('../store/chatSlice').then(({ incrementChatUnread }) => {
+                    store.dispatch(incrementChatUnread());
+                });
+            });
+        }
+        
         onDisplayNotification(remoteMessage);
     });
 }
