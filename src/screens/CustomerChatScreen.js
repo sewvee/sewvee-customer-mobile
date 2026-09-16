@@ -650,7 +650,6 @@ const CustomerChatScreen = ({ route, navigation }) => {
   };
 
   return (
-  return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar backgroundColor="#5B43EE" barStyle="light-content" translucent={false} />
       <View style={[styles.header, { backgroundColor: '#5B43EE', borderBottomWidth: 0, paddingVertical: 12, paddingHorizontal: 16 }]}>
@@ -741,8 +740,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </View>
-    
+
       {/* Android Attach Menu */}
       <Modal visible={showAttachMenu} transparent={true} animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setShowAttachMenu(false)}>
@@ -834,7 +832,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
