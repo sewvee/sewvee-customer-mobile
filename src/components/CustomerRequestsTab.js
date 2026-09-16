@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { normalizeImageUrl } from '../utils/imageUtils';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Alert, Modal, Pressable } from 'react-native';
 import { Camera, Send, MessageCircle, MessageSquare, ChevronLeft, ChevronRight, Trash2, MoreVertical, Edit2, X } from 'lucide-react-native';
+const KeyboardView = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
 import { Colors } from '../constants/theme';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useDispatch, useSelector } from 'react-redux';
@@ -250,9 +251,9 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
   const outfitRequests = requests.filter(r => r.order_outfit_id === activeOutfit.id);
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardView 
       style={{ flex: 1, backgroundColor: '#F8FAFC' }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       {/* Header */}
@@ -410,7 +411,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
           {fullScreenImage && <Image source={{ uri: normalizeImageUrl(fullScreenImage) }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </KeyboardView>
   );
 }
 

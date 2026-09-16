@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Linking, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
+const KeyboardView = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
 import { Colors } from '../constants/theme';
 import { formatChatMessage } from '../utils/chatUtils';
 import { useAuth } from '../context/AuthContext';
@@ -682,7 +683,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <KeyboardAvoidingView
+      <KeyboardView
         style={{ flex: 1, backgroundColor: '#F8FAFC' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 56) : 0}
@@ -738,7 +739,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={20} color="#FFF" />}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardView>
     
       {/* Android Attach Menu */}
       <Modal visible={showAttachMenu} transparent={true} animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
