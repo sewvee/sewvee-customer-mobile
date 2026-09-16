@@ -686,6 +686,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: '#F8FAFC' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        enabled={Platform.OS === 'ios'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
       >
         {loading ? (
