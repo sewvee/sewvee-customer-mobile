@@ -629,7 +629,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
 
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: '#F8FAFC' }}
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 56) : 0}
       >
         {loading ? (
@@ -658,7 +658,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         )}
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <TouchableOpacity 
             style={{ padding: 8, marginRight: 4 }} 
             onPress={handleAttachment}
