@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Linking, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
+import { View, Linking, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
-const KeyboardView = KeyboardAvoidingView;
+const KeyboardView = Platform.OS === 'ios' ? KeyboardAvoidingView : ({ style, children }) => <View style={style}>{children}</View>;
 import { Colors } from '../constants/theme';
 import { formatChatMessage } from '../utils/chatUtils';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +28,11 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const { user } = useAuth();
   const { orders } = useData();
   const dispatch = useDispatch();
+
+  // --- MANUAL ANDROID KEYBOARD SPACER ---
+  // Since translucent status bar kills adjustResize, we must manually push the layout up.
+  const [androidKeyboardHeight, setAndroidKeyboardHeight] = React.useState(0);
+
 
   // On mount: clear the unread badge and record last-visited time for this boutique
   useEffect(() => {
@@ -683,10 +688,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <KeyboardAvoidingView
+      <KeyboardView
         style={{ flex: 1, backgroundColor: '#F8FAFC' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        enabled={Platform.OS === 'ios'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
       >
         {loading ? (
@@ -716,7 +720,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         )}
-        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <View style={[styles.inputContainer, { 
+          paddingBottom: Math.max(insets.bottom, 8) 
+        }]}>
           <TouchableOpacity 
             style={{ padding: 8, marginRight: 4 }} 
             onPress={handleAttachment}
@@ -740,7 +746,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={20} color="#FFF" />}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardView>
 
       {/* Android Attach Menu */}
       <Modal visible={showAttachMenu} transparent={true} animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
