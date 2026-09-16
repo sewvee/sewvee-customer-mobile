@@ -650,7 +650,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <KeyboardView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
       <StatusBar backgroundColor="#5B43EE" barStyle="light-content" />
       <View style={[styles.header, { backgroundColor: '#5B43EE', borderBottomWidth: 0, paddingVertical: 12, paddingHorizontal: 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12, paddingVertical: 8, paddingRight: 8 }}>
@@ -683,11 +683,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <KeyboardView
-        style={{ flex: 1, backgroundColor: '#F8FAFC' }}
-        behavior="padding"
-        keyboardVerticalOffset={insets.top + 56}
-      >
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -739,7 +735,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={20} color="#FFF" />}
           </TouchableOpacity>
         </View>
-      </KeyboardView>
+      </View>
     
       {/* Android Attach Menu */}
       <Modal visible={showAttachMenu} transparent={true} animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
@@ -832,7 +828,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </KeyboardView>
   );
 };
 
