@@ -732,7 +732,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </View>
         )}
         <View style={[styles.inputContainer, { 
-          paddingBottom: Math.max(insets.bottom, 8) 
+          paddingBottom: Platform.OS === "android" && androidKeyboardHeight > 0 ? 16 : Math.max(insets.bottom, 16) 
         }]}>
           <TouchableOpacity 
             style={{ padding: 8, marginRight: 4 }} 
