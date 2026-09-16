@@ -364,9 +364,9 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
       
       {/* Custom BottomSheet Modal for Message Options */}
       <Modal visible={!!selectedMessage} transparent animationType="slide" onRequestClose={() => setSelectedMessage(null)}>
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} onPress={() => setSelectedMessage(null)}>
-          <Pressable onPress={() => {}} style={{ width: '100%' }}>
-            <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }]} onPress={() => setSelectedMessage(null)} />
+          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24, zIndex: 10, elevation: 10 }}>
             <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#1E293B', marginBottom: 16, textAlign: 'center' }}>Message Options</Text>
             
             {selectedMessage && !selectedMessage.attachment_url && (
@@ -399,8 +399,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
               <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#64748B', textAlign: 'center' }}>Cancel</Text>
             </TouchableOpacity>
           </View>
-          </Pressable>
-        </Pressable>
+        </View>
       </Modal>
 
       <Modal visible={!!fullScreenImage} transparent animationType="fade" onRequestClose={() => setFullScreenImage(null)}>
