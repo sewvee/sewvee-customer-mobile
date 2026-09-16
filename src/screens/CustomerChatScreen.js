@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Linking, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Keyboard } from 'react-native';
+import { View, Linking, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Keyboard, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
 const KeyboardView = Platform.OS === 'ios' ? KeyboardAvoidingView : ({ style, children }) => <View style={style}>{children}</View>;
+
 import { Colors } from '../constants/theme';
 import { formatChatMessage } from '../utils/chatUtils';
 import { useAuth } from '../context/AuthContext';
