@@ -15,7 +15,7 @@ import * as ImagePicker from 'react-native-image-picker';
 import {
   Check,
   Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText, ShoppingBag as Shirt, Scissors } from 'lucide-react-native';
-import { Modal, ActionSheetIOS, Alert, Image, Pressable } from 'react-native';
+import { TouchableWithoutFeedback, Modal, ActionSheetIOS, Alert, Image, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { resetChatUnread, setChatUnread } from '../store/chatSlice';
@@ -685,8 +685,8 @@ const CustomerChatScreen = ({ route, navigation }) => {
 
       <KeyboardView
         style={{ flex: 1, backgroundColor: '#F8FAFC' }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 56) : 0}
+        behavior="padding"
+        keyboardVerticalOffset={insets.top + 56}
       >
         {loading ? (
           <View style={styles.center}>
@@ -743,9 +743,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
     
       {/* Android Attach Menu */}
       <Modal visible={showAttachMenu} transparent={true} animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} onPress={() => setShowAttachMenu(false)} />
-          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, zIndex: 10, elevation: 10 }}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setShowAttachMenu(false)}>
+          <TouchableWithoutFeedback>
+            <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
             <View style={{ width: 40, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
             <Text style={{fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 20}}>Attach Photo</Text>
             
@@ -788,9 +788,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
       })()}
 
       <Modal visible={messageOptionsVisible} transparent animationType="fade" onRequestClose={() => setMessageOptionsVisible(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} onPress={() => setMessageOptionsVisible(false)} />
-          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, zIndex: 10, elevation: 10 }}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setMessageOptionsVisible(false)}>
+          <TouchableWithoutFeedback>
+            <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
             <View style={{ width: 40, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
             
             {selectedMessage && (
@@ -827,8 +827,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
               <Trash2 size={20} color="#EF4444" style={{ marginRight: 16 }} />
               <Text style={{ fontSize: 16, color: '#EF4444', fontWeight: '500' }}>Delete message</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
