@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { normalizeImageUrl } from '../utils/imageUtils';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Alert, Modal, Pressable } from 'react-native';
 import { Camera, Send, MessageCircle, MessageSquare, ChevronLeft, ChevronRight, Trash2, MoreVertical, Edit2, X } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -363,8 +363,9 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
       
       {/* Custom BottomSheet Modal for Message Options */}
       <Modal visible={!!selectedMessage} transparent animationType="slide" onRequestClose={() => setSelectedMessage(null)}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setSelectedMessage(null)}>
-          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 }} onStartShouldSetResponder={() => true}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} onPress={() => setSelectedMessage(null)}>
+          <Pressable onPress={() => {}} style={{ width: '100%' }}>
+            <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 }}>
             <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#1E293B', marginBottom: 16, textAlign: 'center' }}>Message Options</Text>
             
             {selectedMessage && !selectedMessage.attachment_url && (
@@ -397,7 +398,8 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
               <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#64748B', textAlign: 'center' }}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal visible={!!fullScreenImage} transparent animationType="fade" onRequestClose={() => setFullScreenImage(null)}>
