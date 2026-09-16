@@ -41,7 +41,6 @@ import VerifyOtpScreen from '../screens/VerifyOtpScreen';
 import ForgotPinScreen from '../screens/ForgotPinScreen';
 import ResetPinScreen from '../screens/ResetPinScreen';
 
-import OnboardingScreen from '../screens/OnboardingScreen';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import CustomersScreen from '../screens/CustomersScreen';
