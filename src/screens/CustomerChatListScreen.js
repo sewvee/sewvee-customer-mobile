@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, StatusBar, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadow } from '../constants/theme';
 import { Store, MessageSquarePlus } from 'lucide-react-native';
@@ -11,6 +11,7 @@ import { BASE_URL } from '../config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatChatMessage } from '../utils/chatUtils';
 import { useDispatch } from 'react-redux';
+import { markAsRead } from '../store/chatSlice';
 import { setChatUnread } from '../store/chatSlice';
 
 const CustomerChatListScreen = ({ navigation }) => {
@@ -19,6 +20,8 @@ const CustomerChatListScreen = ({ navigation }) => {
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastVisited, setLastVisited] = useState({});
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedThread, setSelectedThread] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,10 +97,7 @@ const CustomerChatListScreen = ({ navigation }) => {
       try {
         const lv = await AsyncStorage.getItem('chat_last_visited');
         const lvMap = lv ? JSON.parse(lv) : {};
-        const unreadCount = allThreads.filter(t =>
-          t.latest_message_timestamp &&
-          (!lvMap[String(t.boutique_id)] || new Date(t.latest_message_timestamp) > new Date(lvMap[String(t.boutique_id)]))
-        ).length;
+        const unreadCount = allThreads.filter(t => (t.unread_count > 0) || (t.latest_message_timestamp && (!lvMap[String(t.boutique_id)] || new Date(t.latest_message_timestamp) > new Date(lvMap[String(t.boutique_id)])) && t.latest_message_sender === 'BUSINESS')).length;
         dispatch(setChatUnread(unreadCount));
       } catch (e) { /* ignore */ }
     } catch (err) {
@@ -126,8 +126,7 @@ const CustomerChatListScreen = ({ navigation }) => {
 
   const renderItem = ({ item }) => {
     const lastVisitedTime = lastVisited[String(item.boutique_id)];
-    const isUnread = item.latest_message_timestamp &&
-      (!lastVisitedTime || new Date(item.latest_message_timestamp) > new Date(lastVisitedTime));
+    const isUnread = (item.unread_count > 0) || (item.latest_message_timestamp && (!lastVisitedTime || new Date(item.latest_message_timestamp) > new Date(lastVisitedTime)) && item.latest_message_sender === 'BUSINESS');
 
     return (
     <TouchableOpacity 
@@ -146,7 +145,45 @@ const CustomerChatListScreen = ({ navigation }) => {
           <Store size={24} color="#6366F1" />
         )}
         {isUnread && <View style={styles.unreadDot} />}
-      </View>
+      
+      {/* Three Dots Menu Modal */}
+      <Modal visible={menuVisible} transparent={true} animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
+            <View style={{ width: 40, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            <Text style={{fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 20}}>
+              {selectedThread ? selectedThread.boutique_name : 'Options'}
+            </Text>
+            
+            {selectedThread && selectedThread.order_id && (
+              <TouchableOpacity 
+                style={{flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} 
+                onPress={() => { 
+                  setMenuVisible(false); 
+                  navigation.navigate('OrderDetails', { orderId: selectedThread.order_id });
+                }}
+              >
+                <Ionicons name="receipt-outline" size={20} color="#475569" style={{ marginRight: 16 }} />
+                <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>View Order Details</Text>
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity 
+              style={{flexDirection: 'row', alignItems: 'center', paddingVertical: 16}} 
+              onPress={() => { 
+                setMenuVisible(false); 
+                dispatch(markAsRead(String(selectedThread?.boutique_id)));
+              }}
+            >
+              <Ionicons name="checkmark-done-outline" size={20} color="#475569" style={{ marginRight: 16 }} />
+              <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>Mark as Read</Text>
+            </TouchableOpacity>
+
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+
       <View style={styles.chatInfo}>
         <View style={styles.chatHeaderRow}>
           <View style={{flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8}}>
@@ -163,7 +200,7 @@ const CustomerChatListScreen = ({ navigation }) => {
           </View>
           <View style={{flexDirection: 'row', alignItems: 'center'}}>
             <Text style={[styles.timeText, isUnread && styles.timeTextUnread]}>{formatTime(item.latest_message_timestamp)}</Text>
-            <TouchableOpacity style={{marginLeft: 8, paddingHorizontal: 4}}>
+            <TouchableOpacity style={{marginLeft: 8, paddingHorizontal: 4}} onPress={() => { setSelectedThread(item); setMenuVisible(true); }}>
               <Ionicons name="ellipsis-vertical" size={16} color="#94A3B8" />
             </TouchableOpacity>
           </View>
