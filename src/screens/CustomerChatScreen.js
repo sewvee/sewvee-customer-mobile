@@ -649,6 +649,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </View>
         ) : (
           <FlatList
+            style={{ flex: 1 }}
             ref={flatListRef}
             data={[...messages].reverse()}
             inverted={true}
@@ -669,7 +670,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         )}
-        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           <TouchableOpacity 
             style={{ padding: 8, marginRight: 4 }} 
             onPress={handleAttachment}

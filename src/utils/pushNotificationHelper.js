@@ -32,9 +32,9 @@ export const onDisplayNotification = async (remoteMessage) => {
     message: remoteMessage.notification?.body || remoteMessage.data?.body ,
     priority: "high",
     importance: "high",
-    largeIcon: "ic_launcher", // App icon (large icon on notification)
-    largeIconUrl: "ic_launcher", // Use high-quality icon
-    smallIcon: "ic_launcher", // App icon (status bar and notification)
+    largeIcon: "ic_notification", // App icon (large icon on notification)
+     // Use high-quality icon
+    smallIcon: "ic_notification", // App icon (status bar and notification)
     userInfo: remoteMessage.data, // This carries the FCM data to the click event
      });
 }
