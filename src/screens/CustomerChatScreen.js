@@ -36,6 +36,17 @@ const CustomerChatScreen = ({ route, navigation }) => {
 
   // On mount: clear the unread badge and record last-visited time for this boutique
   useEffect(() => {
+    if (Platform.OS === 'android') {
+      const showSub = Keyboard.addListener('keyboardDidShow', (e) => setAndroidKeyboardHeight(e.endCoordinates.height));
+      const hideSub = Keyboard.addListener('keyboardDidHide', () => setAndroidKeyboardHeight(0));
+      return () => {
+        showSub.remove();
+        hideSub.remove();
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     dispatch(resetChatUnread());
     // Tell global socket service this chat is now open → suppress badge increments for this order
     chatSocketService.setActiveChatOrderId(passedOrderId);
@@ -746,6 +757,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={20} color="#FFF" />}
           </TouchableOpacity>
         </View>
+        {Platform.OS === 'android' && <View style={{ height: androidKeyboardHeight }} />}
       </KeyboardView>
 
       {/* Android Attach Menu */}
