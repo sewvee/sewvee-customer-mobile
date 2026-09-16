@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadow } from '../constants/theme';
@@ -8,25 +8,39 @@ import { useAuth } from '../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { BASE_URL } from '../config/env';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatChatMessage } from '../utils/chatUtils';
+import { useDispatch } from 'react-redux';
+import { setChatUnread } from '../store/chatSlice';
 
 const CustomerChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
-  useFocusEffect(
-    React.useCallback(() => {
-      StatusBar.setBackgroundColor('#FFF');
-      StatusBar.setBarStyle('dark-content');
-      fetchThreads();
-    }, [user])
-  );
+  const dispatch = useDispatch();
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastVisited, setLastVisited] = useState({});
 
-  useEffect(() => {
-    fetchThreads();
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      StatusBar.setBackgroundColor('#FFF');
+      StatusBar.setBarStyle('dark-content');
+      // Refresh thread list every time screen comes into focus (e.g. returning from a chat)
+      fetchThreads();
+      // Load last-visited timestamps for per-thread unread dots
+      loadLastVisited();
+    }, [dispatch, user])
+  );
+
+  async function loadLastVisited() {
+    try {
+      const data = await AsyncStorage.getItem('chat_last_visited');
+      if (data) {
+        setLastVisited(JSON.parse(data));
+      }
+    } catch (e) {
+      console.warn('Failed to load last visited', e);
+    }
+  }
 
   async function fetchThreads() {
     if (!user?.mobile) {
@@ -38,8 +52,14 @@ const CustomerChatListScreen = ({ navigation }) => {
       token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
       
       const [threadsRes, boutiquesRes] = await Promise.all([
-        axios.get(`${BASE_URL}customer-portal/chat/threads`, { params: { phone: user.mobile }, headers: { Authorization: token } }).catch(() => null),
-        axios.get(`${BASE_URL}customer-portal/boutiques`, { headers: { Authorization: token } }).catch(() => null)
+        axios.get(`${BASE_URL}customer-portal/chat/threads`, { 
+          params: { phone: user.mobile, _t: Date.now() }, 
+          headers: { Authorization: token } 
+        }).catch(() => null),
+        axios.get(`${BASE_URL}customer-portal/boutiques`, { 
+          params: { _t: Date.now() },
+          headers: { Authorization: token } 
+        }).catch(() => null)
       ]);
 
       let activeThreads = [];
@@ -66,7 +86,20 @@ const CustomerChatListScreen = ({ navigation }) => {
           order_number: ''
         }));
         
-      setThreads([...activeThreads, ...newBoutiqueThreads]);
+      const allThreads = [...activeThreads, ...newBoutiqueThreads];
+      setThreads(allThreads);
+
+      // Compute unread count from lastVisited and update the tab badge
+      // Works without FCM — badge reflects threads with messages newer than last visit
+      try {
+        const lv = await AsyncStorage.getItem('chat_last_visited');
+        const lvMap = lv ? JSON.parse(lv) : {};
+        const unreadCount = allThreads.filter(t =>
+          t.latest_message_timestamp &&
+          (!lvMap[String(t.boutique_id)] || new Date(t.latest_message_timestamp) > new Date(lvMap[String(t.boutique_id)]))
+        ).length;
+        dispatch(setChatUnread(unreadCount));
+      } catch (e) { /* ignore */ }
     } catch (err) {
       console.warn('Failed to fetch chat data', err);
     } finally {
@@ -91,7 +124,12 @@ const CustomerChatListScreen = ({ navigation }) => {
     return { bg: '#F1F5F9', text: '#475569' }; 
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }) => {
+    const lastVisitedTime = lastVisited[String(item.boutique_id)];
+    const isUnread = item.latest_message_timestamp &&
+      (!lastVisitedTime || new Date(item.latest_message_timestamp) > new Date(lastVisitedTime));
+
+    return (
     <TouchableOpacity 
       style={styles.chatItem}
       onPress={() => navigation.navigate('CustomerChat', { 
@@ -107,11 +145,12 @@ const CustomerChatListScreen = ({ navigation }) => {
         ) : (
           <Store size={24} color="#6366F1" />
         )}
+        {isUnread && <View style={styles.unreadDot} />}
       </View>
       <View style={styles.chatInfo}>
         <View style={styles.chatHeaderRow}>
           <View style={{flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8}}>
-            <Text style={styles.boutiqueName} numberOfLines={1}>
+            <Text style={[styles.boutiqueName, isUnread && styles.boutiqueNameUnread]} numberOfLines={1}>
               {item.boutique_name}
             </Text>
             {item.order_number ? (
@@ -123,7 +162,7 @@ const CustomerChatListScreen = ({ navigation }) => {
             ) : null}
           </View>
           <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <Text style={styles.timeText}>{formatTime(item.latest_message_timestamp)}</Text>
+            <Text style={[styles.timeText, isUnread && styles.timeTextUnread]}>{formatTime(item.latest_message_timestamp)}</Text>
             <TouchableOpacity style={{marginLeft: 8, paddingHorizontal: 4}}>
               <Ionicons name="ellipsis-vertical" size={16} color="#94A3B8" />
             </TouchableOpacity>
@@ -133,13 +172,15 @@ const CustomerChatListScreen = ({ navigation }) => {
           {item.latest_message_attachment && (
              <Ionicons name="camera" size={14} color="#64748B" style={{marginRight: 4}} />
           )}
-          <Text style={styles.lastMessage} numberOfLines={1}>
+          <Text style={[styles.lastMessage, isUnread && styles.lastMessageUnread]} numberOfLines={1}>
             {item.latest_message_text ? formatChatMessage(item.latest_message_text) : (item.latest_message_attachment ? 'Image' : 'Started a conversation')}
           </Text>
+          {isUnread && <View style={styles.unreadCountDot} />}
         </View>
       </View>
     </TouchableOpacity>
   );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -162,7 +203,7 @@ const CustomerChatListScreen = ({ navigation }) => {
             data={threads}
             keyExtractor={(item, index) => `${item.boutique_id}_${item.order_id}_${index}`}
             renderItem={renderItem}
-            contentContainerStyle={{ paddingBottom: 100 }}
+            contentContainerStyle={{ paddingBottom: 24 }}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
           <TouchableOpacity style={styles.fab}>
@@ -261,10 +302,40 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#94A3B8',
   },
+  timeTextUnread: {
+    color: '#6366F1',
+    fontFamily: 'Inter-SemiBold',
+  },
   lastMessage: {
+    flex: 1,
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+  },
+  lastMessageUnread: {
+    fontFamily: 'Inter-SemiBold',
+    color: '#1E293B',
+  },
+  boutiqueNameUnread: {
+    fontFamily: 'Inter-Bold',
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#22C55E',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  unreadCountDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#6366F1',
+    marginLeft: 6,
   },
   separator: {
     height: 1,

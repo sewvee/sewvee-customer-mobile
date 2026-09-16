@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Linking, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
 import { Colors } from '../constants/theme';
 import { formatChatMessage } from '../utils/chatUtils';
@@ -18,6 +18,7 @@ import { useDispatch } from 'react-redux';
 import { resetChatUnread } from '../store/chatSlice';
 
 const CustomerChatScreen = ({ route, navigation }) => {
+  const insets = useSafeAreaInsets();
   const { boutiqueId, boutiqueName: initBoutiqueName, orderId: passedOrderId, orderNumber } = route.params;
   const { user } = useAuth();
   const { orders } = useData();
@@ -552,8 +553,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FAFC' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 56) : 0}>
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -581,7 +583,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         )}
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           <TouchableOpacity 
             style={{ padding: 8, marginRight: 4 }} 
             onPress={handleAttachment}
@@ -592,6 +594,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Type a message..."
+            placeholderTextColor="#94A3B8"
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -707,6 +710,6 @@ const styles = StyleSheet.create({
   msgTimeCustomer: { color: '#E0E7FF' },
   msgTimeBusiness: { color: '#94A3B8' },
   inputContainer: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#E2E8F0' },
-  input: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, fontFamily: 'Inter-Regular', maxHeight: 100 },
+  input: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, fontFamily: 'Inter-Regular', maxHeight: 100, color: '#0F172A' },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#5B43EE', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
 });

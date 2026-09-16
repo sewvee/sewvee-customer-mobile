@@ -18,6 +18,13 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Colors } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { BASE_URL } from '../config/env';
+import { setChatUnread } from '../store/chatSlice';
 
 /* ---------------- SCREENS ---------------- */
 
@@ -92,6 +99,46 @@ const AuthStack = createNativeStackNavigator();
 
 function CustomerTabs() {
   const insets = useSafeAreaInsets();
+  const unreadChatCount = useSelector(state => state.chat.unreadChatCount);
+  const dispatch = useDispatch();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchGlobalUnread = async () => {
+      if (!user?.mobile) return;
+      try {
+        let token = await AsyncStorage.getItem('userToken');
+        token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+        const threadsRes = await axios.get(`${BASE_URL}customer-portal/chat/threads`, { 
+          params: { phone: user.mobile, _t: Date.now() }, 
+          headers: { Authorization: token } 
+        }).catch(() => null);
+        
+        let activeThreads = [];
+        if (threadsRes?.data) {
+          activeThreads = Array.isArray(threadsRes.data) ? threadsRes.data : (Array.isArray(threadsRes.data.data) ? threadsRes.data.data : []);
+        }
+        
+        const lv = await AsyncStorage.getItem('chat_last_visited');
+        const lvMap = lv ? JSON.parse(lv) : {};
+        const unreadCount = activeThreads.filter(t =>
+          t.latest_message_timestamp &&
+          (!lvMap[String(t.boutique_id)] || new Date(t.latest_message_timestamp) > new Date(lvMap[String(t.boutique_id)]))
+        ).length;
+        dispatch(setChatUnread(unreadCount));
+      } catch (e) { /* ignore */ }
+    };
+
+    fetchGlobalUnread();
+    
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') {
+        fetchGlobalUnread();
+      }
+    });
+    return () => subscription.remove();
+  }, [user, dispatch]);
+
   return (
     <CustomerTab.Navigator
       screenOptions={{
@@ -151,6 +198,15 @@ function CustomerTabs() {
         component={CustomerChatListScreen}
         options={{
           tabBarLabel: 'Chat',
+          tabBarBadge: unreadChatCount > 0 ? unreadChatCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: '#EF4444',
+            color: '#FFFFFF',
+            fontSize: 10,
+            minWidth: 16,
+            height: 16,
+            lineHeight: 16,
+          },
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIcon, focused && styles.activeTab]}>
               <MessageCircle size={22} color={focused ? '#FFF' : color} />

@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   productCard: {
     width: (SCREEN_WIDTH - 44) / 2,

@@ -453,7 +453,7 @@ const CustomerOrdersScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]} edges={['top']}>
       
       
       {/* Header */}
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   statsRow: {
     flexDirection: 'row',

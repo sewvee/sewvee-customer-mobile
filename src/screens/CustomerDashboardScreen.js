@@ -481,7 +481,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
   const selectedBoutiqueName = selectedBoutique ? selectedBoutique.name : 'All Boutiques';
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(true)} style={[styles.boutiqueSelector, {flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', flex: 1, marginRight: 16}]}>
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   statsRow: {
     flexDirection: 'row',

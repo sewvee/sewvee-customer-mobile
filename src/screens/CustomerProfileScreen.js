@@ -39,7 +39,7 @@ const CustomerProfileScreen = () => {
   }).length;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Hero Card */}
@@ -123,7 +123,7 @@ export default CustomerProfileScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 100 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
 
   // Hero
   heroCard: {
