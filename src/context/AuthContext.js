@@ -26,11 +26,11 @@ const STORAGE_KEYS = {
 
 const DEMO_USER = {
     id: 'user_demo_1',
-    name: 'Boutique Owner',
+    name: 'Customer',
     mobile: '9876543210',
-    email: 'owner@myboutique.com',
-    role: 'Owner',
-    roleId: 'role_owner',
+    email: 'customer@sewvee.com',
+    role: 'Customer',
+    roleId: 'role_customer',
     lastLogin: new Date().toISOString(),
 };
 
