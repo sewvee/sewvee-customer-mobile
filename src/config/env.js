@@ -97,6 +97,7 @@ export const URL_NOTIFICATIONS_UNREAD_COUNT = `${URL_NOTIFICATIONS}/unread-count
 
 export const URL_CUSTOMER_PORTAL_ORDERS = `${BASE_URL}customer-portal/orders`;
 export const URL_CUSTOMER_PORTAL_SHOP = `${BASE_URL}customer-portal/shop`;
+export const URL_CUSTOMER_PORTAL_INVOICE = (orderId) => `${URL_CUSTOMER_PORTAL_ORDERS}/${orderId}/invoice`;
 
 export const URL_CUSTOMER_AUTH_REGISTER = `${BASE_URL}customer-auth/register`;
 export const URL_CUSTOMER_AUTH_LOGIN = `${BASE_URL}customer-auth/login`;

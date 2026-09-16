@@ -28,6 +28,8 @@ import {
 import { useToast } from '../context/ToastContext';
 import { useDispatch } from 'react-redux';
 import { downloadOrderCopyAction, getOrderByIdAction } from '../store/salesOrderSlice';
+import { URL_CUSTOMER_PORTAL_INVOICE } from '../config/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import InvoiceDocumentHeader from '../components/invoice/InvoiceDocumentHeader';
 import InvoiceItemsTable from '../components/invoice/InvoiceItemsTable';
 import InvoiceMetaStrip from '../components/invoice/InvoiceMetaStrip';
@@ -263,6 +265,7 @@ export default function InvoicePreviewScreen({
   const routeOrderId = route.params?.orderId || route.params?.order?.id || null;
   const isRemotePdfPreview =
     route.params?.previewMode === 'remote_pdf';
+  const isCustomerPortal = route.params?.isCustomerPortal ?? false;
   const remoteCopyType = route.params?.remoteCopyType === 'tailor' ? 'tailor' : 'customer';
   const remotePreviewTitle =
     route.params?.title || (remoteCopyType === 'tailor' ? 'Tailoring Copy' : 'Customer Copy');
@@ -445,6 +448,7 @@ export default function InvoicePreviewScreen({
           orderId: route.params?.orderId || order?.id || null,
           paymentId: route.params?.paymentId || null,
           fileUrl: isRemotePdfPreview ? route.params?.pdfUrl || null : null,
+          isCustomerPortal,
         })).unwrap();
         filePath = response?.filePath;
       } else {

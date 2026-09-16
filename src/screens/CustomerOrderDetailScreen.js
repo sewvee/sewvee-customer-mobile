@@ -556,6 +556,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           onPress={() => navigation.navigate('InvoicePreview', { 
             order, 
             orderId: order.id,
+            isCustomerPortal: true,
             allowedCopyTypes: ['customer'],
             initialCopyType: 'customer',
             company: {
