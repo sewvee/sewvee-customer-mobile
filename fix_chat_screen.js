@@ -1,64 +1,50 @@
 const fs = require('fs');
-const path = './src/screens/CustomerChatScreen.js';
+const path = 'src/screens/CustomerChatScreen.js';
 let content = fs.readFileSync(path, 'utf8');
 
-// 1. Get orderId from params
+// Replace SafeAreaView wrapper with View and manual padding
 content = content.replace(
-  /const \{ boutiqueId, boutiqueName: initBoutiqueName \} = route\.params;/,
-  `const { boutiqueId, boutiqueName: initBoutiqueName, orderId: passedOrderId, orderNumber } = route.params;`
+  /<SafeAreaView style=\{styles\.container\} edges=\{\['top'\]\}>/g,
+  '<View style={[styles.container, { paddingTop: insets.top }]}>'
+);
+content = content.replace(
+  /<\/SafeAreaView>/g,
+  '</View>'
 );
 
-// 2. Set title to include orderNumber if available
+// Fix the Modal touch bug (sibling architecture)
+const modalSearch = `<TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setMessageOptionsVisible(false)}>
+          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>`;
+const modalReplace = `<View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} onPress={() => setMessageOptionsVisible(false)} />
+          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, zIndex: 10, elevation: 10 }}>`;
+content = content.replace(modalSearch, modalReplace);
+
+const modalClosingSearch = `          </View>
+        </TouchableOpacity>
+      </Modal>`;
+const modalClosingReplace = `          </View>
+        </View>
+      </Modal>`;
+content = content.replace(modalClosingSearch, modalClosingReplace);
+
+// Also make KeyboardView default back to KeyboardAvoidingView with behavior padding on android just in case
 content = content.replace(
-  /const \[boutiqueName, setBoutiqueName\] = useState\(initBoutiqueName \|\| 'Boutique Chat'\);/,
-  `const [boutiqueName, setBoutiqueName] = useState(initBoutiqueName || 'Boutique Chat');
-  const displayTitle = orderNumber ? \`\${boutiqueName} #\${orderNumber}\` : boutiqueName;`
+  /const KeyboardView = Platform.OS === 'ios' \? KeyboardAvoidingView : View;/g,
+  "const KeyboardView = KeyboardAvoidingView;"
 );
 
 content = content.replace(
-  /<Text style=\{styles\.headerTitle\}>\{boutiqueName\}<\/Text>/,
-  `<Text style={styles.headerTitle}>{displayTitle}</Text>`
+  /behavior=\{Platform.OS === 'ios' \? 'padding' : undefined\}/g,
+  "behavior={Platform.OS === 'ios' ? 'padding' : undefined}" 
 );
 
-// 3. Update fetchMessages to use orderId if passed
-content = content.replace(
-  /const res = await axios\.get\(\`\$\{BASE_URL\}customer-portal\/chat\/\$\{boutiqueId\}\/messages\`, \{\s*params: \{ phone: user\.mobile \},\s*headers: \{ Authorization: token \}\s*\}\);/m,
-  `let res;
-      if (passedOrderId) {
-        res = await axios.get(\`\${BASE_URL}customer-portal/orders/\${passedOrderId}/requests\`, {
-          headers: { Authorization: token }
-        });
-      } else {
-        res = await axios.get(\`\${BASE_URL}customer-portal/chat/\${boutiqueId}/messages\`, {
-          params: { phone: user.mobile },
-          headers: { Authorization: token }
-        });
-      }`
-);
 
-// 4. Update the fallback logic for contextSelected if orderId is passed
-content = content.replace(
-  /useEffect\(\(\) => \{\s*if \(\!contextSelected && boutiqueOrders\.length > 0\) \{[\s\S]*?\}\s*\}, \[boutiqueOrders, contextSelected\]\);/m,
-  `useEffect(() => {
-    if (!contextSelected) {
-      if (passedOrderId) {
-        const order = orders.find(o => o.id?.toString() === passedOrderId?.toString());
-        if (order) {
-          const outfits = order.outfits || order.items || [];
-          if (outfits.length > 0) {
-            setContextSelected(\`\${order.id}_\${outfits[0].id || outfits[0].order_outfit_id}\`);
-          }
-        }
-      } else if (boutiqueOrders.length > 0) {
-        const order = boutiqueOrders[0];
-        const outfits = order.outfits || order.items || [];
-        if (outfits.length > 0) {
-          setContextSelected(\`\${order.id}_\${outfits[0].id || outfits[0].order_outfit_id}\`);
-        }
-      }
-    }
-  }, [boutiqueOrders, contextSelected, passedOrderId, orders]);`
-);
+// Ensure Pressable and StyleSheet are imported
+if (!content.includes('Pressable')) {
+    content = content.replace("Image } from 'react-native';", "Image, Pressable, StyleSheet } from 'react-native';");
+}
+
 
 fs.writeFileSync(path, content);
-console.log('CustomerChatScreen patched.');
+console.log("Patched CustomerChatScreen!");

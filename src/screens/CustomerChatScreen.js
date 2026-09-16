@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Linking, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Send, Store, ShoppingBag } from 'lucide-react-native';
-const KeyboardView = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
+const KeyboardView = KeyboardAvoidingView;
 import { Colors } from '../constants/theme';
 import { formatChatMessage } from '../utils/chatUtils';
 import { useAuth } from '../context/AuthContext';
@@ -650,7 +650,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar backgroundColor="#5B43EE" barStyle="light-content" />
       <View style={[styles.header, { backgroundColor: '#5B43EE', borderBottomWidth: 0, paddingVertical: 12, paddingHorizontal: 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12, paddingVertical: 8, paddingRight: 8 }}>
@@ -763,7 +763,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
               <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>Create Collage</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* Collage Maker */}
@@ -787,8 +787,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
       })()}
 
       <Modal visible={messageOptionsVisible} transparent animationType="fade" onRequestClose={() => setMessageOptionsVisible(false)}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setMessageOptionsVisible(false)}>
-          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} onPress={() => setMessageOptionsVisible(false)} />
+          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, zIndex: 10, elevation: 10 }}>
             <View style={{ width: 40, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
             
             {selectedMessage && (
@@ -828,7 +829,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
