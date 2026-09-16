@@ -67,7 +67,7 @@ const CustomerOrdersScreen = ({ navigation }) => {
     return sorted.filter(order => {
       const type = (order.type || '').toUpperCase();
       if (selectedTab === 'stitching') {
-        return type === 'STITCHING' || type === 'CUSTOM';
+        return type === 'STITCHING' || type === 'CUSTOM' || type === 'ENQUIRY';
       } else {
         return (
           type === 'READY-MADE' || type === 'READYMADE' || type === 'PRODUCT'

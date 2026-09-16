@@ -284,6 +284,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         name: `chat_${Date.now()}.jpg`,
         type: 'image/jpeg'
       });
+      formData.append('key_name', 'chat_attachment');
 
       const uploadRes = await axios.post(URL_UPLOAD, formData, {
         headers: { 
@@ -451,6 +452,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         name: `voice_${Date.now()}.wav`,
         type: 'audio/wav'
       });
+      formData.append('key_name', 'chat_attachment');
 
       const uploadRes = await axios.post(URL_UPLOAD, formData, {
         headers: { 
