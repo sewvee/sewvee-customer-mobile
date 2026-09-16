@@ -636,7 +636,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           ) : null}
           {renderMessageContent(item, isCustomer)}
           <Text style={[styles.msgTime, isCustomer ? styles.msgTimeCustomer : styles.msgTimeBusiness]}>
-            {formatTime(item.created_at)}
+            {formatTime(item.created_at)}{(item.is_edited || (item.updated_at && item.updated_at !== item.created_at && new Date(item.updated_at).getTime() > new Date(item.created_at).getTime() + 1000)) ? ' (Edited)' : ''}
           </Text>
           
           {item.reaction_emoji ? (
@@ -732,7 +732,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </View>
         )}
         <View style={[styles.inputContainer, { 
-          paddingBottom: Platform.OS === "android" && androidKeyboardHeight > 0 ? 16 : Math.max(insets.bottom, 16) 
+          paddingBottom: Math.max(insets.bottom, 8) + (Platform.OS === "android" && androidKeyboardHeight > 0 ? 12 : 0) 
         }]}>
           <TouchableOpacity 
             style={{ padding: 8, marginRight: 4 }} 
