@@ -499,9 +499,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Auth" component={AuthNavigator} />
       ) : (
         <>
-          {!isOnboarded && (
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          )}
+          
           {/* <Stack.Screen name="InventoryScreen" component={InventoryScreen} options={{ headerShown: false }} /> */}
 
           <Stack.Screen name="Main" component={MainTabs} />
