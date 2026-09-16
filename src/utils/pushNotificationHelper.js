@@ -91,7 +91,7 @@ export const requestUserPermission = async () => {
         }, (created) => console.log(`createChannel fallback returned '${created}'`));
 
         PushNotification.createChannel({
-            channelId: 'com.sewvee',
+            channelId: 'sewvee_channel',
             channelName: 'Sewvee Notifications',
             importance: 4,
         }, (created) => console.log(`createChannel sewvee returned '${created}'`));

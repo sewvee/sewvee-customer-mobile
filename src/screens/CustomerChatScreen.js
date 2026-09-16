@@ -650,8 +650,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
   };
 
   return (
-    <KeyboardView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
-      <StatusBar backgroundColor="#5B43EE" barStyle="light-content" />
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar backgroundColor="#5B43EE" barStyle="light-content" translucent={false} />
       <View style={[styles.header, { backgroundColor: '#5B43EE', borderBottomWidth: 0, paddingVertical: 12, paddingHorizontal: 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12, paddingVertical: 8, paddingRight: 8 }}>
           <ChevronLeft size={24} color="#FFF" />
@@ -683,7 +684,11 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
+      >
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -735,7 +740,8 @@ const CustomerChatScreen = ({ route, navigation }) => {
             {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={20} color="#FFF" />}
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
+    </View>
     
       {/* Android Attach Menu */}
       <Modal visible={showAttachMenu} transparent={true} animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
@@ -828,7 +834,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
-    </KeyboardView>
+    </KeyboardAvoidingView>
   );
 };
 
