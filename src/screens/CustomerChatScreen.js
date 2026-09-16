@@ -200,6 +200,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const [boutiqueName, setBoutiqueName] = useState(initBoutiqueName || 'Boutique Chat');
   const displayTitle = orderNumber ? `${boutiqueName} #${orderNumber}` : boutiqueName;
   const [loading, setLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -864,13 +865,36 @@ const CustomerChatScreen = ({ route, navigation }) => {
           {passedOrderId && (
             <TouchableOpacity 
               onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: passedOrderId })}
-              style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16 }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, marginRight: 8 }}
             >
               <Text style={{ color: '#FFF', fontSize: 13, fontFamily: 'Inter-SemiBold' }}>View Order</Text>
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity style={{ paddingHorizontal: 4, paddingVertical: 8 }} onPress={() => setMenuVisible(true)}>
+            <Ionicons name="ellipsis-vertical" size={20} color="#FFF" />
+          </TouchableOpacity>
         </View>
       </View>
+
+      <Modal visible={menuVisible} transparent={true} animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 60, paddingRight: 16 }} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+          <View style={{ backgroundColor: '#FFF', borderRadius: 8, width: 180, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 4 }}>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }} onPress={() => { setMenuVisible(false); }}>
+              <Ionicons name="mail-unread-outline" size={18} color="#475569" style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Medium', color: '#1E293B' }}>Mark Unread</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }} onPress={() => { setMenuVisible(false); }}>
+              <Ionicons name="star-outline" size={18} color="#475569" style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Medium', color: '#1E293B' }}>Favorite</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }} onPress={() => { setMenuVisible(false); }}>
+              <Ionicons name="search-outline" size={18} color="#475569" style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Medium', color: '#1E293B' }}>Search</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <KeyboardView
         style={{ flex: 1, backgroundColor: '#F8FAFC' }}

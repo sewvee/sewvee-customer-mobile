@@ -146,42 +146,7 @@ const CustomerChatListScreen = ({ navigation }) => {
         )}
         {isUnread && <View style={styles.unreadDot} />}
       
-      {/* Three Dots Menu Modal */}
-      <Modal visible={menuVisible} transparent={true} animationType="fade" onRequestClose={() => setMenuVisible(false)}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setMenuVisible(false)}>
-          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 }}>
-            <View style={{ width: 40, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
-            <Text style={{fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 20}}>
-              {selectedThread ? selectedThread.boutique_name : 'Options'}
-            </Text>
-            
-            {selectedThread && selectedThread.order_id && (
-              <TouchableOpacity 
-                style={{flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} 
-                onPress={() => { 
-                  setMenuVisible(false); 
-                  navigation.navigate('OrderDetails', { orderId: selectedThread.order_id });
-                }}
-              >
-                <Ionicons name="receipt-outline" size={20} color="#475569" style={{ marginRight: 16 }} />
-                <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>View Order Details</Text>
-              </TouchableOpacity>
-            )}
-            
-            <TouchableOpacity 
-              style={{flexDirection: 'row', alignItems: 'center', paddingVertical: 16}} 
-              onPress={() => { 
-                setMenuVisible(false); 
-                dispatch(markAsRead(String(selectedThread?.boutique_id)));
-              }}
-            >
-              <Ionicons name="checkmark-done-outline" size={20} color="#475569" style={{ marginRight: 16 }} />
-              <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>Mark as Read</Text>
-            </TouchableOpacity>
-
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      
     </View>
 
       <View style={styles.chatInfo}>
@@ -200,9 +165,6 @@ const CustomerChatListScreen = ({ navigation }) => {
           </View>
           <View style={{flexDirection: 'row', alignItems: 'center'}}>
             <Text style={[styles.timeText, isUnread && styles.timeTextUnread]}>{formatTime(item.latest_message_timestamp)}</Text>
-            <TouchableOpacity style={{marginLeft: 8, paddingHorizontal: 4}} onPress={() => { setSelectedThread(item); setMenuVisible(true); }}>
-              <Ionicons name="ellipsis-vertical" size={16} color="#94A3B8" />
-            </TouchableOpacity>
           </View>
         </View>
         <View style={{flexDirection: 'row', alignItems: 'center'}}>
