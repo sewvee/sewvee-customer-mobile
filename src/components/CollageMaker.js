@@ -133,16 +133,18 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
         showToast("Failed to download image for cropping", "error");
         return;
       }
-    } else if (Platform.OS === 'android' && sourcePath && !sourcePath.startsWith('file://')) {
+    } else if (Platform.OS === 'android' && sourcePath && !sourcePath.startsWith('file://') && !sourcePath.startsWith('content://')) {
       sourcePath = 'file://' + sourcePath;
     }
 
-    ImageCropPicker.openCropper({ path: sourcePath, freeStyleCropEnabled: true, cropperToolbarTitle: 'Crop Photo' })
-      .then(img => {
-        setImages(prev => ({ ...prev, [slotToCrop]: img.path }));
-        setActiveSlot(slotToCrop);
-      })
-      .catch(e => console.log('Crop cancelled', e));
+    setTimeout(() => {
+      ImageCropPicker.openCropper({ path: sourcePath, freeStyleCropEnabled: true, cropperToolbarTitle: 'Crop Photo' })
+        .then(img => {
+          setImages(prev => ({ ...prev, [slotToCrop]: img.path }));
+          setActiveSlot(slotToCrop);
+        })
+        .catch(e => console.log('Crop cancelled', e));
+    }, 100);
   };
 
   // Drawing & Text Logic (PanResponders)
@@ -501,8 +503,8 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
       </Modal>
 
       {/* Text input overlay */}
-      {addingText && (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.overlay}>
+      <Modal visible={addingText} transparent animationType="slide" onRequestClose={() => setAddingText(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setAddingText(false)} />
           <View style={s.inputCard}>
             <Text style={s.inputTitle}>Add Text Annotation</Text>
@@ -527,7 +529,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
             </View>
           </View>
         </KeyboardAvoidingView>
-      )}
+      </Modal>
 
     </Modal>
   );
