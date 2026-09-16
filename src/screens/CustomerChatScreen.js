@@ -515,6 +515,22 @@ const CustomerChatScreen = ({ route, navigation }) => {
 
   
   
+    const handleOpenAttachment = async (url) => {
+    try {
+      let finalUrl = getFullImageUrl(url);
+      if (finalUrl.includes('.pdf') || finalUrl.includes('download')) {
+        let token = await AsyncStorage.getItem('userToken');
+        if (token) {
+          token = token.replace('Bearer ', '');
+          finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
+        }
+      }
+      await Linking.openURL(finalUrl);
+    } catch (err) {
+      console.error("Couldn't load page", err);
+    }
+  };
+
   const getFullImageUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('file://')) return url;
@@ -748,7 +764,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
         {!!item.attachment_url && isPdf && !isAudio && (
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#EEF2FF', padding: 12, borderRadius: 8, marginBottom: 8, width: 220 }}
-            onPress={() => Linking.openURL(getFullImageUrl(item.attachment_url)).catch(err => console.error("Couldn't load page", err))}
+            onPress={() => handleOpenAttachment(item.attachment_url)}
           >
             <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: isCustomer ? 'rgba(255,255,255,0.3)' : '#C7D2FE', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
               <FileText size={20} color={isCustomer ? '#FFF' : '#4F46E5'} />
