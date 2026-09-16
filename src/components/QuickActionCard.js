@@ -98,22 +98,22 @@ const styles = StyleSheet.create({
     height: 130,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   title: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'Inter-Bold',
     color: '#0F172A',
     textAlign: 'center',
     lineHeight: 18,
   },
   subtitle: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'Inter-Medium',
     color: '#64748B',
     textAlign: 'center',
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#fff',
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: 'Inter-Bold',
   }
 });

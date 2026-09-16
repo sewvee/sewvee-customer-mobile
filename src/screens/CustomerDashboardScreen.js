@@ -581,14 +581,14 @@ const CustomerDashboardScreen = ({ navigation }) => {
             title="Stitching"
             subtitle="Online stitching"
             badge="Online Order"
-            icon={<Scissors size={20} color={'#4F46E5'} />}
+            icon={<Scissors size={24} color={'#4F46E5'} />}
             customBg={'#EEF2FF'}
             onPress={() => navigation.navigate('NewStitchRequest', { selectedBoutique })}
           />
           <QuickActionCard
             title="Readymade"
             subtitle="Shop readymades"
-            icon={<ShoppingBag size={20} color={'#D97706'} />}
+            icon={<ShoppingBag size={24} color={'#D97706'} />}
             customBg={'#FEF3C7'}
             onPress={() => navigation.navigate('CustomerShop')}
           />
