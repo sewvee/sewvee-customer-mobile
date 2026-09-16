@@ -24,7 +24,8 @@ import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { BASE_URL } from '../config/env';
-import { setChatUnread } from '../store/chatSlice';
+import { setChatUnread, incrementChatUnread } from '../store/chatSlice';
+import chatSocketService from '../utils/chatSocketService';
 
 /* ---------------- SCREENS ---------------- */
 
@@ -129,14 +130,29 @@ function CustomerTabs() {
       } catch (e) { /* ignore */ }
     };
 
+    // Start the global Socket.IO listener for instant badge updates (WhatsApp-style)
+    const startGlobalSocket = async () => {
+      if (!user?.mobile) return;
+      try {
+        let token = await AsyncStorage.getItem('userToken');
+        if (!token) return;
+        token = token.startsWith('Bearer ') ? token.replace('Bearer ', '') : token;
+        chatSocketService.start(token, dispatch);
+      } catch (e) { /* ignore */ }
+    };
+
     fetchGlobalUnread();
+    startGlobalSocket();
     
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'active') {
         fetchGlobalUnread();
       }
     });
-    return () => subscription.remove();
+    return () => {
+      subscription.remove();
+      chatSocketService.stop();
+    };
   }, [user, dispatch]);
 
   return (
@@ -299,8 +315,8 @@ function MainTabs() {
   const insets = useSafeAreaInsets();
   const { user, hasPermission } = useAuth();
   const canViewInsights = hasPermission?.('Insights', 'view') ?? true;
-  const isTailor = user?.role === 'Tailor';
-  const isCustomer = user?.role === 'Customer' || !user?.role;
+  const isTailor = false; // Forced for Customer App
+  const isCustomer = true; // Forced for Customer App
 
   if (isCustomer) {
     return <CustomerTabs />;

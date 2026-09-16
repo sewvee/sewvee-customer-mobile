@@ -15,7 +15,9 @@ import { Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash
 import { Modal, ActionSheetIOS, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
-import { resetChatUnread } from '../store/chatSlice';
+import { resetChatUnread, setChatUnread } from '../store/chatSlice';
+import io from 'socket.io-client';
+import chatSocketService from '../utils/chatSocketService';
 
 const CustomerChatScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
@@ -27,6 +29,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
   // On mount: clear the unread badge and record last-visited time for this boutique
   useEffect(() => {
     dispatch(resetChatUnread());
+    // Tell global socket service this chat is now open → suppress badge increments for this order
+    chatSocketService.setActiveChatOrderId(passedOrderId);
+
     const saveLastVisited = async () => {
       try {
         const existing = await AsyncStorage.getItem('chat_last_visited');
@@ -38,7 +43,76 @@ const CustomerChatScreen = ({ route, navigation }) => {
       }
     };
     saveLastVisited();
-  }, [boutiqueId, dispatch]);
+
+    return () => {
+      // Clear active chat so global socket resumes badge counting
+      chatSocketService.clearActiveChatOrderId();
+    };
+  }, [boutiqueId, passedOrderId, dispatch]);
+
+  // Socket.IO — real-time chat connection for this order
+  useEffect(() => {
+    if (!passedOrderId) return;
+    let socket = null;
+
+    const connectSocket = async () => {
+      try {
+        let token = await AsyncStorage.getItem('userToken');
+        if (!token) return;
+        token = token.startsWith('Bearer ') ? token.replace('Bearer ', '') : token;
+
+        socket = io(API_DOMAIN, {
+          transports: ['websocket'],
+          auth: { token, orderId: passedOrderId },
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 2000,
+        });
+
+        socket.on('connect', () => {
+          console.log('[Socket] Connected to order room:', passedOrderId);
+        });
+
+        socket.on('CHAT_MESSAGE_SENT', (event) => {
+          const msg = event?.payload;
+          if (!msg) return;
+          // Only append if it came from the BUSINESS (boutique) — our own sends are handled optimistically
+          if (msg.sender_type === 'BUSINESS') {
+            setMessages(prev => {
+              // Avoid duplicates
+              if (prev.some(m => m.id === msg.id)) return prev;
+              return [msg, ...prev];
+            });
+            // Update lastVisited so badge stays 0 while chat is open
+            AsyncStorage.getItem('chat_last_visited').then(lv => {
+              const map = lv ? JSON.parse(lv) : {};
+              map[String(boutiqueId)] = new Date().toISOString();
+              AsyncStorage.setItem('chat_last_visited', JSON.stringify(map));
+            }).catch(() => {});
+          }
+        });
+
+        socket.on('disconnect', () => {
+          console.log('[Socket] Disconnected from order room');
+        });
+
+        socket.on('connect_error', (err) => {
+          console.warn('[Socket] Connection error:', err.message);
+        });
+      } catch (e) {
+        console.warn('[Socket] Setup error:', e);
+      }
+    };
+
+    connectSocket();
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    };
+  }, [passedOrderId, boutiqueId]);
 
   const [messages, setMessages] = useState([]);
   const [boutiqueName, setBoutiqueName] = useState(initBoutiqueName || 'Boutique Chat');
@@ -520,7 +594,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor="#5B43EE" barStyle="light-content" />
       <View style={[styles.header, { backgroundColor: '#5B43EE', borderBottomWidth: 0, paddingVertical: 12, paddingHorizontal: 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12, paddingVertical: 8, paddingRight: 8 }}>
@@ -553,9 +627,11 @@ const CustomerChatScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FAFC' }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 56) : 0}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 56) : 0}
+      >
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -568,7 +644,6 @@ const CustomerChatScreen = ({ route, navigation }) => {
             keyExtractor={item => item.id?.toString() || Math.random().toString()}
             renderItem={renderMessage}
             contentContainerStyle={styles.listContent}
-            
           />
         )}
 
@@ -583,7 +658,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         )}
-        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <View style={styles.inputContainer}>
           <TouchableOpacity 
             style={{ padding: 8, marginRight: 4 }} 
             onPress={handleAttachment}
