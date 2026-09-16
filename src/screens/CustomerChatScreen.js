@@ -15,7 +15,7 @@ import * as ImagePicker from 'react-native-image-picker';
 import {
   Check,
   Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText, ShoppingBag as Shirt, Scissors } from 'lucide-react-native';
-import { Modal, ActionSheetIOS, Alert, Image } from 'react-native';
+import { Modal, ActionSheetIOS, Alert, Image, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { resetChatUnread, setChatUnread } from '../store/chatSlice';
