@@ -410,23 +410,34 @@ const CustomerChatScreen = ({ route, navigation }) => {
             <Text style={{ fontWeight: 'bold', color: isCustomer ? '#FFF' : '#334155' }}>Outfit Details</Text>
           </View>
           
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Category:</Text>
-              <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569' }}>{category}</Text>
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: isCustomer ? '#E0E7FF' : '#475569', width: 95 }}>Category:</Text>
+              <Text style={{ fontSize: 14, color: isCustomer ? '#FFF' : '#0F172A', flex: 1, fontWeight: '500' }}>{category}</Text>
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Description:</Text>
-              <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569', flex: 1, textAlign: 'right', marginLeft: 16 }}>{description}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Measurements:</Text>
-              <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569', flex: 1, textAlign: 'right' }}>{measurement}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: isCustomer ? '#E0E7FF' : '#475569' }}>Expected By:</Text>
-              <Text style={{ fontSize: 12, color: isCustomer ? '#E0E7FF' : '#475569' }}>{delivery}</Text>
-            </View>
+            
+            {description ? (
+              <View style={{ flexDirection: 'column', gap: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: isCustomer ? '#E0E7FF' : '#475569' }}>Description:</Text>
+                <View style={{ backgroundColor: isCustomer ? 'rgba(0,0,0,0.1)' : '#FFF', padding: 10, borderRadius: 8, borderWidth: isCustomer ? 0 : 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ fontSize: 13, color: isCustomer ? '#FFF' : '#0F172A', lineHeight: 18 }}>{description}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {measurement ? (
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: isCustomer ? '#E0E7FF' : '#475569', width: 95 }}>Measurement:</Text>
+                <Text style={{ fontSize: 13, color: isCustomer ? '#FFF' : '#0F172A', flex: 1, lineHeight: 18 }}>{measurement}</Text>
+              </View>
+            ) : null}
+
+            {delivery ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: isCustomer ? '#E0E7FF' : '#475569', width: 95 }}>Expected:</Text>
+                <Text style={{ fontSize: 13, color: isCustomer ? '#FFF' : '#0F172A', flex: 1 }}>{delivery}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       );
@@ -629,7 +640,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
 
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: '#F8FAFC' }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 56) : 0}
       >
         {loading ? (
@@ -686,12 +697,25 @@ const CustomerChatScreen = ({ route, navigation }) => {
     
       {/* Android Attach Menu */}
       <Modal visible={showAttachMenu} transparent={true} animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
-        <TouchableOpacity style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center'}} onPress={() => setShowAttachMenu(false)}>
-          <View style={{backgroundColor: '#FFF', borderRadius: 16, width: '80%', padding: 16}}>
-            <Text style={{fontSize: 16, fontWeight: 'bold', marginBottom: 16}}>Attach File</Text>
-            <TouchableOpacity style={{paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} onPress={openCamera}><Text>Take Photo</Text></TouchableOpacity>
-            <TouchableOpacity style={{paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} onPress={openLibrary}><Text>Choose from Library</Text></TouchableOpacity>
-            <TouchableOpacity style={{paddingVertical: 12}} onPress={() => {setShowAttachMenu(false); setCollageOutfitId(contextSelected); setCollageMakerVisible(true);}}><Text>Create Collage</Text></TouchableOpacity>
+        <TouchableOpacity style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end'}} activeOpacity={1} onPress={() => setShowAttachMenu(false)}>
+          <View style={{backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20}}>
+            <View style={{ width: 40, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            <Text style={{fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 20}}>Attach Photo</Text>
+            
+            <TouchableOpacity style={{flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} onPress={() => { setShowAttachMenu(false); setTimeout(openCamera, 300); }}>
+              <Camera size={20} color="#475569" style={{ marginRight: 16 }} />
+              <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>Take Photo</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={{flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} onPress={() => { setShowAttachMenu(false); setTimeout(openLibrary, 300); }}>
+              <ImageIcon size={20} color="#475569" style={{ marginRight: 16 }} />
+              <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>Choose from Library</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={{flexDirection: 'row', alignItems: 'center', paddingVertical: 16}} onPress={() => {setShowAttachMenu(false); setCollageOutfitId(contextSelected); setCollageMakerVisible(true);}}>
+              <Scissors size={20} color="#475569" style={{ marginRight: 16 }} />
+              <Text style={{fontSize: 16, fontFamily: 'Inter-Medium', color: '#0F172A'}}>Create Collage</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
