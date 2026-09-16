@@ -211,6 +211,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const [messageOptionsVisible, setMessageOptionsVisible] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [collageMakerVisible, setCollageMakerVisible] = useState(false);
   const [collageOutfitId, setCollageOutfitId] = useState(null); 
 
@@ -888,28 +889,63 @@ const CustomerChatScreen = ({ route, navigation }) => {
         <View style={[styles.inputContainer, { 
           paddingBottom: Math.max(insets.bottom, 8) + (Platform.OS === "android" && androidKeyboardHeight > 0 ? 12 : 0) 
         }]}>
-          <TouchableOpacity 
-            style={{ padding: 8, marginRight: 4 }} 
-            onPress={handleAttachment}
-            disabled={!contextSelected || sending}
-          >
-            <Paperclip size={24} color={!contextSelected || sending ? "#CBD5E1" : "#94A3B8"} />
-          </TouchableOpacity>
-          <TextInput
-            style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor="#94A3B8"
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-          />
-          <TouchableOpacity 
-            style={[styles.sendBtn, (!inputText.trim() || !contextSelected) && { opacity: 0.5 }]} 
-            onPress={handleSend}
-            disabled={!inputText.trim() || !contextSelected || sending}
-          >
-            {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={20} color="#FFF" />}
-          </TouchableOpacity>
+          {isRecording ? (
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <TouchableOpacity onPress={cancelRecording} style={{ padding: 10 }}>
+                <Trash2 size={24} color="#EF4444" />
+              </TouchableOpacity>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'center' }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#EF4444', marginRight: 8, opacity: recordingSeconds % 2 === 0 ? 1 : 0.5 }} />
+                <Text style={{ fontSize: 16, fontFamily: 'Inter-Medium', color: '#EF4444' }}>
+                  {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}
+                </Text>
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.sendBtn, { backgroundColor: '#5B43EE' }]} 
+                onPress={stopRecordingAndSend}
+                disabled={sending}
+              >
+                {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={20} color="#FFF" />}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity 
+                style={{ padding: 8, marginRight: 4 }} 
+                onPress={handleAttachment}
+                disabled={!contextSelected || sending}
+              >
+                <Paperclip size={24} color={!contextSelected || sending ? "#CBD5E1" : "#94A3B8"} />
+              </TouchableOpacity>
+              <TextInput
+                style={styles.input}
+                placeholder="Type a message..."
+                placeholderTextColor="#94A3B8"
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+              />
+              {inputText.trim() ? (
+                <TouchableOpacity 
+                  style={[styles.sendBtn, (!contextSelected) && { opacity: 0.5 }]} 
+                  onPress={handleSend}
+                  disabled={!contextSelected || sending}
+                >
+                  {sending ? <ActivityIndicator size="small" color="#FFF" /> : <Send size={20} color="#FFF" />}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.sendBtn, { backgroundColor: '#5B43EE' }, (!contextSelected) && { opacity: 0.5 }]} 
+                  onPress={startRecording}
+                  disabled={!contextSelected || sending}
+                >
+                  <Mic size={20} color="#FFF" />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
         </View>
         {Platform.OS === 'android' && <View style={{ height: androidKeyboardHeight }} />}
       </KeyboardView>
@@ -988,19 +1024,44 @@ const CustomerChatScreen = ({ route, navigation }) => {
             <TouchableOpacity 
               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}
               onPress={() => {
-                Alert.alert(
-                  'Delete Message',
-                  'Are you sure you want to delete this message?',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => handleDeleteMessage(selectedMessage.id) }
-                  ]
-                );
+                setMessageOptionsVisible(false);
+                setTimeout(() => setDeleteConfirmVisible(true), 300);
               }}
             >
               <Trash2 size={20} color="#EF4444" style={{ marginRight: 16 }} />
               <Text style={{ fontSize: 16, color: '#EF4444', fontWeight: '500' }}>Delete message</Text>
             </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Custom Delete Confirmation Modal */}
+      <Modal visible={deleteConfirmVisible} transparent animationType="fade" onRequestClose={() => setDeleteConfirmVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }} activeOpacity={1} onPress={() => setDeleteConfirmVisible(false)}>
+          <TouchableWithoutFeedback>
+            <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 24, width: '85%', maxWidth: 340 }}>
+              <Text style={{ fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 12 }}>Delete Message</Text>
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Regular', color: '#475569', marginBottom: 24, lineHeight: 22 }}>
+                Are you sure you want to delete this message? This action cannot be undone.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <TouchableOpacity 
+                  onPress={() => setDeleteConfirmVisible(false)}
+                  style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginRight: 8 }}
+                >
+                  <Text style={{ fontSize: 15, fontFamily: 'Inter-SemiBold', color: '#64748B' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    setDeleteConfirmVisible(false);
+                    if (selectedMessage) handleDeleteMessage(selectedMessage.id);
+                  }}
+                  style={{ backgroundColor: '#FEE2E2', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 }}
+                >
+                  <Text style={{ fontSize: 15, fontFamily: 'Inter-SemiBold', color: '#EF4444' }}>Delete</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </TouchableWithoutFeedback>
         </TouchableOpacity>
