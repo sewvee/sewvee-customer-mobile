@@ -15,6 +15,9 @@ import * as ImagePicker from 'react-native-image-picker';
 import {
   Check,
   Camera, Paperclip, MoreVertical, Image as ImageIcon, Star, Edit2, Trash2, X, FileText, ShoppingBag as Shirt, Scissors } from 'lucide-react-native';
+import AudioRecord from 'react-native-audio-record';
+import { Mic, Square, Play, Pause } from 'lucide-react-native';
+import Sound from 'react-native-sound';
 import { TouchableWithoutFeedback, Modal, ActionSheetIOS, Alert, Image, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
@@ -22,7 +25,67 @@ import { resetChatUnread, setChatUnread } from '../store/chatSlice';
 import io from 'socket.io-client';
 import chatSocketService from '../utils/chatSocketService';
 
+
+const AudioPlayerBubble = ({ uri, isCustomer }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const soundRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.release();
+      }
+    };
+  }, []);
+
+  const togglePlay = () => {
+    if (isPlaying) {
+      if (soundRef.current) {
+        soundRef.current.pause();
+        setIsPlaying(false);
+      }
+    } else {
+      if (soundRef.current) {
+        soundRef.current.play((success) => {
+          setIsPlaying(false);
+          if (success) soundRef.current.setCurrentTime(0);
+        });
+        setIsPlaying(true);
+      } else {
+        Sound.setCategory('Playback');
+        const sound = new Sound(uri, '', (error) => {
+          if (error) {
+            console.warn('failed to load the sound', error);
+            return;
+          }
+          soundRef.current = sound;
+          setIsPlaying(true);
+          sound.play((success) => {
+            setIsPlaying(false);
+            if (success) sound.setCurrentTime(0);
+          });
+        });
+      }
+    }
+  };
+
+  return (
+    <TouchableOpacity 
+      style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#EEF2FF', padding: 12, borderRadius: 24, marginBottom: 8, width: 160 }}
+      onPress={togglePlay}
+    >
+      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isCustomer ? 'rgba(255,255,255,0.3)' : '#C7D2FE', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+        {isPlaying ? <Pause size={20} color={isCustomer ? '#FFF' : '#4F46E5'} /> : <Play size={20} color={isCustomer ? '#FFF' : '#4F46E5'} />}
+      </View>
+      <View style={{ flex: 1, height: 3, backgroundColor: isCustomer ? 'rgba(255,255,255,0.4)' : '#C7D2FE', borderRadius: 2 }}>
+        <View style={{ width: '30%', height: '100%', backgroundColor: isCustomer ? '#FFF' : '#4F46E5', borderRadius: 2 }} />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
 const CustomerChatScreen = ({ route, navigation }) => {
+
   const insets = useSafeAreaInsets();
   const { boutiqueId, boutiqueName: initBoutiqueName, orderId: passedOrderId, orderNumber } = route.params;
   const { user } = useAuth();
@@ -138,6 +201,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const displayTitle = orderNumber ? `${boutiqueName} #${orderNumber}` : boutiqueName;
   const [loading, setLoading] = useState(true);
   const [inputText, setInputText] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const timerRef = useRef(null);
   const [sending, setSending] = useState(false);
   const [contextSelected, setContextSelected] = useState('');
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
@@ -328,7 +394,90 @@ const CustomerChatScreen = ({ route, navigation }) => {
     }
   };
 
+  
+  const startRecording = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const { PermissionsAndroid } = require('react-native');
+        const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('Permission Denied', 'Microphone permission is required to send voice notes.');
+          return;
+        }
+      }
+      const options = { sampleRate: 16000, channels: 1, bitsPerSample: 16, audioSource: 6, wavFile: `voice_note_${Date.now()}.wav` };
+      AudioRecord.init(options);
+      AudioRecord.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      timerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to start recording');
+    }
+  };
+
+  const stopRecordingAndSend = async () => {
+    try {
+      const audioFile = await AudioRecord.stop();
+      setIsRecording(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (audioFile && contextSelected) {
+        const path = Platform.OS === 'android' && !audioFile.startsWith('file://') ? `file://${audioFile}` : audioFile;
+        uploadAudioAndSend(path, contextSelected);
+      }
+    } catch (e) {
+      console.warn('Failed to stop recording', e);
+    }
+  };
+
+  const cancelRecording = async () => {
+    try { await AudioRecord.stop(); } catch (e) {}
+    setIsRecording(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  const uploadAudioAndSend = async (uri, contextId) => {
+    if (!uri || !contextId) return;
+    const [orderId, outfitId] = contextId.split('_');
+    try {
+      setSending(true);
+      let token = await AsyncStorage.getItem('userToken');
+      token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+      
+      const formData = new FormData();
+      formData.append('file', {
+        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+        name: `voice_${Date.now()}.wav`,
+        type: 'audio/wav'
+      });
+
+      const uploadRes = await axios.post(URL_UPLOAD, formData, {
+        headers: { 
+          Authorization: token,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      const fileUrl = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
+      if (fileUrl) {
+        await axios.post(`${BASE_URL}customer-portal/orders/${orderId}/outfits/${outfitId}/requests`, {
+          message: 'Voice Note',
+          attachment_url: fileUrl
+        }, {
+          headers: { Authorization: token }
+        });
+        fetchMessages();
+      }
+    } catch (err) {
+      console.warn('Failed to upload audio', err);
+      Alert.alert('Upload Failed', 'Failed to send voice note.');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleSend = async () => {
+
     if (editingMessage) {
       return handleUpdateMessage();
     }
@@ -581,14 +730,19 @@ const CustomerChatScreen = ({ route, navigation }) => {
     }
 
     // 5. Standard Message + Attachments
-    const isPdf = item.attachment_url && (item.attachment_url.toLowerCase().includes('.pdf') || item.attachment_type === 'application/pdf' || msgText.includes('invoice/receipt'));
+    const attachUrl = item.attachment_url ? item.attachment_url.toLowerCase() : '';
+    const isPdf = attachUrl.includes('.pdf') || item.attachment_type === 'application/pdf' || msgText.includes('invoice/receipt');
+    const isAudio = attachUrl.includes('.wav') || attachUrl.includes('.mp3') || attachUrl.includes('.m4a') || attachUrl.includes('voice_note') || attachUrl.includes('voice_') || msgText.includes('Voice Note');
     
     return (
       <>
-        {!!item.attachment_url && !isPdf && (
+        {!!item.attachment_url && !isPdf && !isAudio && (
           <Image source={{ uri: getFullImageUrl(item.attachment_url) }} style={{ width: 200, height: 200, borderRadius: 8, marginBottom: 8 }} />
         )}
-        {!!item.attachment_url && isPdf && (
+        {!!item.attachment_url && isAudio && (
+          <AudioPlayerBubble uri={getFullImageUrl(item.attachment_url)} isCustomer={isCustomer} />
+        )}
+        {!!item.attachment_url && isPdf && !isAudio && (
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isCustomer ? 'rgba(255,255,255,0.2)' : '#EEF2FF', padding: 12, borderRadius: 8, marginBottom: 8, width: 220 }}
             onPress={() => Linking.openURL(getFullImageUrl(item.attachment_url)).catch(err => console.error("Couldn't load page", err))}
