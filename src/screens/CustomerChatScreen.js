@@ -124,6 +124,13 @@ const CustomerChatScreen = ({ route, navigation }) => {
         const map = existing ? JSON.parse(existing) : {};
         map[String(boutiqueId)] = new Date().toISOString();
         await AsyncStorage.setItem('chat_last_visited', JSON.stringify(map));
+
+        const forcedRaw = await AsyncStorage.getItem('chat_forced_unread');
+        if (forcedRaw) {
+          const forcedMap = JSON.parse(forcedRaw);
+          delete forcedMap[String(boutiqueId)];
+          await AsyncStorage.setItem('chat_forced_unread', JSON.stringify(forcedMap));
+        }
       } catch (e) {
         console.warn('Failed to save lastVisited', e);
       }
@@ -572,6 +579,13 @@ const CustomerChatScreen = ({ route, navigation }) => {
       });
       setInputText('');
       fetchMessages();
+      
+      try {
+        const existing = await AsyncStorage.getItem('chat_last_visited');
+        const map = existing ? JSON.parse(existing) : {};
+        map[String(boutiqueId)] = new Date().toISOString();
+        await AsyncStorage.setItem('chat_last_visited', JSON.stringify(map));
+      } catch (e) {}
     } catch (err) {
       console.warn('Failed to send message', err);
     } finally {

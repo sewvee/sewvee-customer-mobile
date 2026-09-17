@@ -103,7 +103,16 @@ const CustomerChatListScreen = ({ navigation }) => {
       try {
         const lv = await AsyncStorage.getItem('chat_last_visited');
         const lvMap = lv ? JSON.parse(lv) : {};
-        const unreadCount = allThreads.filter(t => (t.unread_count > 0) || (t.latest_message_timestamp && (!lvMap[String(t.boutique_id)] || new Date(t.latest_message_timestamp) > new Date(lvMap[String(t.boutique_id)])) && t.latest_message_sender === 'BUSINESS')).length;
+        const forced = await AsyncStorage.getItem('chat_forced_unread');
+        const forcedMap = forced ? JSON.parse(forced) : {};
+
+        const unreadCount = allThreads.filter(t => {
+          const isForced = forcedMap[String(t.boutique_id)];
+          const lvTime = lvMap[String(t.boutique_id)];
+          const isBizSender = t.latest_message_sender === 'BUSINESS' || t.latest_message_sender === 'STAFF';
+          const isNew = t.latest_message_timestamp && (!lvTime || new Date(t.latest_message_timestamp) > new Date(lvTime));
+          return isForced || (isBizSender && isNew);
+        }).length;
         dispatch(setChatUnread(unreadCount));
       } catch (e) { /* ignore */ }
     } catch (err) {
@@ -134,7 +143,10 @@ const CustomerChatListScreen = ({ navigation }) => {
     const lastVisitedTime = lastVisited[String(item.boutique_id)];
     const isForcedUnread = forcedUnread[String(item.boutique_id)];
     const isFav = favorites[String(item.boutique_id)];
-    const isUnread = isForcedUnread || (item.unread_count > 0) || (item.latest_message_timestamp && (!lastVisitedTime || new Date(item.latest_message_timestamp) > new Date(lastVisitedTime)) && item.latest_message_sender === 'BUSINESS');
+    const isBizSender = item.latest_message_sender === 'BUSINESS' || item.latest_message_sender === 'STAFF';
+    const isNewMessage = item.latest_message_timestamp && (!lastVisitedTime || new Date(item.latest_message_timestamp) > new Date(lastVisitedTime));
+
+    const isUnread = isForcedUnread || (isBizSender && isNewMessage);
 
     return (
     <TouchableOpacity 
