@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   StatusBar,
   Image,
@@ -104,6 +105,7 @@ const LoginScreen = ({ navigation }) => {
       />
       <View style={styles.bgOverlay} />
 
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
@@ -188,6 +190,7 @@ const LoginScreen = ({ navigation }) => {
 
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <CountryPickerBottomSheet
           visible={showCountryPicker}
