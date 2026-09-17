@@ -255,7 +255,13 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
         const lines = [];
         lines.push(`Category: ${outfit.category}`);
         if (outfit.description) lines.push(`Description: ${outfit.description}`);
-        if (outfit.measurement) lines.push(`Measurement: ${outfit.measurement}`);
+        if (outfit.measurement) {
+          let meas = `Measurement: ${outfit.measurement}`;
+          if (outfit.measurement === 'Use Previous Measurements' && outfit.previousOrderDetails) {
+            meas += ` (Order details: ${outfit.previousOrderDetails})`;
+          }
+          lines.push(meas);
+        }
         if (deliveryDate) lines.push(`Expected Date: ${deliveryDate}`);
         
         payloadOutfits.push({
@@ -573,9 +579,13 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
                             </View>
                             
                             {isActive && opt === 'Use Previous Measurements' && (
-                              <View style={styles.subInputBox}>
-                                <Text style={styles.subInputText}>Tap to select an order...</Text>
-                              </View>
+                              <TextInput
+                                style={[styles.subInputBox, { color: '#0F172A', fontFamily: 'Inter-Medium', fontSize: 14 }]}
+                                placeholder="Enter previous order ID or details..."
+                                placeholderTextColor="#94A3B8"
+                                value={activeOutfit.previousOrderDetails || ''}
+                                onChangeText={(val) => updateOutfit(activeOutfit.id, 'previousOrderDetails', val)}
+                              />
                             )}
                           </TouchableOpacity>
                         );
