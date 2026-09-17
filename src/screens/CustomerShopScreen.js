@@ -435,8 +435,7 @@ const CustomerShopScreen = () => {
           onPress={() => setIsBoutiqueModalVisible(false)}
         >
           <View style={[styles.modalCard, { height: 'auto', maxHeight: '70%', marginTop: 'auto', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: 0, paddingBottom: Platform.OS === 'ios' ? 34 : 20 }]}>
-            <View style={[styles.modalHeader, { paddingHorizontal: 20, paddingTop: 20 }]}>
-              <Text style={styles.modalTitle}>Select Boutique</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
               <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(false)} style={{ padding: 4 }}>
                 <X size={24} color={Colors.textPrimary} />
               </TouchableOpacity>
