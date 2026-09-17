@@ -54,13 +54,14 @@ export default function CustomerSignupScreen({ navigation }) {
       const response = await fetch(`${API_DOMAIN}/mobile/customer-auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, mobile: countryCode === '+91' ? phone : countryCode + phone, email, pin })
+        body: JSON.stringify({ name, mobile: countryCode === '+91' ? phone : countryCode + phone, email, pin, state: '', city: '' })
       });
       const data = await response.json();
       
       if (!response.ok || !data.success) {
         setLoading(false);
-        return setErrorMsg(data.message || 'Failed to create account');
+        const errStr = Array.isArray(data.message) ? data.message.join(', ') : (data.message || 'Failed to create account');
+        return setErrorMsg(errStr);
       }
 
       setLoading(false);
