@@ -203,6 +203,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const displayTitle = orderNumber ? `${boutiqueName} #${orderNumber}` : boutiqueName;
   const [loading, setLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -219,6 +222,70 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const [collageOutfitId, setCollageOutfitId] = useState(null); 
 
   const flatListRef = useRef(null);
+
+  useEffect(() => {
+    const checkFavorite = async () => {
+      try {
+        const favsRaw = await AsyncStorage.getItem('chat_favorites');
+        const favs = favsRaw ? JSON.parse(favsRaw) : {};
+        if (favs[String(boutiqueId)]) {
+          setIsFavorite(true);
+        }
+      } catch (e) {}
+    };
+    checkFavorite();
+  }, [boutiqueId]);
+
+  const handleToggleFavorite = async () => {
+    try {
+      setMenuVisible(false);
+      const nextFav = !isFavorite;
+      setIsFavorite(nextFav);
+      const favsRaw = await AsyncStorage.getItem('chat_favorites');
+      const favs = favsRaw ? JSON.parse(favsRaw) : {};
+      if (nextFav) {
+        favs[String(boutiqueId)] = true;
+      } else {
+        delete favs[String(boutiqueId)];
+      }
+      await AsyncStorage.setItem('chat_favorites', JSON.stringify(favs));
+      showToast(nextFav ? 'Added to favorites' : 'Removed from favorites', 'success');
+    } catch (e) {
+      console.error('Favorite error', e);
+    }
+  };
+
+  const handleMarkUnread = async () => {
+    try {
+      setMenuVisible(false);
+      const existing = await AsyncStorage.getItem('chat_last_visited');
+      const map = existing ? JSON.parse(existing) : {};
+      delete map[String(boutiqueId)];
+      await AsyncStorage.setItem('chat_last_visited', JSON.stringify(map));
+
+      const forcedRaw = await AsyncStorage.getItem('chat_forced_unread');
+      const forcedMap = forcedRaw ? JSON.parse(forcedRaw) : {};
+      forcedMap[String(boutiqueId)] = true;
+      await AsyncStorage.setItem('chat_forced_unread', JSON.stringify(forcedMap));
+
+      showToast('Marked chat as unread', 'info');
+      navigation.goBack();
+    } catch (e) {
+      console.error('Mark unread error', e);
+    }
+  };
+
+  const handleOpenSearch = () => {
+    setMenuVisible(false);
+    setSearchMode(true);
+    setSearchQuery('');
+  };
+
+  const filteredMessages = useMemo(() => {
+    if (!searchMode || !searchQuery.trim()) return messages;
+    const q = searchQuery.toLowerCase().trim();
+    return messages.filter(m => (m.message || '').toLowerCase().includes(q));
+  }, [messages, searchMode, searchQuery]);
 
   const boutiqueOrders = orders.filter(o => o.boutiqueId?.toString() === boutiqueId?.toString());
   
@@ -845,26 +912,59 @@ const CustomerChatScreen = ({ route, navigation }) => {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar backgroundColor="#5B43EE" barStyle="light-content" translucent={false} />
       <View style={[styles.header, { backgroundColor: '#5B43EE', borderBottomWidth: 0, paddingVertical: 12, paddingHorizontal: 16 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12, paddingVertical: 8, paddingRight: 8 }}>
+        <TouchableOpacity 
+          onPress={() => {
+            if (searchMode) {
+              setSearchMode(false);
+              setSearchQuery('');
+            } else {
+              navigation.goBack();
+            }
+          }} 
+          style={{ marginRight: 12, paddingVertical: 8, paddingRight: 8 }}
+        >
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
         
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-          <ShoppingBag size={20} color="#FFF" />
-        </View>
+        {searchMode ? (
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingHorizontal: 12, height: 38, marginRight: 8 }}>
+            <Ionicons name="search" size={18} color="#FFF" style={{ marginRight: 8 }} />
+            <TextInput
+              style={{ flex: 1, color: '#FFF', fontSize: 14, fontFamily: 'Inter-Medium', paddingVertical: 0 }}
+              placeholder="Search chat..."
+              placeholderTextColor="rgba(255,255,255,0.7)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.8)" />
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+              <ShoppingBag size={20} color="#FFF" />
+            </View>
 
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontFamily: 'Inter-Bold', color: '#FFF', marginBottom: 2 }}>
-            {orderNumber ? orderNumber : 'Boutique Chat'}
-          </Text>
-          <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: 'rgba(255,255,255,0.8)' }} numberOfLines={1}>
-            {boutiqueName}
-          </Text>
-        </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Inter-Bold', color: '#FFF', marginBottom: 2, marginRight: 6 }}>
+                  {orderNumber ? orderNumber : 'Boutique Chat'}
+                </Text>
+                {isFavorite && <Ionicons name="star" size={14} color="#FBBF24" style={{ marginBottom: 2 }} />}
+              </View>
+              <Text style={{ fontSize: 13, fontFamily: 'Inter-Medium', color: 'rgba(255,255,255,0.8)' }} numberOfLines={1}>
+                {boutiqueName}
+              </Text>
+            </View>
+          </>
+        )}
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          
-          {passedOrderId && (
+          {!searchMode && passedOrderId && (
             <TouchableOpacity 
               onPress={() => navigation.navigate('CustomerOrderDetail', { orderId: passedOrderId })}
               style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, marginRight: 8 }}
@@ -882,15 +982,17 @@ const CustomerChatScreen = ({ route, navigation }) => {
       <Modal visible={menuVisible} transparent={true} animationType="fade" onRequestClose={() => setMenuVisible(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 60, paddingRight: 16 }} activeOpacity={1} onPress={() => setMenuVisible(false)}>
           <View style={{ backgroundColor: '#FFF', borderRadius: 8, width: 180, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 4 }}>
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }} onPress={() => { setMenuVisible(false); }}>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }} onPress={handleMarkUnread}>
               <Ionicons name="mail-unread-outline" size={18} color="#475569" style={{ marginRight: 12 }} />
               <Text style={{ fontSize: 15, fontFamily: 'Inter-Medium', color: '#1E293B' }}>Mark Unread</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }} onPress={() => { setMenuVisible(false); }}>
-              <Ionicons name="star-outline" size={18} color="#475569" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 15, fontFamily: 'Inter-Medium', color: '#1E293B' }}>Favorite</Text>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }} onPress={handleToggleFavorite}>
+              <Ionicons name={isFavorite ? "star" : "star-outline"} size={18} color={isFavorite ? "#F59E0B" : "#475569"} style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: 15, fontFamily: 'Inter-Medium', color: isFavorite ? "#F59E0B" : "#1E293B" }}>
+                {isFavorite ? 'Favorited' : 'Favorite'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }} onPress={() => { setMenuVisible(false); }}>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }} onPress={handleOpenSearch}>
               <Ionicons name="search-outline" size={18} color="#475569" style={{ marginRight: 12 }} />
               <Text style={{ fontSize: 15, fontFamily: 'Inter-Medium', color: '#1E293B' }}>Search</Text>
             </TouchableOpacity>
@@ -911,7 +1013,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           <FlatList
             style={{ flex: 1 }}
             ref={flatListRef}
-            data={[...messages].reverse()}
+            data={[...filteredMessages].reverse()}
             inverted={true}
             keyExtractor={item => item.id?.toString() || Math.random().toString()}
             renderItem={renderMessage}

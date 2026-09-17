@@ -20,6 +20,8 @@ const CustomerChatListScreen = ({ navigation }) => {
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastVisited, setLastVisited] = useState({});
+  const [favorites, setFavorites] = useState({});
+  const [forcedUnread, setForcedUnread] = useState({});
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedThread, setSelectedThread] = useState(null);
 
@@ -37,9 +39,13 @@ const CustomerChatListScreen = ({ navigation }) => {
   async function loadLastVisited() {
     try {
       const data = await AsyncStorage.getItem('chat_last_visited');
-      if (data) {
-        setLastVisited(JSON.parse(data));
-      }
+      setLastVisited(data ? JSON.parse(data) : {});
+
+      const favData = await AsyncStorage.getItem('chat_favorites');
+      setFavorites(favData ? JSON.parse(favData) : {});
+
+      const forcedData = await AsyncStorage.getItem('chat_forced_unread');
+      setForcedUnread(forcedData ? JSON.parse(forcedData) : {});
     } catch (e) {
       console.warn('Failed to load last visited', e);
     }
@@ -126,7 +132,9 @@ const CustomerChatListScreen = ({ navigation }) => {
 
   const renderItem = ({ item }) => {
     const lastVisitedTime = lastVisited[String(item.boutique_id)];
-    const isUnread = (item.unread_count > 0) || (item.latest_message_timestamp && (!lastVisitedTime || new Date(item.latest_message_timestamp) > new Date(lastVisitedTime)) && item.latest_message_sender === 'BUSINESS');
+    const isForcedUnread = forcedUnread[String(item.boutique_id)];
+    const isFav = favorites[String(item.boutique_id)];
+    const isUnread = isForcedUnread || (item.unread_count > 0) || (item.latest_message_timestamp && (!lastVisitedTime || new Date(item.latest_message_timestamp) > new Date(lastVisitedTime)) && item.latest_message_sender === 'BUSINESS');
 
     return (
     <TouchableOpacity 
@@ -155,6 +163,9 @@ const CustomerChatListScreen = ({ navigation }) => {
             <Text style={[styles.boutiqueName, isUnread && styles.boutiqueNameUnread]} numberOfLines={1}>
               {item.boutique_name}
             </Text>
+            {isFav ? (
+              <Ionicons name="star" size={14} color="#FBBF24" style={{ marginLeft: 4, marginRight: 4 }} />
+            ) : null}
             {item.order_number ? (
               <View style={[styles.badge, { backgroundColor: getBadgeStyle(item.order_number).bg }]}>
                 <Text style={[styles.badgeText, { color: getBadgeStyle(item.order_number).text }]}>
