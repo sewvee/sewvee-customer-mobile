@@ -604,7 +604,13 @@ const CustomerChatScreen = ({ route, navigation }) => {
     const handleOpenAttachment = async (url) => {
     try {
       let finalUrl = getFullImageUrl(url);
-      if (finalUrl.includes('.pdf') || finalUrl.includes('download')) {
+      
+      // Rewrite business invoice endpoints to customer portal endpoint
+      if (finalUrl.match(/\/mobile\/orders\/(\d+)\/invoice\/(pdf|download)/)) {
+        finalUrl = finalUrl.replace(/\/mobile\/orders\/(\d+)\/invoice\/(pdf|download)/, '/mobile/customer-portal/orders/$1/invoice');
+      }
+
+      if (finalUrl.includes('.pdf') || finalUrl.includes('download') || finalUrl.includes('invoice')) {
         let token = await AsyncStorage.getItem('userToken');
         if (token) {
           token = token.replace('Bearer ', '');

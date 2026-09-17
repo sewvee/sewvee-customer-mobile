@@ -460,7 +460,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
                       
                       {/* 1. Reference Photos (Collage) */}
                       <Text style={styles.sectionHeading}>1. Reference Photos</Text>
-                      <Text style={styles.sectionSubheading}>Add your fabric & design inspiration. 1) Collage your saree/outfit material, any embroidery or patterns, and reference images.</Text>
+                      <Text style={styles.sectionSubheading}>Add your fabric, patterns, and design inspiration.</Text>
                       
                       {activeOutfit.collageUrl ? (
                         <View style={styles.collagePreviewContainer}>
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   btnCollageText: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#FFF' },
 
   sectionHeading: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', marginBottom: 4 },
-  sectionSubheading: { fontSize: 13, fontFamily: 'Inter-Medium', color: '#64748B', marginBottom: 16, lineHeight: 20 },
+  sectionSubheading: { fontSize: 12, fontFamily: 'Inter-Medium', color: '#64748B', marginBottom: 12, lineHeight: 18 },
   
   collagePreviewContainer: { marginBottom: 24 },
   collagePreviewImage: { width: '100%', height: 350, borderRadius: 12, backgroundColor: '#F1F5F9' },

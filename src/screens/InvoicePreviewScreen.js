@@ -344,6 +344,7 @@ export default function InvoicePreviewScreen({
           paymentId: route.params?.paymentId || null,
           fileUrl: route.params?.pdfUrl || null,
           previewOnly: true,
+          isCustomerPortal,
         })).unwrap();
 
         if (!response?.filePath) {
@@ -502,6 +503,7 @@ export default function InvoicePreviewScreen({
           paymentId: route.params?.paymentId || null,
           fileUrl: route.params?.pdfUrl || null,
           previewOnly: true,
+          isCustomerPortal,
         })).unwrap();
 
         if (!response?.filePath) {

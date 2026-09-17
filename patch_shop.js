@@ -1,43 +1,43 @@
 const fs = require('fs');
+const path = 'src/screens/CustomerShopScreen.js';
+let content = fs.readFileSync(path, 'utf8');
 
-const file = 'src/screens/CustomerShopScreen.js';
-let content = fs.readFileSync(file, 'utf8');
-
-// 1. Remove activeTab state
-content = content.replace(/const \[activeTab, setActiveTab\] = useState\('sewvee'\); \/\/ 'sewvee' \| 'boutique'\n/, '');
-
-// 2. Remove activeTab dependency from useEffect
-content = content.replace(/}, \[selectedBoutique, activeTab\]\);/g, '}, [selectedBoutique]);');
-
-// 3. Fix fetchProducts logic
-content = content.replace(/if \(activeTab === 'sewvee'\) \{\s*url = `\$\{BASE_URL\}customer\/store\/catalogue`;\s*\} else if \(boutique && !boutique.isSewveeDirect\) \{/, 'if (boutique && !boutique.isSewveeDirect) {');
-
-// 4. Replace Shop Header with Dropdown
-const headerRegex = /<View style=\{\{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, backgroundColor: '#fff' \}\}>\s*<Text style=\{\{ fontSize: 22, fontFamily: 'Inter-Bold', color: '#0F172A' \}\}>Shop<\/Text>/;
-const newHeader = `<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, backgroundColor: '#fff' }}>
-          <TouchableOpacity
-            onPress={() => setIsBoutiqueModalVisible(true)}
-            activeOpacity={0.7}
-            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
-          >
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-              <Store size={18} color={Colors.primary} />
-            </View>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', letterSpacing: 0.5, marginBottom: 1 }}>SHOPPING AT</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', marginRight: 4 }} numberOfLines={1}>
-                  {selectedBoutique ? selectedBoutique.name : 'Select Boutique'}
-                </Text>
-                <ChevronDown size={16} color="#64748B" />
+const oldCartLogic = `<TouchableOpacity style={styles.cartIconBtn} onPress={() => setIsCartVisible(true)}>
+            <ShoppingBag size={24} color={Colors.textPrimary} />
+            {cart.length > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cart.reduce((a, c) => a + (c.quantity || 1), 0)}</Text>
               </View>
-            </View>
+            )}
           </TouchableOpacity>`;
-content = content.replace(headerRegex, newHeader);
 
-// 5. Remove Tab Bar and old Dropdown
-const tabBarAndDropdownRegex = /\{\/\* Tab Bar \*\/\}[\s\S]*?\{\/\* Boutique selector — only shown under Boutique tab \*\/\}[\s\S]*?<\/SafeAreaView>/;
-content = content.replace(tabBarAndDropdownRegex, '</SafeAreaView>');
+const newCartLogic = `<TouchableOpacity 
+            style={[
+              styles.cartIconBtn, 
+              cart.length > 0 && { 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: Colors.primary, 
+                paddingHorizontal: 16, 
+                paddingVertical: 10, 
+                borderRadius: 24,
+                elevation: 3,
+                shadowColor: Colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+              }
+            ]} 
+            onPress={() => setIsCartVisible(true)}
+          >
+            <ShoppingBag size={cart.length > 0 ? 18 : 24} color={cart.length > 0 ? '#FFF' : Colors.textPrimary} />
+            {cart.length > 0 && (
+              <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 13, marginLeft: 8 }}>
+                Cart ({cart.reduce((a, c) => a + (c.quantity || 1), 0)})
+              </Text>
+            )}
+          </TouchableOpacity>`;
 
-fs.writeFileSync(file, content);
-console.log('Patched', file);
+content = content.replace(oldCartLogic, newCartLogic);
+fs.writeFileSync(path, content);
+console.log('Patched CustomerShopScreen.js');
