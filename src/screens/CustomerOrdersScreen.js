@@ -65,7 +65,7 @@ const CustomerOrdersScreen = ({ navigation }) => {
         new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt),
     );
     return sorted.filter(order => {
-      const type = (order.type || '').toUpperCase();
+      const type = (order.order_type || order.type || '').toUpperCase();
       if (selectedTab === 'stitching') {
         return type === 'STITCHING' || type === 'CUSTOM' || type === 'ENQUIRY';
       } else {
