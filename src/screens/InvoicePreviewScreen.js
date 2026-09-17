@@ -289,6 +289,16 @@ export default function InvoicePreviewScreen({
       };
     }
 
+    if (isCustomerPortal) {
+      if (isMounted) {
+        setLatestOrder(route.params?.order || null);
+        setLoadingOrder(false);
+      }
+      return () => {
+        isMounted = false;
+      };
+    }
+
     setLoadingOrder(true);
     dispatch(getOrderByIdAction(routeOrderId))
       .unwrap()
