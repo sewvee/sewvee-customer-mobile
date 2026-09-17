@@ -146,9 +146,18 @@ export const DataProvider = ({ children }) => {
             if (!cleanPhone || cleanPhone.length < 10) return [];
 
             console.log(`DEBUG: fetch URL: ${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
-            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
+            let token = userToken;
+            token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`, {
+                headers: {
+                    'Authorization': token
+                }
+            });
             console.log('DEBUG: fetch status:', response.status);
-            if (!response.ok) return [];
+            if (!response.ok) {
+                console.log('DEBUG: fetch failed with status:', response.status);
+                return [];
+            }
             const json = await response.json();
             console.log('DEBUG: fetch json success:', json.success, 'data length:', json.data?.length);
             if (!json.success || !Array.isArray(json.data)) return [];
