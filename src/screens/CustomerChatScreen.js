@@ -8,6 +8,7 @@ import { Colors } from '../constants/theme';
 import { formatChatMessage } from '../utils/chatUtils';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import axios from 'axios';
 import { BASE_URL, URL_UPLOAD, API_DOMAIN } from '../config/env';
 import CustomerFeedbackModal from '../components/CustomerFeedbackModal';
@@ -93,6 +94,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const { user } = useAuth();
   const { orders } = useData();
   const dispatch = useDispatch();
+  const { showToast } = useToast();
 
   // --- MANUAL ANDROID KEYBOARD SPACER ---
   // Since translucent status bar kills adjustResize, we must manually push the layout up.
