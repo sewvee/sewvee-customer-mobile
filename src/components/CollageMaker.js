@@ -5,7 +5,7 @@ import {
   PanResponder, TextInput, KeyboardAvoidingView, StatusBar
 } from 'react-native';
 import { Colors, Shadow } from '../constants/theme';
-import { X, ImagePlus, Download, Share2, Check, Folder, ChevronRight, ArrowLeft, Crop, Trash2, PenTool, Type, RotateCcw, Minus, Plus } from 'lucide-react-native';
+import { Camera, X, ImagePlus, Download, Share2, Check, Folder, ChevronRight, ArrowLeft, Crop, Trash2, PenTool, Type, RotateCcw, Minus, Plus } from 'lucide-react-native';
 import ViewShot from 'react-native-view-shot';
 import ImageCropPicker from 'react-native-image-crop-picker';
 import Share from 'react-native-share';
@@ -100,6 +100,16 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
       })
       .catch(e => console.log('pick cancelled', e));
   };
+
+  const handleTakePhoto = () => {
+    setSourcePickerVisible(false);
+    ImageCropPicker.openCamera({ cropping: false, mediaType: 'photo' })
+      .then(originalImage => {
+        setOriginalImages(prev => ({ ...prev, [activeSlot]: originalImage.path }));
+        setImages(prev => ({ ...prev, [activeSlot]: originalImage.path }));
+      })
+      .catch(e => console.log('camera cancelled', e));
+  };
   const handleGalleryImageSelect = (imgUri) => {
     setImages(prev => ({ ...prev, [activeSlot]: imgUri }));
     setOriginalImages(prev => ({ ...prev, [activeSlot]: imgUri }));
@@ -113,6 +123,8 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
   };
 
   const handleGlobalCrop = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     let slotToCrop = activeSlot;
     if (slotToCrop == null || !images[slotToCrop]) {
       const firstSlot = Object.keys(images).find(k => images[k]);
@@ -120,6 +132,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
     }
     if (!slotToCrop || !images[slotToCrop]) {
       showToast("Please select or add a photo to crop first", "error");
+      setIsProcessing(false);
       return;
     }
     let sourcePath = originalImages[slotToCrop] || images[slotToCrop];
@@ -131,6 +144,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
         sourcePath = Platform.OS === 'android' ? `file://${localPath}` : localPath;
       } catch (err) {
         showToast("Failed to download image for cropping", "error");
+        setIsProcessing(false);
         return;
       }
     } else if (Platform.OS === 'android' && sourcePath && !sourcePath.startsWith('file://') && !sourcePath.startsWith('content://')) {
@@ -138,12 +152,13 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
     }
 
     setTimeout(() => {
-      ImageCropPicker.openCropper({ path: sourcePath, freeStyleCropEnabled: true, cropperToolbarTitle: 'Crop Photo' })
+      ImageCropPicker.openCropper({ path: sourcePath, width: 1200, height: 1200, freeStyleCropEnabled: true, cropperToolbarTitle: 'Crop Photo' })
         .then(img => {
           setImages(prev => ({ ...prev, [slotToCrop]: img.path }));
           setActiveSlot(slotToCrop);
         })
-        .catch(e => console.log('Crop cancelled', e));
+        .catch(e => console.log('Crop cancelled', e))
+        .finally(() => setIsProcessing(false));
     }, 100);
   };
 
@@ -443,6 +458,12 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
           <View style={s.pickerSheet}>
             <Text style={s.pickerTitle}>Add Photo</Text>
             <Text style={s.pickerSubtitle}>Choose a source</Text>
+            <TouchableOpacity style={s.pickerOption} onPress={handleTakePhoto}>
+              <View style={s.pickerOptionIcon}><Camera size={24} color={Colors.primary} /></View>
+              <View style={{ flex: 1 }}><Text style={s.pickerOptionTitle}>Take Photo</Text></View>
+              <ChevronRight size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+
             <TouchableOpacity style={s.pickerOption} onPress={handlePickFromPhone}>
               <View style={s.pickerOptionIcon}><ImagePlus size={24} color={Colors.primary} /></View>
               <View style={{ flex: 1 }}><Text style={s.pickerOptionTitle}>Phone Gallery</Text></View>
