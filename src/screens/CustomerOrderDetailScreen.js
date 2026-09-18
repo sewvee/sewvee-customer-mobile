@@ -444,6 +444,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   };
 
 
+  const isOrderCancelled = (order.status || '').toUpperCase() === 'CANCELLED' || (order.status || '').toUpperCase() === 'CANCELED' || order.status_id === 4;
   return (
     <SafeAreaView style={styles.container}>
       {!isOutfitChatActive && (
