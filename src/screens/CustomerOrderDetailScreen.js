@@ -449,31 +449,38 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       {!isOutfitChatActive && (
         <>
           {/* Navbar */}
-          <View style={styles.navbar}>
+          <View style={[styles.navbar, { alignItems: 'center' }]}>
             <TouchableOpacity style={styles.backIconBtn} onPress={() => navigation.goBack()}>
               <ArrowLeft size={22} color={Colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.navbarTitle}>
-              {order.order_type === 'SALE_ORDER' ? 'Invoice ' : ((order.billNo || '').startsWith('ENQ') || order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST') ? '' : 'Order '}#{order.billNo || order.id}
-            </Text>
+            <View style={{ flex: 1, alignItems: 'flex-start', paddingLeft: 8 }}>
+              <Text style={styles.navbarTitle}>
+                {order.order_type === 'SALE_ORDER' ? 'Invoice ' : ((order.billNo || '').startsWith('ENQ') || order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST') ? '' : 'Order '}#{order.billNo || order.id}
+              </Text>
+              {(order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST') && (
+                <Text style={{ fontSize: 10, fontFamily: 'Inter-Bold', color: '#94A3B8', marginTop: 2 }}>PRE-ORDER INQUIRY</Text>
+              )}
+            </View>
             <View style={{ width: 22 }} />
           </View>
 
           {/* TABS */}
-          <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
-            <TouchableOpacity 
-              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
-              onPress={() => setActiveTab('details')}
-            >
-              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Details</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'payment' ? Colors.primary : 'transparent' }}
-              onPress={() => setActiveTab('payment')}
-            >
-              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'payment' ? Colors.primary : '#64748B' }}>Payments</Text>
-            </TouchableOpacity>
-          </View>
+          {(!order.order_type || (order.order_type !== 'ENQUIRY' && order.order_type !== 'STITCHING_REQUEST')) && (
+            <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
+                onPress={() => setActiveTab('details')}
+              >
+                <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'payment' ? Colors.primary : 'transparent' }}
+                onPress={() => setActiveTab('payment')}
+              >
+                <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'payment' ? Colors.primary : '#64748B' }}>Payments</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </>
       )}
 
@@ -598,11 +605,12 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           </>
         )}
 
-        <TouchableOpacity 
-          style={[styles.invoiceBtn, { paddingVertical: 14, justifyContent: 'center', marginBottom: 32, backgroundColor: '#FFF' }]}
-          onPress={() => navigation.navigate('InvoicePreview', { 
-            order, 
-            orderId: order.id,
+        {(order.order_type !== 'ENQUIRY' && order.order_type !== 'STITCHING_REQUEST') && (
+          <TouchableOpacity 
+            style={[styles.invoiceBtn, { paddingVertical: 14, justifyContent: 'center', marginBottom: 32, backgroundColor: '#FFF' }]}
+            onPress={() => navigation.navigate('InvoicePreview', { 
+              order, 
+              orderId: order.id,
             isCustomerPortal: true,
             allowedCopyTypes: ['customer'],
             initialCopyType: 'customer',
@@ -614,8 +622,9 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           })}
         >
           <Download size={16} color={Colors.textPrimary} style={{marginRight: 6}} />
-          <Text style={[styles.invoiceBtnText, { fontSize: 14 }]}>Download Invoice</Text>
-        </TouchableOpacity>
+            <Text style={[styles.invoiceBtnText, { fontSize: 14 }]}>Download Invoice</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       ) : (

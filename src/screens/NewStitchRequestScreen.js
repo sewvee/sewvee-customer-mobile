@@ -339,32 +339,43 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       <Text style={styles.stepTitle}>Configure Outfits</Text>
       <Text style={styles.stepSubtitle}>Tap each outfit to provide design references, details, and measurements.</Text>
       
-      {outfits.map((outfit, index) => (
-        <View key={outfit.id} style={styles.outfitDrawerCard}>
-          <TouchableOpacity 
-            style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} 
-            onPress={() => setEditingOutfitId(outfit.id)}
-          >
-            <View style={styles.accordionHeaderLeft}>
-              <View style={styles.accordionIndexCircle}>
-                <Text style={styles.accordionIndexText}>{index + 1}</Text>
+      {outfits.map((outfit, index) => {
+        const isConfigured = !!(outfit.description || outfit.measurement || (outfit.images && outfit.images.length > 0) || outfit.collageUrl || outfit.audioUrl);
+        return (
+          <View key={outfit.id} style={[styles.outfitDrawerCard, isConfigured && { borderColor: '#10B981', backgroundColor: '#F0FDF4' }]}>
+            <TouchableOpacity 
+              style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} 
+              onPress={() => setEditingOutfitId(outfit.id)}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                {isConfigured ? (
+                  <View style={[styles.accordionIndexCircle, { backgroundColor: '#D1FAE5' }]}>
+                    <Check size={16} color="#10B981" />
+                  </View>
+                ) : (
+                  <View style={styles.accordionIndexCircle}>
+                    <Text style={styles.accordionIndexText}>{index + 1}</Text>
+                  </View>
+                )}
+                <View>
+                  <Text style={[styles.outfitTitle, isConfigured && { color: '#065F46' }]}>{outfit.name}</Text>
+                  <Text style={[styles.outfitSubtitle, isConfigured && { color: '#059669' }]}>
+                    {isConfigured ? 'Configured • Tap to edit' : 'Tap to add details'}
+                  </Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.outfitTitle}>{outfit.name}</Text>
-                <Text style={styles.outfitSubtitle}>Tap to add details</Text>
-              </View>
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={() => setEditingOutfitId(outfit.id)}>
+                <ChevronRight size={20} color={isConfigured ? '#10B981' : '#CBD5E1'} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => removeOutfit(outfit.id)} style={{ padding: 4, backgroundColor: '#FEE2E2', borderRadius: 12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
+                <X size={14} color="#EF4444" />
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity onPress={() => removeOutfit(outfit.id)} style={{ padding: 4, backgroundColor: '#FEE2E2', borderRadius: 12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}>
-              <X size={14} color="#EF4444" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setEditingOutfitId(outfit.id)}>
-              <ChevronRight size={20} color="#CBD5E1" />
-            </TouchableOpacity>
           </View>
-        </View>
-      ))}
+        );
+      })}
       
       <CollageMaker
         visible={collageMakerVisible}
