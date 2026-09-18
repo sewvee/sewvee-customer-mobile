@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Image, StatusBar, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadow } from '../constants/theme';
-import { Store, MessageSquarePlus, MessageCircle } from 'lucide-react-native';
+import { Store, MessageSquarePlus, MessageSquare } from 'lucide-react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
@@ -207,7 +207,7 @@ const CustomerChatListScreen = ({ navigation }) => {
         <View style={styles.center}>
           <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 32, alignItems: 'center', width: '90%', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2 }}>
             <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
-              <MessageCircle color="#4F46E5" size={40} />
+              <MessageSquare color="#4F46E5" size={40} />
             </View>
             <Text style={{ fontSize: 18, fontFamily: 'Inter-Bold', color: '#1E293B', marginBottom: 8 }}>No Conversations</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Inter-Regular', color: '#64748B', textAlign: 'center' }}>When you interact with a boutique, your chats will appear here.</Text>
