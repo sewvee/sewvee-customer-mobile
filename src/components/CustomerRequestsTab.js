@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { normalizeImageUrl } from '../utils/imageUtils';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform, Alert, Modal, Pressable } from 'react-native';
 import { Camera, Send, MessageCircle, MessageSquare, ChevronLeft, ChevronRight, Trash2, MoreVertical, Edit2, X } from 'lucide-react-native';
+const KeyboardView = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
 import { Colors } from '../constants/theme';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useDispatch, useSelector } from 'react-redux';
@@ -250,9 +251,9 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
   const outfitRequests = requests.filter(r => r.order_outfit_id === activeOutfit.id);
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardView 
       style={{ flex: 1, backgroundColor: '#F8FAFC' }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       {/* Header */}
@@ -363,8 +364,9 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
       
       {/* Custom BottomSheet Modal for Message Options */}
       <Modal visible={!!selectedMessage} transparent animationType="slide" onRequestClose={() => setSelectedMessage(null)}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setSelectedMessage(null)}>
-          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 }} onStartShouldSetResponder={() => true}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }]} onPress={() => setSelectedMessage(null)} />
+          <View style={{ backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24, zIndex: 10, elevation: 10 }}>
             <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#1E293B', marginBottom: 16, textAlign: 'center' }}>Message Options</Text>
             
             {selectedMessage && !selectedMessage.attachment_url && (
@@ -397,7 +399,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
               <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#64748B', textAlign: 'center' }}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       <Modal visible={!!fullScreenImage} transparent animationType="fade" onRequestClose={() => setFullScreenImage(null)}>
@@ -408,7 +410,7 @@ export default function CustomerRequestsTab({ order, onUpdateStatus, onChatActiv
           {fullScreenImage && <Image source={{ uri: normalizeImageUrl(fullScreenImage) }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </KeyboardView>
   );
 }
 

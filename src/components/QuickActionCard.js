@@ -1,38 +1,86 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors, Shadow } from '../constants/theme';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import { Colors } from '../constants/theme';
 import LinearGradient from 'react-native-linear-gradient';
 
-const QuickActionCard = ({ title, icon, onPress, primary }) => {
-  if (primary) {
-    return (
-      <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={[styles.card, styles.shadow]}>
-        <LinearGradient
-          colors={['#F5F3FF', '#EDE9FE']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientBg}
-        >
-          <View style={styles.iconContainerPrimary}>
-            {icon}
-          </View>
-          <Text style={styles.titlePrimary} numberOfLines={2} textAlign="center">{title}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    );
-  }
+const QuickActionCard = ({ title, subtitle, icon, onPress, primary, badge, customBg }) => {
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: false, speed: 20 }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: false, speed: 20 }).start();
+  };
+
+  useEffect(() => {
+    if (badge) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0,
+            duration: 1200,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+    }
+  }, [badge]);
+
+  const borderColor = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#E2E8F0', '#818CF8']
+  });
+
+  const shadowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.05, 0.4]
+  });
 
   return (
-    <TouchableOpacity
-      style={[styles.card, styles.secondaryCard, styles.shadow]}
-      activeOpacity={0.8}
+    <Pressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       onPress={onPress}
+      style={{ flex: 1, marginHorizontal: 4 }}
     >
-      <View style={styles.iconContainerSecondary}>
-        {icon}
-      </View>
-      <Text style={styles.titleSecondary} numberOfLines={2} textAlign="center">{title}</Text>
-    </TouchableOpacity>
+      <Animated.View style={[
+        { transform: [{ scale: scaleAnim }] },
+        styles.card,
+        {
+          borderColor: badge ? borderColor : '#E2E8F0',
+          shadowColor: badge ? '#4F46E5' : '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: badge ? shadowOpacity : 0.05,
+          shadowRadius: badge ? 8 : 2,
+          elevation: badge ? 4 : 1,
+        }
+      ]}>
+        {badge && (
+          <View style={styles.badgeContainer}>
+            <LinearGradient
+              colors={['#4F46E5', '#818cf8', '#4F46E5']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.badgeBg}
+            >
+              <Text style={styles.badgeText}>{badge}</Text>
+            </LinearGradient>
+          </View>
+        )}
+        <View style={[styles.iconContainer, { backgroundColor: customBg || '#EEF2FF' }]}>
+          {icon}
+        </View>
+        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        {subtitle && <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>}
+      </Animated.View>
+    </Pressable>
   );
 };
 
@@ -40,67 +88,52 @@ export default QuickActionCard;
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
-    borderRadius: 16,
-    marginHorizontal: 4,
-    height: 100,
-  },
-  shadow: {
-    shadowColor: '#5B43EE',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  gradientBg: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryCard: {
-    backgroundColor: Colors.white,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  iconContainerPrimary: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E0E7FF',
+    position: 'relative',
+    height: 130,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  iconContainerSecondary: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  titlePrimary: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: Colors.textPrimary,
+  title: {
+    fontSize: 15,
+    fontFamily: 'Inter-Bold',
+    color: '#0F172A',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
   },
-  titleSecondary: {
+  subtitle: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: Colors.textPrimary,
+    fontFamily: 'Inter-Medium',
+    color: '#64748B',
     textAlign: 'center',
-    lineHeight: 16,
+    marginTop: 4,
+    letterSpacing: -0.2,
   },
+  badgeContainer: {
+    position: 'absolute',
+    top: -10,
+    zIndex: 10,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  badgeBg: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: 'Inter-Bold',
+  }
 });

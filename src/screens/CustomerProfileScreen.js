@@ -1,10 +1,11 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight, LogOut } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 
@@ -13,6 +14,12 @@ const DANGER = '#EF4444';
 
 const CustomerProfileScreen = () => {
   const { user, logout } = useAuth();
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBackgroundColor('#F8FAFC');
+      StatusBar.setBarStyle('dark-content');
+    }, [])
+  );
   const navigation = useNavigation();
   const { orders } = useData();
 
@@ -32,7 +39,7 @@ const CustomerProfileScreen = () => {
   }).length;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Hero Card */}
@@ -116,7 +123,7 @@ export default CustomerProfileScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 100 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
 
   // Hero
   heroCard: {

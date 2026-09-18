@@ -41,8 +41,7 @@ function App() {
           <View style={styles.container}>
 
             <StatusBar
-              translucent
-              backgroundColor="transparent"
+              backgroundColor="#FFFFFF"
               barStyle="dark-content"
             />
 

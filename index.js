@@ -6,6 +6,7 @@ import App from './App';
 import { name as appName } from './app.json';
 import { store } from './src/store';
 import { markAsRead } from './src/store/notificationSlice';
+import { incrementChatUnread } from './src/store/chatSlice';
 import * as navigationService from './src/utils/navigationService';
 
 // Register background handler
@@ -83,6 +84,21 @@ PushNotification.configure({
                 } else if (page === 'LOW_STOCK') {
                     setTimeout(() => {
                         navigationService.navigate('InventoryScreen');
+                    }, 3000);
+                } else if (page === 'CHAT') {
+                    store.dispatch(incrementChatUnread());
+                    setTimeout(() => {
+                        navigationService.navigate('CustomerChat', {
+                            orderId: innerData?.orderId || data.orderId,
+                            boutiqueId: innerData?.boutiqueId || data.boutiqueId,
+                            boutiqueName: innerData?.boutiqueName || data.boutiqueName,
+                        });
+                    }, 3000);
+                } else if (page === 'ORDER_DETAILS') {
+                    setTimeout(() => {
+                        navigationService.navigate('CustomerOrderDetail', {
+                            orderId: innerData?.orderId || data.orderId,
+                        });
                     }, 3000);
                 } else {
                     setTimeout(() => {

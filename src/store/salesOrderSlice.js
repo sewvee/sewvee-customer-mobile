@@ -7,6 +7,7 @@ import {
   URL_PAYMENT_DOWNLOAD,
   URL_PAYMENT_INVOICE,
   URL_ORDER_INVOICE_DOWNLOAD,
+  URL_CUSTOMER_PORTAL_INVOICE,
   URL_ORDER_TAILORING_COPY,
   URL_ORDER_TAILORING_COPY_DOWNLOAD,
 } from '../config/env';
@@ -1161,14 +1162,15 @@ export const downloadOrderCopyAction = createAsyncThunk(
 
       // Customer Copy preview: GET /mobile/payments/{paymentId}/invoice
       // Customer Copy download: GET /mobile/payments/{paymentId}/invoice/download
-      // Fall back to the legacy order invoice endpoint only when paymentId is unavailable.
+      // Fall back to the customer-portal invoice endpoint when paymentId is unavailable.
       // Tailoring Copy preview: GET /mobile/orders/{id}/tailoringcopy
       // Tailoring Copy download: GET /mobile/orders/{id}/tailoringcopy/download
+      const isCustomerPortal = payload?.isCustomerPortal ?? false;
       const endpoint =
         copyType === 'customer'
           ? paymentId
             ? (previewOnly ? URL_PAYMENT_INVOICE(paymentId) : URL_PAYMENT_DOWNLOAD(paymentId))
-            : (directFileUrl || URL_ORDER_INVOICE_DOWNLOAD(orderId))
+            : (directFileUrl || (isCustomerPortal ? URL_CUSTOMER_PORTAL_INVOICE(orderId) : URL_ORDER_INVOICE_DOWNLOAD(orderId)))
           : previewOnly
             ? URL_ORDER_TAILORING_COPY(tailoringCopyId)
             : (directFileUrl || URL_ORDER_TAILORING_COPY_DOWNLOAD(tailoringCopyId));

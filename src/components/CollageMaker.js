@@ -5,9 +5,10 @@ import {
   PanResponder, TextInput, KeyboardAvoidingView, StatusBar
 } from 'react-native';
 import { Colors, Shadow } from '../constants/theme';
-import { X, ImagePlus, Download, Share2, Check, Folder, ChevronRight, ArrowLeft, Crop, Trash2, PenTool, Type, RotateCcw, Minus, Plus } from 'lucide-react-native';
+import { Camera, X, ImagePlus, Download, Share2, Check, Folder, ChevronRight, ArrowLeft, Crop, Trash2, PenTool, Type, RotateCcw, Minus, Plus } from 'lucide-react-native';
 import ViewShot from 'react-native-view-shot';
 import ImageCropPicker from 'react-native-image-crop-picker';
+import * as ImagePicker from 'react-native-image-picker';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import Svg, { Path } from 'react-native-svg';
@@ -100,6 +101,22 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
       })
       .catch(e => console.log('pick cancelled', e));
   };
+
+  const handleTakePhoto = () => {
+    const slotIndex = activeSlot;
+    setSourcePickerVisible(false);
+    setTimeout(() => {
+      ImagePicker.launchCamera({ mediaType: 'photo', quality: 0.8 }, (res) => {
+        if (res.didCancel || res.errorCode || !res.assets || res.assets.length === 0) {
+          console.log('camera cancelled or failed', res.errorMessage);
+          return;
+        }
+        const imgUri = res.assets[0].uri;
+        setOriginalImages(prev => ({ ...prev, [slotIndex]: imgUri }));
+        setImages(prev => ({ ...prev, [slotIndex]: imgUri }));
+      });
+    }, 400);
+  };
   const handleGalleryImageSelect = (imgUri) => {
     setImages(prev => ({ ...prev, [activeSlot]: imgUri }));
     setOriginalImages(prev => ({ ...prev, [activeSlot]: imgUri }));
@@ -113,13 +130,16 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
   };
 
   const handleGlobalCrop = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     let slotToCrop = activeSlot;
-    if (slotToCrop == null || !images[slotToCrop]) {
+    if (slotToCrop === null || slotToCrop === undefined || !images[slotToCrop]) {
       const firstSlot = Object.keys(images).find(k => images[k]);
       if (firstSlot) slotToCrop = firstSlot;
     }
-    if (!slotToCrop || !images[slotToCrop]) {
+    if (slotToCrop === null || slotToCrop === undefined || !images[slotToCrop]) {
       showToast("Please select or add a photo to crop first", "error");
+      setIsProcessing(false);
       return;
     }
     let sourcePath = originalImages[slotToCrop] || images[slotToCrop];
@@ -131,18 +151,22 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
         sourcePath = Platform.OS === 'android' ? `file://${localPath}` : localPath;
       } catch (err) {
         showToast("Failed to download image for cropping", "error");
+        setIsProcessing(false);
         return;
       }
-    } else if (Platform.OS === 'android' && sourcePath && !sourcePath.startsWith('file://')) {
+    } else if (Platform.OS === 'android' && sourcePath && !sourcePath.startsWith('file://') && !sourcePath.startsWith('content://')) {
       sourcePath = 'file://' + sourcePath;
     }
 
-    ImageCropPicker.openCropper({ path: sourcePath, freeStyleCropEnabled: true, cropperToolbarTitle: 'Crop Photo' })
-      .then(img => {
-        setImages(prev => ({ ...prev, [slotToCrop]: img.path }));
-        setActiveSlot(slotToCrop);
-      })
-      .catch(e => console.log('Crop cancelled', e));
+    setTimeout(() => {
+      ImageCropPicker.openCropper({ path: sourcePath, width: 1200, height: 1200, freeStyleCropEnabled: true, cropperToolbarTitle: 'Crop Photo' })
+        .then(img => {
+          setImages(prev => ({ ...prev, [slotToCrop]: img.path }));
+          setActiveSlot(slotToCrop);
+        })
+        .catch(e => console.log('Crop cancelled', e))
+        .finally(() => setIsProcessing(false));
+    }, 100);
   };
 
   // Drawing & Text Logic (PanResponders)
@@ -441,16 +465,18 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
           <View style={s.pickerSheet}>
             <Text style={s.pickerTitle}>Add Photo</Text>
             <Text style={s.pickerSubtitle}>Choose a source</Text>
+            <TouchableOpacity style={s.pickerOption} onPress={handleTakePhoto}>
+              <View style={s.pickerOptionIcon}><Camera size={24} color={Colors.primary} /></View>
+              <View style={{ flex: 1 }}><Text style={s.pickerOptionTitle}>Take Photo</Text></View>
+              <ChevronRight size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+
             <TouchableOpacity style={s.pickerOption} onPress={handlePickFromPhone}>
               <View style={s.pickerOptionIcon}><ImagePlus size={24} color={Colors.primary} /></View>
               <View style={{ flex: 1 }}><Text style={s.pickerOptionTitle}>Phone Gallery</Text></View>
               <ChevronRight size={18} color={Colors.textSecondary} />
             </TouchableOpacity>
-            <TouchableOpacity style={s.pickerOption} onPress={() => { setSourcePickerVisible(false); setGalleryBrowserVisible(true); }}>
-              <View style={s.pickerOptionIcon}><Folder size={24} color={Colors.primary} /></View>
-              <View style={{ flex: 1 }}><Text style={s.pickerOptionTitle}>Sewvee Gallery</Text></View>
-              <ChevronRight size={18} color={Colors.textSecondary} />
-            </TouchableOpacity>
+            
             <TouchableOpacity style={s.cancelPickerBtn} onPress={() => setSourcePickerVisible(false)}>
               <Text style={s.cancelPickerText}>Cancel</Text>
             </TouchableOpacity>
@@ -458,51 +484,11 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
         </View>
       </Modal>
 
-      {/* Sewvee Gallery Modal */}
-      <Modal visible={galleryBrowserVisible} animationType="slide">
-        <View style={s.galleryBrowserContainer}>
-          <View style={s.galleryBrowserHeader}>
-            <TouchableOpacity onPress={() => selectedFolder ? setSelectedFolder(null) : setGalleryBrowserVisible(false)} style={{ padding: 6 }}>
-              <ArrowLeft size={22} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            <Text style={s.galleryBrowserTitle}>{selectedFolder ? selectedFolder.name : 'My Gallery'}</Text>
-            <TouchableOpacity onPress={() => { setGalleryBrowserVisible(false); setSelectedFolder(null); }} style={{ padding: 6 }}>
-              <X size={22} color={Colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          {!selectedFolder ? (
-            <FlatList
-              data={galleryFolders}
-              keyExtractor={item => item.id}
-              contentContainerStyle={{ padding: 16 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={s.folderPickerRow} onPress={() => setSelectedFolder(item)}>
-                  <View style={s.folderPickerIcon}><Folder size={22} color={Colors.primary} fill="#EEF2FF" /></View>
-                  <View style={{ flex: 1 }}><Text style={s.folderPickerName}>{item.name}</Text></View>
-                  <ChevronRight size={18} color={Colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-            />
-          ) : (
-            <FlatList
-              data={selectedFolder.images}
-              keyExtractor={item => item.id}
-              numColumns={3}
-              contentContainerStyle={{ padding: 12 }}
-              columnWrapperStyle={{ gap: 6, marginBottom: 6 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={s.galleryThumb} onPress={() => handleGalleryImageSelect(item.url)}>
-                  <Image source={{ uri: item.url }} style={s.galleryThumbImage} />
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </View>
-      </Modal>
+      
 
       {/* Text input overlay */}
-      {addingText && (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.overlay}>
+      <Modal visible={addingText} transparent animationType="slide" onRequestClose={() => setAddingText(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setAddingText(false)} />
           <View style={s.inputCard}>
             <Text style={s.inputTitle}>Add Text Annotation</Text>
@@ -527,7 +513,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
             </View>
           </View>
         </KeyboardAvoidingView>
-      )}
+      </Modal>
 
     </Modal>
   );
