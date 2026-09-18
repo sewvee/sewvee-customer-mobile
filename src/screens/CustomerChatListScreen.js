@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, StatusBar, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Image, StatusBar, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadow } from '../constants/theme';
 import { Store, MessageSquarePlus } from 'lucide-react-native';
@@ -18,6 +18,8 @@ const CustomerChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
   const dispatch = useDispatch();
   const [threads, setThreads] = useState([]);
+  const [boutiques, setBoutiques] = useState([]);
+  const [isBoutiqueModalVisible, setIsBoutiqueModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [lastVisited, setLastVisited] = useState({});
   const [favorites, setFavorites] = useState({});
@@ -83,20 +85,8 @@ const CustomerChatListScreen = ({ navigation }) => {
 
       const activeBoutiqueIds = new Set(activeThreads.map(t => t.boutique_id));
       
-      const newBoutiqueThreads = allBoutiques
-        .filter(b => !activeBoutiqueIds.has(b.id))
-        .map(b => ({
-          boutique_id: b.id,
-          boutique_name: b.boutique_name || b.name,
-          profile_icon_url: b.profile_icon_url || null,
-          latest_message_text: 'Started a conversation',
-          latest_message_timestamp: null,
-          order_id: null,
-          order_number: ''
-        }));
-        
-      const allThreads = [...activeThreads, ...newBoutiqueThreads];
-      setThreads(allThreads);
+      setThreads(activeThreads);
+      setBoutiques(allBoutiques);
 
       // Compute unread count from lastVisited and update the tab badge
       // Works without FCM — badge reflects threads with messages newer than last visit
@@ -233,6 +223,42 @@ const CustomerChatListScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       )}
+      <Modal visible={isBoutiqueModalVisible} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A' }}>Select a Boutique</Text>
+              <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(false)} style={{ padding: 4 }}>
+                <Text style={{ fontSize: 24, color: '#64748B', fontFamily: 'Inter-Medium' }}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {boutiques.map(b => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center' }}
+                  onPress={() => {
+                    setIsBoutiqueModalVisible(false);
+                    navigation.navigate('CustomerChat', {
+                      boutiqueId: b.id,
+                      boutiqueName: b.boutique_name || b.name,
+                      boutiqueLogo: b.boutique_logo || b.logo_url
+                    });
+                  }}
+                >
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#5B43EE' }}>{(b.boutique_name || b.name || 'B').charAt(0)}</Text>
+                  </View>
+                  <Text style={{ fontSize: 16, fontFamily: 'Inter-Medium', color: '#1E293B' }}>{b.boutique_name || b.name}</Text>
+                </TouchableOpacity>
+              ))}
+              {boutiques.length === 0 && (
+                <Text style={{ fontSize: 14, fontFamily: 'Inter-Medium', color: '#64748B', textAlign: 'center', marginTop: 24 }}>No boutiques found.</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
