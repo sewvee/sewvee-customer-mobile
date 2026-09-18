@@ -307,6 +307,8 @@ const CustomerChatScreen = ({ route, navigation }) => {
           const outfits = order.outfits || order.items || [];
           if (outfits.length > 0) {
             setContextSelected(`${order.id}_${outfits[0].id || outfits[0].order_outfit_id}`);
+          } else {
+            setContextSelected(`${order.id}_0`);
           }
         }
       } else if (boutiqueOrders.length > 0) {
@@ -314,6 +316,8 @@ const CustomerChatScreen = ({ route, navigation }) => {
         const outfits = order.outfits || order.items || [];
         if (outfits.length > 0) {
           setContextSelected(`${order.id}_${outfits[0].id || outfits[0].order_outfit_id}`);
+        } else {
+          setContextSelected(`${order.id}_0`);
         }
       }
     }
