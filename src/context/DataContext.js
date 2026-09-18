@@ -194,7 +194,7 @@ export const DataProvider = ({ children }) => {
                             const order = loadedOrders[0];
                             const orderMobile = String(order.customerMobile || order.customer_mobile || order.phone || order.customer?.mobile || '').replace(/[^0-9]/g, '').slice(-10);
                             
-                            if (userPhone && orderMobile && userPhone !== orderMobile) {
+                            if (userPhone && (!orderMobile || userPhone !== orderMobile)) {
                                 console.log('DEBUG: Discarding leaked cached orders. Cache belongs to:', orderMobile, 'Current user:', userPhone);
                                 loadedOrders = [];
                                 AsyncStorage.removeItem(STORAGE_KEYS.ORDERS);
