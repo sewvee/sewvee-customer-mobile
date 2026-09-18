@@ -640,7 +640,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
             </Text>
             <TouchableOpacity 
               style={styles.newOrderButton}
-              onPress={() => { /* Navigate to new stitch order flow */ }}
+              onPress={() => navigation.navigate('NewStitchRequest', { selectedBoutique })}
             >
               <Text style={styles.newOrderButtonText}>New Stitch Order</Text>
             </TouchableOpacity>
