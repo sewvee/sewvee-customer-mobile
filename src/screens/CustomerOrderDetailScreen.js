@@ -705,6 +705,11 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Shirt size={14} color={Colors.primary} />
                             <Text style={styles.cardTitle}>REQUEST SUMMARY</Text>
+                            {isOrderCancelled && (
+                              <View style={{ marginLeft: 12, backgroundColor: '#FEF2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FECACA' }}>
+                                <Text style={{ fontSize: 10, fontFamily: 'Inter-Bold', color: '#EF4444' }}>CANCELLED</Text>
+                              </View>
+                            )}
                           </View>
                           {outfits.length > 1 && (
                             <TouchableOpacity
@@ -756,16 +761,18 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                         </View>
                       </View>
                       {/* Cancel Entire Request */}
-                      <TouchableOpacity
-                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 16, paddingVertical: 16, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1.5, borderColor: '#FECACA' }}
-                        onPress={() => {
-                          setCancelSheetMode('order');
-                          setCancelSheetVisible(true);
-                        }}
-                      >
-                        <X size={16} color="#EF4444" style={{ marginRight: 8 }} />
-                        <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: '#EF4444' }}>Cancel Entire Request</Text>
-                      </TouchableOpacity>
+                      {!isOrderCancelled && (
+                        <TouchableOpacity
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 16, paddingVertical: 16, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1.5, borderColor: '#FECACA' }}
+                          onPress={() => {
+                            setCancelSheetMode('order');
+                            setCancelSheetVisible(true);
+                          }}
+                        >
+                          <X size={16} color="#EF4444" style={{ marginRight: 8 }} />
+                          <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: '#EF4444' }}>Cancel Entire Request</Text>
+                        </TouchableOpacity>
+                      )}
                     </>
                   )}
 
