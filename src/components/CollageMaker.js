@@ -137,7 +137,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
       const firstSlot = Object.keys(images).find(k => images[k]);
       if (firstSlot) slotToCrop = firstSlot;
     }
-    if (!slotToCrop || !images[slotToCrop]) {
+    if (slotToCrop === null || slotToCrop === undefined || !images[slotToCrop]) {
       showToast("Please select or add a photo to crop first", "error");
       setIsProcessing(false);
       return;
