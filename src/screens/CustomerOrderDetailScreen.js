@@ -102,6 +102,49 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const [confirmOutfitId, setConfirmOutfitId] = useState(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // Cancel sheet state
+  const [cancelSheetVisible, setCancelSheetVisible] = useState(false);
+  const [cancelSheetMode, setCancelSheetMode] = useState('order'); // 'order' | 'outfit'
+  const [cancelTargetOutfitId, setCancelTargetOutfitId] = useState(null);
+  const [cancelTargetOutfitName, setCancelTargetOutfitName] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelConfirm = async () => {
+    setIsCancelling(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const authHeader = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      const headers = { Authorization: authHeader, 'Content-Type': 'application/json' };
+
+      if (cancelSheetMode === 'order') {
+        // Use the new dedicated /cancel endpoint — no hardcoded status_id
+        const res = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/cancel`, {
+          method: 'POST',
+          headers,
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.message || `Server error ${res.status}`);
+      } else {
+        // Cancel a single outfit
+        const res = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/cancel`, {
+          method: 'POST',
+          headers,
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.message || `Server error ${res.status}`);
+      }
+
+      setCancelSheetVisible(false);
+      await refreshData();
+      navigation.goBack();
+    } catch (e) {
+      setCancelSheetVisible(false);
+      Alert.alert('Error', e.message || 'Failed to cancel. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const [customerAddedRefPhotos, setCustomerAddedRefPhotos] = useState([]);
   const [galleryFolders, setGalleryFolders] = useState([]);
   
@@ -657,31 +700,10 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                           {outfits.length > 1 && (
                             <TouchableOpacity
                               onPress={() => {
-                                Alert.alert(
-                                  'Cancel Outfit',
-                                  `Are you sure you want to cancel ${outfitName}?`,
-                                  [
-                                    { text: 'No', style: 'cancel' },
-                                    {
-                                      text: 'Yes, Cancel',
-                                      style: 'destructive',
-                                      onPress: async () => {
-                                        try {
-                                          const token = await AsyncStorage.getItem('userToken');
-                                          const headers = { Authorization: token?.startsWith('Bearer ') ? token : `Bearer ${token}` };
-                                          await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${outfit.id}/status`, {
-                                            method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ status_id: 4 })
-                                          });
-                                          refreshData();
-                                          Alert.alert('Cancelled', 'Outfit has been cancelled successfully.');
-                                        } catch (e) {
-                                          Alert.alert('Error', 'Failed to cancel outfit.');
-                                        }
-                                      }
-                                    }
-                                  ]
-                                );
+                                setCancelTargetOutfitId(outfit.id);
+                                setCancelTargetOutfitName(outfitName);
+                                setCancelSheetMode('outfit');
+                                setCancelSheetVisible(true);
                               }}
                               style={{ borderWidth: 1.5, borderColor: '#EF4444', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}
                             >
@@ -728,31 +750,8 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                       <TouchableOpacity
                         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 16, paddingVertical: 16, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1.5, borderColor: '#FECACA' }}
                         onPress={() => {
-                          Alert.alert(
-                            'Cancel Entire Request',
-                            'Are you sure you want to cancel this entire enquiry? This action cannot be undone.',
-                            [
-                              { text: 'No', style: 'cancel' },
-                              {
-                                text: 'Yes, Cancel Request',
-                                style: 'destructive',
-                                onPress: async () => {
-                                  try {
-                                    const token = await AsyncStorage.getItem('userToken');
-                                    const headers = { Authorization: token?.startsWith('Bearer ') ? token : `Bearer ${token}` };
-                                    await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/status`, {
-                                      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ status_id: 4 })
-                                    });
-                                    refreshData();
-                                    navigation.goBack();
-                                  } catch (e) {
-                                    Alert.alert('Error', 'Failed to cancel request.');
-                                  }
-                                }
-                              }
-                            ]
-                          );
+                          setCancelSheetMode('order');
+                          setCancelSheetVisible(true);
                         }}
                       >
                         <X size={16} color="#EF4444" style={{ marginRight: 8 }} />
@@ -970,6 +969,55 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       />
 
       
+      {/* ── Cancel Sheet ── */}
+      <Modal visible={cancelSheetVisible} transparent animationType="slide" onRequestClose={() => !isCancelling && setCancelSheetVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => !isCancelling && setCancelSheetVisible(false)} />
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+              <X size={22} color="#EF4444" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 17, fontFamily: 'Inter-Bold', color: '#1E293B' }}>
+                {cancelSheetMode === 'order' ? 'Cancel Entire Request' : `Cancel ${cancelTargetOutfitName}`}
+              </Text>
+              <Text style={{ fontSize: 13, color: '#EF4444', fontFamily: 'Inter-Medium', marginTop: 2 }}>This cannot be undone</Text>
+            </View>
+          </View>
+
+          <Text style={{ fontSize: 14, fontFamily: 'Inter-Regular', color: '#475569', lineHeight: 22, marginBottom: 24 }}>
+            {cancelSheetMode === 'order'
+              ? 'Are you sure you want to cancel this entire enquiry? The boutique will be notified and all associated outfit requests will be marked as cancelled.'
+              : `Are you sure you want to cancel ${cancelTargetOutfitName}? You can still keep other outfits in this request active.`}
+          </Text>
+
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EF4444', paddingVertical: 14, borderRadius: 12, marginBottom: 12, opacity: isCancelling ? 0.7 : 1 }}
+            onPress={handleCancelConfirm}
+            disabled={isCancelling}
+          >
+            {isCancelling ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <>
+                <X size={16} color="#FFF" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 15 }}>
+                  {cancelSheetMode === 'order' ? 'Yes, Cancel Request' : 'Yes, Cancel Outfit'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: '#E2E8F0' }}
+            onPress={() => setCancelSheetVisible(false)}
+            disabled={isCancelling}
+          >
+            <Text style={{ color: '#475569', fontFamily: 'Inter-SemiBold', fontSize: 15 }}>No, Keep It</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       {/* ── Confirm Photos Drawer ── */}
       <Modal visible={confirmDrawerVisible} transparent animationType="slide" onRequestClose={() => setConfirmDrawerVisible(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setConfirmDrawerVisible(false)} />

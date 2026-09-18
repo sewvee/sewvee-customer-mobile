@@ -102,13 +102,16 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
   };
 
   const handleTakePhoto = () => {
+    const slotIndex = activeSlot; // capture before modal closes to avoid stale closure
     setSourcePickerVisible(false);
-    ImageCropPicker.openCamera({ cropping: false, mediaType: 'photo' })
-      .then(originalImage => {
-        setOriginalImages(prev => ({ ...prev, [activeSlot]: originalImage.path }));
-        setImages(prev => ({ ...prev, [activeSlot]: originalImage.path }));
-      })
-      .catch(e => console.log('camera cancelled', e));
+    setTimeout(() => {
+      ImageCropPicker.openCamera({ cropping: false, mediaType: 'photo' })
+        .then(originalImage => {
+          setOriginalImages(prev => ({ ...prev, [slotIndex]: originalImage.path }));
+          setImages(prev => ({ ...prev, [slotIndex]: originalImage.path }));
+        })
+        .catch(e => console.log('camera cancelled', e));
+    }, 350); // wait for source picker modal to fully close before launching camera
   };
   const handleGalleryImageSelect = (imgUri) => {
     setImages(prev => ({ ...prev, [activeSlot]: imgUri }));
@@ -126,7 +129,7 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
     if (isProcessing) return;
     setIsProcessing(true);
     let slotToCrop = activeSlot;
-    if (slotToCrop == null || !images[slotToCrop]) {
+    if (slotToCrop === null || slotToCrop === undefined || !images[slotToCrop]) {
       const firstSlot = Object.keys(images).find(k => images[k]);
       if (firstSlot) slotToCrop = firstSlot;
     }
