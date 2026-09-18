@@ -145,10 +145,10 @@ export const DataProvider = ({ children }) => {
             console.log('DEBUG: fetchOrders cleanPhone:', cleanPhone);
             if (!cleanPhone || cleanPhone.length < 10) return null;
 
-            console.log(`DEBUG: fetch URL: ${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
+            console.log(`DEBUG: fetch URL: ${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=500`);
             let token = userToken;
             token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
-            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100&_t=${Date.now()}`, {
+            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=500&_t=${Date.now()}`, {
                 headers: {
                     'Authorization': token,
                     'Cache-Control': 'no-cache',

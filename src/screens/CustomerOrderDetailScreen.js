@@ -82,7 +82,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const { user } = useAuth();
-  const { orders, updateOrder, refreshData } = useData();
+  const { orders, updateOrder, refreshData, loading: dataLoading } = useData();
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
@@ -178,6 +178,12 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   }, [orders, orderId]);
 
   useEffect(() => {
+    if (!order) {
+      refreshData();
+    }
+  }, [order, orderId]);
+
+  useEffect(() => {
     if (order) {
       setCourierName(order.courierService || '');
       setTrackingId(order.courierTrackingId || '');
@@ -187,10 +193,16 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   if (!order) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Order not found</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>Back to Dashboard</Text>
-        </TouchableOpacity>
+        {dataLoading ? (
+           <ActivityIndicator size="large" color="#5B43EE" />
+        ) : (
+          <>
+            <Text style={styles.errorText}>Order not found</Text>
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Text style={styles.backBtnText}>Back to Dashboard</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     );
   }

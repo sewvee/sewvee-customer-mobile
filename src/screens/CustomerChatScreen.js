@@ -92,7 +92,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
   const { boutiqueId, boutiqueName: initBoutiqueName, orderId: passedOrderId, orderNumber } = route.params;
   const { user } = useAuth();
-  const { orders } = useData();
+  const { orders, refreshData, loading: dataLoading } = useData();
   const dispatch = useDispatch();
   const { showToast } = useToast();
 
@@ -303,6 +303,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
     if (!contextSelected) {
       if (passedOrderId) {
         const order = orders.find(o => o.id?.toString() === passedOrderId?.toString());
+        
         if (order) {
           const outfits = order.outfits || order.items || [];
           if (outfits.length > 0) {
@@ -311,8 +312,13 @@ const CustomerChatScreen = ({ route, navigation }) => {
             setContextSelected(`${order.id}_0`);
           }
         } else {
-          // If the order isn't in the local context yet, allow chatting anyway
-          setContextSelected(`${passedOrderId}_0`);
+          // Order missing from context
+          if (!dataLoading) {
+             refreshData(); // Fetch it
+             // Fallback immediately so UI doesn't block, if it loads, the dropdown will update if they reopen it, 
+             // but actually it's better to just set it so messages load.
+             setContextSelected(`${passedOrderId}_0`);
+          }
         }
       } else if (boutiqueOrders.length > 0) {
         const order = boutiqueOrders[0];

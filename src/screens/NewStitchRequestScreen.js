@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, Image, Alert, Platform, KeyboardAvoidingView, Modal,
+  TextInput, Image, Alert, Platform, KeyboardAvoidingView, Modal, Keyboard,
   StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,15 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
   const companyId = selectedBoutique?.id || user?.company_id || 1;
   const boutiqueName = selectedBoutique?.name || 'Sewvee';
 
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -203,7 +212,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
         for (const image of outfit.images) {
           const formData = new FormData();
           formData.append('file', {
-            uri: image.uri,
+            uri: Platform.OS === 'ios' ? image.uri.replace('file://', '') : image.uri,
             type: image.type || 'image/jpeg',
             name: image.fileName || 'photo.jpg'
           });
@@ -216,7 +225,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
                 'Content-Type': 'multipart/form-data'
               }
             });
-            const url = uploadRes.data?.file_url || uploadRes.data?.data?.file_url || uploadRes.data?.url;
+            const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
             if (url) uploadedUrls.push(url);
           } catch (err) {
             console.warn('Failed to upload image', err);
@@ -226,21 +235,21 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
         if (outfit.audioUrl) {
           const formData = new FormData();
           formData.append('file', {
-            uri: outfit.audioUrl,
+            uri: Platform.OS === 'ios' ? outfit.audioUrl.replace('file://', '') : outfit.audioUrl,
             type: 'audio/wav',
             name: 'voice_note.wav'
           });
           formData.append('key_name', 'order_audios');
           try {
             const uploadRes = await axios.post(URL_UPLOAD, formData, { headers: { Authorization: formattedToken, 'Content-Type': 'multipart/form-data' }});
-            const url = uploadRes.data?.file_url || uploadRes.data?.data?.file_url || uploadRes.data?.url;
+            const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
             if (url) uploadedUrls.push(url);
           } catch (err) { console.warn('Failed to upload audio', err); }
         }
         if (outfit.collageUrl) {
           const formData = new FormData();
           formData.append('file', {
-            uri: outfit.collageUrl,
+            uri: Platform.OS === 'ios' ? outfit.collageUrl.replace('file://', '') : outfit.collageUrl,
             type: 'image/jpeg',
             name: 'collage.jpg'
           });
@@ -253,7 +262,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
                 'Content-Type': 'multipart/form-data'
               }
             });
-            const url = uploadRes.data?.file_url || uploadRes.data?.data?.file_url || uploadRes.data?.url;
+            const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
             if (url) uploadedUrls.push(url);
           } catch (err) {
             console.warn('Failed to upload collage', err);
@@ -466,10 +475,26 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
           visible={!!editingOutfitId}
           animationType="slide"
           transparent={true}
-          onRequestClose={() => setEditingOutfitId(null)}
+          onRequestClose={() => {
+            if (isKeyboardVisible) {
+              Keyboard.dismiss();
+            } else {
+              setEditingOutfitId(null);
+            }
+          }}
         >
           <View style={styles.modalOverlay}>
-            <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setEditingOutfitId(null)} />
+            <TouchableOpacity 
+              style={styles.modalBackdrop} 
+              activeOpacity={1} 
+              onPress={() => {
+                if (isKeyboardVisible) {
+                  Keyboard.dismiss();
+                } else {
+                  setEditingOutfitId(null);
+                }
+              }} 
+            />
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalContainer}>
               {(() => {
                 const activeOutfit = outfits.find(o => o.id === editingOutfitId);
