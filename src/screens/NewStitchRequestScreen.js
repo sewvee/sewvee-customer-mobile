@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus, Minus, Camera, ImageIcon, Calendar, X, ChevronRight, ChevronDown, Mic, Image as ImageIconLucide, CheckCircle2, Square, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { useToast } from '../context/ToastContext';
 import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
@@ -22,6 +23,7 @@ const MEASUREMENT_OPTIONS = ['Use Previous Measurements', 'I will provide later'
 const NewStitchRequestScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { refreshData } = useData();
   
   // Accept selectedBoutique from route params, fallback to user company_id or 1
   const selectedBoutique = route.params?.selectedBoutique;
@@ -290,6 +292,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       });
       
       showToast('Stitch Request Sent Successfully!', 'success');
+      await refreshData();
       navigation.navigate('Main', { screen: 'CustomerOrders' });
     } catch (error) {
       console.error(error);
