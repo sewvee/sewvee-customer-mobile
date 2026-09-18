@@ -148,9 +148,11 @@ export const DataProvider = ({ children }) => {
             console.log(`DEBUG: fetch URL: ${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
             let token = userToken;
             token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
-            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`, {
+            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100&_t=${Date.now()}`, {
                 headers: {
-                    'Authorization': token
+                    'Authorization': token,
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
                 }
             });
             console.log('DEBUG: fetch status:', response.status);
