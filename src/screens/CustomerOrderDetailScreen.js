@@ -15,7 +15,7 @@ import {
   Modal,
   Linking,
 } from 'react-native';
-import { Mic, CheckCircle2, ChevronUp, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Spacing, Shadow } from '../constants/theme';
 import { 
@@ -47,6 +47,9 @@ import {
   Type,
   X,
   Check,
+  Mic,
+  CheckCircle2,
+  ChevronUp,
 } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import ImageCropPicker from 'react-native-image-crop-picker';
