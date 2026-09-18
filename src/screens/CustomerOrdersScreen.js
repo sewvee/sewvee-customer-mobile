@@ -544,21 +544,23 @@ const CustomerOrdersScreen = ({ navigation }) => {
             />
           ) : (
             <View style={styles.emptyContainer}>
-              <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
-                <Package color="#94A3B8" size={40} />
+              <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
+                {selectedTab === 'stitching' ? <Scissors color="#4F46E5" size={40} /> : <ShoppingBag color="#4F46E5" size={40} />}
               </View>
-              <Text style={styles.emptyTitle}>Welcome 👋</Text>
+              <Text style={styles.emptyTitle}>{selectedTab === 'stitching' ? 'No Stitching Orders' : 'No Readymade Orders'}</Text>
               <Text style={styles.emptySubtitle}>
-                Start your first stitching order.
+                {selectedTab === 'stitching' ? "You haven't placed any custom stitching orders yet." : "Your readymade fashion purchases will appear here."}
               </Text>
-              <TouchableOpacity
-                style={styles.newOrderButton}
-                onPress={() => {
-                  navigation.navigate('NewStitchRequest');
-                }}
-              >
-                <Text style={styles.newOrderButtonText}>New Stitch Order</Text>
-              </TouchableOpacity>
+              {selectedTab === 'stitching' && (
+                <TouchableOpacity
+                  style={styles.newOrderButton}
+                  onPress={() => {
+                    navigation.navigate('NewStitchRequest');
+                  }}
+                >
+                  <Text style={styles.newOrderButtonText}>New Stitch Order</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </ScrollView>

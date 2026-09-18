@@ -437,11 +437,13 @@ const CustomerShopScreen = () => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <ShoppingBag size={48} color={Colors.textSecondary} />
-              <Text style={styles.emptyTitle}>Coming Soon</Text>
-              <Text style={styles.emptySubtitle}>
-                {selectedBoutique ? 'This boutique has not added any products yet.' : 'Please select a boutique first.'}
+            <View style={[styles.emptyContainer, { backgroundColor: Colors.white, borderRadius: 20, margin: 16, padding: 32, ...Shadow.subtle }]}>
+              <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
+                <ShoppingBag color="#4F46E5" size={40} />
+              </View>
+              <Text style={[styles.emptyTitle, { marginTop: 0, fontSize: 18 }]}>{selectedBoutique ? 'No Products Found' : 'Select a Boutique'}</Text>
+              <Text style={[styles.emptySubtitle, { paddingHorizontal: 0 }]}>
+                {selectedBoutique ? "This boutique hasn't added any products to their shop yet." : "Please select a boutique to view their readymade collections."}
               </Text>
             </View>
           }
