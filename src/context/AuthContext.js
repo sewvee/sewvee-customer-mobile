@@ -97,6 +97,13 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (token, onboarded = true) => {
         const tokenToSave = token || 'demo';
+        // Clear any previous session's cached data so a new user never sees stale orders
+        await AsyncStorage.multiRemove([
+            STORAGE_KEYS.ORDERS,
+            STORAGE_KEYS.CUSTOMERS,
+            STORAGE_KEYS.PAYMENTS,
+            STORAGE_KEYS.DATA_SEED_VERSION,
+        ]);
         await Promise.all([
             AsyncStorage.setItem(STORAGE_KEYS.TOKEN, tokenToSave),
             AsyncStorage.setItem(STORAGE_KEYS.ONBOARDED, String(onboarded))
