@@ -310,6 +310,9 @@ const CustomerChatScreen = ({ route, navigation }) => {
           } else {
             setContextSelected(`${order.id}_0`);
           }
+        } else {
+          // If the order isn't in the local context yet, allow chatting anyway
+          setContextSelected(`${passedOrderId}_0`);
         }
       } else if (boutiqueOrders.length > 0) {
         const order = boutiqueOrders[0];
@@ -1095,6 +1098,13 @@ const CustomerChatScreen = ({ route, navigation }) => {
             </View>
           ) : (
             <View style={{ flex: 1, flexDirection: 'column' }}>
+              {!contextSelected && (
+                <View style={{ backgroundColor: '#FEF2F2', padding: 10, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#FECACA' }}>
+                  <Text style={{ fontSize: 12, color: '#EF4444', textAlign: 'center', fontFamily: 'Inter-Medium' }}>
+                    You must place an order or inquiry with this boutique to start chatting.
+                  </Text>
+                </View>
+              )}
               {attachedImage && (
                 <View style={{ flexDirection: 'row', marginBottom: 8, position: 'relative', alignSelf: 'flex-start', paddingLeft: 4 }}>
                   <Image source={{ uri: attachedImage }} style={{ width: 60, height: 60, borderRadius: 8, backgroundColor: '#E2E8F0' }} />
@@ -1116,11 +1126,12 @@ const CustomerChatScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
                 <TextInput
                   style={styles.input}
-                  placeholder="Type a message..."
+                  placeholder={contextSelected ? "Type a message..." : "Chat disabled"}
                   placeholderTextColor="#94A3B8"
                   value={inputText}
                   onChangeText={setInputText}
                   multiline
+                  editable={!!contextSelected && !sending}
                 />
                 {inputText.trim() || attachedImage ? (
                   <TouchableOpacity 
