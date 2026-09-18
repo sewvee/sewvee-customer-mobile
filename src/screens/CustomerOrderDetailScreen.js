@@ -14,7 +14,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Mic, CheckCircle2, ChevronUp, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Spacing, Shadow } from '../constants/theme';
 import { 
@@ -93,6 +93,8 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const [editingPhoto, setEditingPhoto] = useState(null); // { file_url, outfitId }
   const [editDrawerVisible, setEditDrawerVisible] = useState(false);
   const [activeOutfitIndex, setActiveOutfitIndex] = useState(0);
+  const [expandedOutfits, setExpandedOutfits] = useState({});
+  const toggleOutfit = (id) => setExpandedOutfits(prev => ({ ...prev, [id]: !prev[id] }));
 
   const [confirmDrawerVisible, setConfirmDrawerVisible] = useState(false);
   const [confirmOutfitId, setConfirmOutfitId] = useState(null);
@@ -407,7 +409,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
               <ArrowLeft size={22} color={Colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.navbarTitle}>
-              {order.order_type === 'SALE_ORDER' ? 'Invoice' : 'Order'} #{order.billNo || order.id}
+              {order.order_type === 'SALE_ORDER' ? 'Invoice ' : ((order.billNo || '').startsWith('ENQ') || order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST') ? '' : 'Order '}#{order.billNo || order.id}
             </Text>
             <View style={{ width: 22 }} />
           </View>
@@ -623,9 +625,97 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
               const outfitName = outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`;
 
               return (
-                <View key={outfit.id || index} style={styles.outfitBlock}>
+                              const isEnquiry = order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST';
+              const isConfigured = !isEnquiry;
+              const isExpanded = expandedOutfits[outfit.id || index];
 
-              {/* OUTFIT DETAILS Card */}
+              let cat = outfit.name || 'Outfit';
+              let desc = '-';
+              let meas = '-';
+              let expDate = '-';
+              if (outfit.customer_notes) {
+                const lines = outfit.customer_notes.split('\n');
+                lines.forEach(l => {
+                  if (l.startsWith('Category:')) cat = l.replace('Category:', '').trim();
+                  else if (l.startsWith('Description:')) desc = l.replace('Description:', '').trim();
+                  else if (l.startsWith('Measurement:')) meas = l.replace('Measurement:', '').trim();
+                  else if (l.startsWith('Expected Date:')) expDate = l.replace('Expected Date:', '').trim();
+                });
+              }
+
+              return (
+                <View key={outfit.id || index} style={styles.outfitBlock}>
+                  {isEnquiry && (
+                    <>
+                      <View style={styles.card}>
+                        <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Shirt size={14} color={Colors.primary} />
+                            <Text style={styles.cardTitle}>REQUEST SUMMARY</Text>
+                          </View>
+                        </View>
+                        <View style={{ padding: 16 }}>
+                          <View style={{ marginBottom: 16 }}><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>CATEGORY</Text><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium' }}>{cat}</Text></View>
+                          <View style={{ marginBottom: 16 }}><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>DESCRIPTION / NOTES</Text><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium' }}>{desc}</Text></View>
+                          <View style={{ marginBottom: 16 }}><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>MEASUREMENT</Text><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium' }}>{meas}</Text></View>
+                          <View><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>EXPECTED DELIVERY</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}><Calendar size={14} color={Colors.primary} /><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium', marginLeft: 6 }}>{expDate}</Text></View>
+                          </View>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.card}>
+                        <View style={styles.cardHeader}>
+                          <ImageIcon size={14} color={Colors.primary} />
+                          <Text style={styles.cardTitle}>REFERENCE PHOTOS</Text>
+                        </View>
+                        <View style={{ padding: 16, flexDirection: 'row', flexWrap: 'wrap' }}>
+                          {outfit.photos && outfit.photos.length > 0 ? outfit.photos.map((p, i) => {
+                             const url = p.file_url || p.url || '';
+                             const isAudio = url.toLowerCase().endsWith('.wav') || url.toLowerCase().endsWith('.mp3') || url.toLowerCase().endsWith('.m4a');
+                             if (isAudio) {
+                               return (
+                                 <TouchableOpacity key={i} onPress={() => Linking.openURL(resolveImageUrl(url))} style={{ width: 100, height: 100, borderRadius: 8, marginRight: 8, marginBottom: 8, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#C7D2FE' }}>
+                                   <Mic size={32} color="#4F46E5" />
+                                   <Text style={{ fontSize: 10, color: '#4F46E5', marginTop: 8, fontFamily: 'Inter-Medium' }}>Play Audio</Text>
+                                 </TouchableOpacity>
+                               );
+                             }
+                             return (
+                               <TouchableOpacity key={i} onPress={() => Linking.openURL(resolveImageUrl(url))}>
+                                 <Image source={{ uri: resolveImageUrl(url) }} style={{ width: 100, height: 100, borderRadius: 8, marginRight: 8, marginBottom: 8, backgroundColor: '#F1F5F9' }} />
+                               </TouchableOpacity>
+                             );
+                          }) : <Text style={{ fontSize: 13, color: '#94A3B8', fontStyle: 'italic' }}>No reference photos provided.</Text>}
+                        </View>
+                      </View>
+                    </>
+                  )}
+
+                  {isConfigured && (
+                    <TouchableOpacity 
+                      activeOpacity={0.7} 
+                      onPress={() => toggleOutfit(outfit.id || index)}
+                      style={{ backgroundColor: '#ECFDF5', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#10B981', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#D1FAE5', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                          <CheckCircle2 size={20} color="#059669" />
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#065F46', marginBottom: 2 }}>{outfitName}</Text>
+                          <Text style={{ fontSize: 13, fontFamily: 'Inter-Regular', color: '#059669' }}>Configured • Tap to {isExpanded ? 'hide' : 'edit'}</Text>
+                        </View>
+                      </View>
+                      <View>
+                        {isExpanded ? <ChevronUp size={20} color="#059669" /> : <ChevronRight size={20} color="#059669" />}
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
+                  {isConfigured && isExpanded && (
+                    <>
+{/* OUTFIT DETAILS Card */}
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
                   <Shirt size={14} color={Colors.primary} />
@@ -741,8 +831,10 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                               >
                                 <Text style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}>X</Text>
                               </TouchableOpacity>
-                            </View>
-                          ); })}
+                    </>
+                  )}
+                </View>
+              ); })}
                         </ScrollView>
                       </View>
                     )}
