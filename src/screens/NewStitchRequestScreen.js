@@ -108,7 +108,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
               category: cat,
               name: `${cat}${count > 1 ? ` ${i + 1}` : ''}`,
               description: '',
-              measurement: 'Use Previous Measurements',
+              measurement: '',
               images: []
             });
           }
@@ -117,6 +117,12 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       setOutfits(newOutfits);
       setStep(2);
     } else if (step === 2) {
+      const missingMeas = outfits.find(o => !o.measurement);
+      if (missingMeas) {
+        showToast(`Please select a measurement option for ${missingMeas.name}`, 'error');
+        setEditingOutfitId(missingMeas.id); // auto-open the drawer for them
+        return;
+      }
       setStep(3);
     }
   };
