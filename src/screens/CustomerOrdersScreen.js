@@ -544,11 +544,9 @@ const CustomerOrdersScreen = ({ navigation }) => {
             />
           ) : (
             <View style={styles.emptyContainer}>
-              <Image
-                source={require('../assets/lightBlue.png')}
-                style={styles.emptyImg}
-                resizeMode="contain"
-              />
+              <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
+                <Package color="#94A3B8" size={40} />
+              </View>
               <Text style={styles.emptyTitle}>Welcome 👋</Text>
               <Text style={styles.emptySubtitle}>
                 Start your first stitching order.

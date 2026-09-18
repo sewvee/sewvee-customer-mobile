@@ -65,7 +65,7 @@ const CustomerChatListScreen = ({ navigation }) => {
           params: { phone: user.mobile, _t: Date.now() }, 
           headers: { Authorization: token } 
         }).catch(() => null),
-        axios.get(`${BASE_URL}customer-portal/boutiques`, { 
+        axios.get(`${BASE_URL}customer-portal/all-boutiques`, { 
           params: { _t: Date.now() },
           headers: { Authorization: token } 
         }).catch(() => null)

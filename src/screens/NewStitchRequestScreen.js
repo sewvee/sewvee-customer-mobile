@@ -26,7 +26,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
   // Accept selectedBoutique from route params, fallback to user company_id or 1
   const selectedBoutique = route.params?.selectedBoutique;
   const companyId = selectedBoutique?.id || user?.company_id || 1;
-  const boutiqueName = selectedBoutique?.name || 'Sewvee Originals';
+  const boutiqueName = selectedBoutique?.name || 'Sewvee';
 
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);

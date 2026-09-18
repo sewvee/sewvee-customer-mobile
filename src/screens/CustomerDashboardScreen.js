@@ -61,18 +61,21 @@ const CustomerDashboardScreen = ({ navigation }) => {
       }
     }, [])
   );
-  const { user, logout } = useAuth();
+  const { user, userToken, logout } = useAuth();
   const { orders, refreshData, loading } = useData();
   const [refreshing, setRefreshing] = useState(false);
   
   const [shopItems, setShopItems] = useState([]);
   const [loadingShop, setLoadingShop] = useState(false);
+  const [availableBoutiques, setAvailableBoutiques] = useState([]);
   const [isBoutiqueModalVisible, setIsBoutiqueModalVisible] = useState(false);
   const [selectedBoutique, setSelectedBoutique] = useState(null);
   const [banners, setBanners] = useState([]);
   const [stripIndex, setStripIndex] = useState(0);
   const bannerListRef = useRef(null);
   const [bannerIndex, setBannerIndex] = useState(0);
+
+
 
   // Fetch banners from marketing API
   useEffect(() => {
@@ -137,56 +140,53 @@ const CustomerDashboardScreen = ({ navigation }) => {
     return () => clearInterval(interval);
   }, [stripBanners.length]);
 
-  useEffect(() => {
-    fetchInitialShopItems();
-  }, [user, orders]);
-
-  const availableBoutiques = React.useMemo(() => {
-    const boutiques = [];
-    const ids = new Set();
-    if (orders) {
-      orders.forEach(o => {
-        const bId = o.boutiqueId || o.company_id;
-        if (bId && !ids.has(bId)) {
-          ids.add(bId);
-          boutiques.push({ id: bId, name: o.boutiqueName || 'Unknown Boutique' });
-        }
-      });
-    }
-    return boutiques;
-  }, [orders]);
-
-  useEffect(() => {
-    if (availableBoutiques.length > 0 && !selectedBoutique) {
-      setSelectedBoutique(availableBoutiques[0]);
-      fetchShopItems(availableBoutiques[0].id);
-    }
-  }, [availableBoutiques]);
-
-  const fetchInitialShopItems = async () => {
+  const fetchBoutiquesAndShopItems = async () => {
     try {
-      if (orders && orders.length > 0) {
-        const boutiqueId = orders[0].boutiqueId || orders[0].company_id;
-        if (boutiqueId) {
-          await fetchShopItems(boutiqueId);
-          return;
-        }
-      }
-      const res = await fetch(`${BASE_URL}marketing/customer/store/catalogue`);
+      let token = userToken || '';
+      token = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      const res = await fetch(`${BASE_URL}customer-portal/all-boutiques?_t=${Date.now()}`, {
+        headers: { Authorization: token }
+      });
       const data = await res.json();
-      if (data) {
-        const items = data.data || data.products || (Array.isArray(data) ? data : []);
-        setShopItems(items.slice(0, 5));
+      let boutiques = [];
+      if (data && data.success && Array.isArray(data.data)) {
+        boutiques = data.data.map(b => ({ id: b.id, name: b.boutique_name || b.name, ...b }));
+      }
+      
+      setAvailableBoutiques(boutiques);
+
+      if (!selectedBoutique && boutiques.length > 0) {
+        setIsBoutiqueModalVisible(true);
+        setSelectedBoutique(boutiques[0]);
+        fetchShopItems(boutiques[0]);
+      } else if (boutiques.length === 0) {
+        setIsBoutiqueModalVisible(true);
       }
     } catch (err) {
-      console.warn('Failed to fetch initial shop items', err.message);
+      console.warn('Failed to fetch boutiques', err.message);
+      setAvailableBoutiques([]);
     }
   };
 
-  const fetchShopItems = async (companyId) => {
+  useEffect(() => {
+    if (userToken) {
+      fetchBoutiquesAndShopItems();
+    }
+  }, [user, userToken]);
+
+  const fetchShopItems = async (boutique) => {
     try {
       setLoadingShop(true);
-      const res = await fetch(`${URL_CUSTOMER_PORTAL_SHOP}?companyId=${companyId}`);
+      let url;
+      if (boutique) {
+        url = `${URL_CUSTOMER_PORTAL_SHOP}?companyId=${boutique.id}`;
+      } else {
+        setShopItems([]);
+        setLoadingShop(false);
+        return;
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
       if (data) {
         const items = data.data || data.products || (Array.isArray(data) ? data : []);
@@ -578,7 +578,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
         <Text style={[styles.sectionTitle, {marginTop: 24, marginBottom: 12}]}>Quick Actions</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, marginHorizontal: -4, marginTop: 4 }}>
           <QuickActionCard
-            title="Stitching"
+            title="Stitching Order"
             subtitle="Online stitching"
             badge="Online Order"
             icon={<Scissors size={24} color={'#4F46E5'} />}
@@ -631,11 +631,9 @@ const CustomerDashboardScreen = ({ navigation }) => {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Image
-              source={require('../assets/lightBlue.png')}
-              style={styles.emptyImg}
-              resizeMode="contain"
-            />
+            <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
+              <Package color="#94A3B8" size={40} />
+            </View>
             <Text style={styles.emptyTitle}>Welcome 👋</Text>
             <Text style={styles.emptySubtitle}>
               Start your first stitching order.
@@ -731,7 +729,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
                   style={{padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}
                   onPress={() => {
                     setSelectedBoutique(b);
-                    fetchShopItems(b.id);
+                    fetchShopItems(b);
                     setIsBoutiqueModalVisible(false);
                   }}
                 >

@@ -132,6 +132,9 @@ export const AuthProvider = ({ children }) => {
                 STORAGE_KEYS.COMPANY,
                 STORAGE_KEYS.ONBOARDED,
                 STORAGE_KEYS.ORDER_DRAFT,
+                STORAGE_KEYS.ORDERS,
+                STORAGE_KEYS.CUSTOMERS,
+                STORAGE_KEYS.PAYMENTS,
                 'sewvee_user_profile',
             ]);
             

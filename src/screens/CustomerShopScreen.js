@@ -41,7 +41,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CustomerShopScreen = () => {
   const { showToast } = useToast();
   const navigation = useNavigation();
-  const { user, getAuthToken } = useAuth();
+  const { user, userToken, getAuthToken } = useAuth();
   const { orders, refreshData } = useData();
 
   const [selectedBoutique, setSelectedBoutique] = useState(null);
@@ -72,30 +72,35 @@ const CustomerShopScreen = () => {
     phone: user?.mobile || user?.phone || ''
   });
 
-  const SEWVEE_DIRECT = {
-    id: 'sewvee_direct',
-    name: 'Sewvee Originals',
-    isSewveeDirect: true,
+  const fetchBoutiquesAndShopItems = async () => {
+    try {
+      let token = userToken || '';
+      token = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      const res = await fetch(`${BASE_URL}customer-portal/all-boutiques?_t=${Date.now()}`, {
+        headers: { Authorization: token }
+      });
+      const data = await res.json();
+      let boutiques = [];
+      if (data && data.success && Array.isArray(data.data)) {
+        boutiques = data.data.map(b => ({ id: b.id, name: b.boutique_name || b.name, mobile: b.phone || '', ...b }));
+      }
+      
+      setBoutique(boutiques);
+
+      if (!selectedBoutique && boutiques.length > 0) {
+        setSelectedBoutique(boutiques[0]);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch boutiques in Shop', err.message);
+      setBoutique([]);
+    }
   };
 
   useEffect(() => {
-    if (orders && orders.length > 0) {
-      const uniqueBoutique = [];
-      const map = new Map();
-      orders.forEach(o => {
-        if (o.boutiqueId && !map.has(o.boutiqueId)) {
-          map.set(o.boutiqueId, true);
-          uniqueBoutique.push({ id: o.boutiqueId, name: o.boutiqueName, mobile: o.boutiqueMobile || '' });
-        }
-      });
-      setBoutique(uniqueBoutique);
-      if (uniqueBoutique.length > 0 && !selectedBoutique) {
-        setSelectedBoutique(SEWVEE_DIRECT);
-      }
-    } else if (!selectedBoutique) {
-      setSelectedBoutique(SEWVEE_DIRECT);
+    if (userToken) {
+      fetchBoutiquesAndShopItems();
     }
-  }, [orders]);
+  }, [userToken]);
 
   useEffect(() => {
     fetchProducts(selectedBoutique);
@@ -105,10 +110,8 @@ const CustomerShopScreen = () => {
     try {
       setLoadingProducts(true);
       let url;
-      if (boutique && !boutique.isSewveeDirect) {
+      if (boutique) {
         url = `${URL_CUSTOMER_PORTAL_SHOP}?companyId=${boutique.id}`;
-      } else if (boutique && boutique.isSewveeDirect) {
-        url = `${BASE_URL}marketing/customer/store/catalogue`;
       } else {
         setProducts([]);
         setLoadingProducts(false);
@@ -460,23 +463,6 @@ const CustomerShopScreen = () => {
             </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}>
               {/* Redesigned Boutique List */}
-              <TouchableOpacity
-                style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-                onPress={() => {
-                  setSelectedBoutique(SEWVEE_DIRECT);
-                  setIsBoutiqueModalVisible(false);
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: selectedBoutique?.id === 'sewvee_direct' ? '#EEF2FF' : '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    <Sparkles size={18} color={selectedBoutique?.id === 'sewvee_direct' ? '#4F46E5' : '#64748B'} />
-                  </View>
-                  <Text style={{ fontSize: 16, fontFamily: selectedBoutique?.id === 'sewvee_direct' ? 'Inter-Bold' : 'Inter-Medium', color: selectedBoutique?.id === 'sewvee_direct' ? '#4F46E5' : '#1E293B' }}>
-                    Sewvee Originals
-                  </Text>
-                </View>
-                {selectedBoutique?.id === 'sewvee_direct' && <Check size={20} color="#4F46E5" />}
-              </TouchableOpacity>
 
               {boutiques.map(b => (
                 <TouchableOpacity
