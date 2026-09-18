@@ -8,6 +8,7 @@ import { Colors, Shadow } from '../constants/theme';
 import { Camera, X, ImagePlus, Download, Share2, Check, Folder, ChevronRight, ArrowLeft, Crop, Trash2, PenTool, Type, RotateCcw, Minus, Plus } from 'lucide-react-native';
 import ViewShot from 'react-native-view-shot';
 import ImageCropPicker from 'react-native-image-crop-picker';
+import * as ImagePicker from 'react-native-image-picker';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import Svg, { Path } from 'react-native-svg';
@@ -102,16 +103,19 @@ const CollageMaker = ({ visible, onClose, onSaveReference, galleryFolders = [], 
   };
 
   const handleTakePhoto = () => {
-    const slotIndex = activeSlot; // capture before modal closes to avoid stale closure
+    const slotIndex = activeSlot;
     setSourcePickerVisible(false);
     setTimeout(() => {
-      ImageCropPicker.openCamera({ cropping: false, mediaType: 'photo' })
-        .then(originalImage => {
-          setOriginalImages(prev => ({ ...prev, [slotIndex]: originalImage.path }));
-          setImages(prev => ({ ...prev, [slotIndex]: originalImage.path }));
-        })
-        .catch(e => console.log('camera cancelled', e));
-    }, 350); // wait for source picker modal to fully close before launching camera
+      ImagePicker.launchCamera({ mediaType: 'photo', quality: 0.8 }, (res) => {
+        if (res.didCancel || res.errorCode || !res.assets || res.assets.length === 0) {
+          console.log('camera cancelled or failed', res.errorMessage);
+          return;
+        }
+        const imgUri = res.assets[0].uri;
+        setOriginalImages(prev => ({ ...prev, [slotIndex]: imgUri }));
+        setImages(prev => ({ ...prev, [slotIndex]: imgUri }));
+      });
+    }, 400);
   };
   const handleGalleryImageSelect = (imgUri) => {
     setImages(prev => ({ ...prev, [activeSlot]: imgUri }));
