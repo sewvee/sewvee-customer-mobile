@@ -13,6 +13,7 @@ import {
   Platform,
   Alert,
   Modal,
+  Linking,
 } from 'react-native';
 import { Mic, CheckCircle2, ChevronUp, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -37,6 +38,7 @@ import {
   FileText,
   Download,
   ChevronDown,
+  ChevronRight,
   PenTool,
   ClipboardList,
   Plus,
@@ -597,7 +599,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           </View>
         ) : (
           <View>
-            {outfits.length > 1 && (
+            {(order.order_type === 'STITCHING_REQUEST' || order.order_type === 'ENQUIRY' || outfits.length > 1) && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.outfitTabsContainer} contentContainerStyle={styles.outfitTabsContent}>
                 {outfits.map((o, idx) => (
                   <TouchableOpacity 
@@ -606,7 +608,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                     onPress={() => setActiveOutfitIndex(idx)}
                   >
                     <Text style={[styles.outfitTabItemText, activeOutfitIndex === idx && styles.activeOutfitTabItemText]}>
-                      {o.name ? o.name.toUpperCase() : `OUTFIT ${idx + 1}`}
+                      {o.name ? `Outfit ${idx + 1}: ${o.name}` : `Outfit ${idx + 1}`}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -632,8 +634,8 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
               let desc = '-';
               let meas = '-';
               let expDate = '-';
-              if (outfit.customer_notes) {
-                const lines = outfit.customer_notes.split('\n');
+              if (outfit.notes) {
+                const lines = outfit.notes.split('\n');
                 lines.forEach(l => {
                   if (l.startsWith('Category:')) cat = l.replace('Category:', '').trim();
                   else if (l.startsWith('Description:')) desc = l.replace('Description:', '').trim();
@@ -652,6 +654,40 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                             <Shirt size={14} color={Colors.primary} />
                             <Text style={styles.cardTitle}>REQUEST SUMMARY</Text>
                           </View>
+                          {outfits.length > 1 && (
+                            <TouchableOpacity
+                              onPress={() => {
+                                Alert.alert(
+                                  'Cancel Outfit',
+                                  `Are you sure you want to cancel ${outfitName}?`,
+                                  [
+                                    { text: 'No', style: 'cancel' },
+                                    {
+                                      text: 'Yes, Cancel',
+                                      style: 'destructive',
+                                      onPress: async () => {
+                                        try {
+                                          const token = await AsyncStorage.getItem('userToken');
+                                          const headers = { Authorization: token?.startsWith('Bearer ') ? token : `Bearer ${token}` };
+                                          await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/outfits/${outfit.id}/status`, {
+                                            method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ status_id: 4 })
+                                          });
+                                          refreshData();
+                                          Alert.alert('Cancelled', 'Outfit has been cancelled successfully.');
+                                        } catch (e) {
+                                          Alert.alert('Error', 'Failed to cancel outfit.');
+                                        }
+                                      }
+                                    }
+                                  ]
+                                );
+                              }}
+                              style={{ borderWidth: 1.5, borderColor: '#EF4444', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}
+                            >
+                              <Text style={{ fontSize: 11, fontFamily: 'Inter-Bold', color: '#EF4444' }}>CANCEL OUTFIT</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                         <View style={{ padding: 16 }}>
                           <View style={{ marginBottom: 16 }}><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>CATEGORY</Text><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium' }}>{cat}</Text></View>
@@ -688,6 +724,40 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                           }) : <Text style={{ fontSize: 13, color: '#94A3B8', fontStyle: 'italic' }}>No reference photos provided.</Text>}
                         </View>
                       </View>
+                      {/* Cancel Entire Request */}
+                      <TouchableOpacity
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 16, paddingVertical: 16, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1.5, borderColor: '#FECACA' }}
+                        onPress={() => {
+                          Alert.alert(
+                            'Cancel Entire Request',
+                            'Are you sure you want to cancel this entire enquiry? This action cannot be undone.',
+                            [
+                              { text: 'No', style: 'cancel' },
+                              {
+                                text: 'Yes, Cancel Request',
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    const token = await AsyncStorage.getItem('userToken');
+                                    const headers = { Authorization: token?.startsWith('Bearer ') ? token : `Bearer ${token}` };
+                                    await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/status`, {
+                                      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ status_id: 4 })
+                                    });
+                                    refreshData();
+                                    navigation.goBack();
+                                  } catch (e) {
+                                    Alert.alert('Error', 'Failed to cancel request.');
+                                  }
+                                }
+                              }
+                            ]
+                          );
+                        }}
+                      >
+                        <X size={16} color="#EF4444" style={{ marginRight: 8 }} />
+                        <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: '#EF4444' }}>Cancel Entire Request</Text>
+                      </TouchableOpacity>
                     </>
                   )}
 
