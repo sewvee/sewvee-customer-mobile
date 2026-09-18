@@ -624,8 +624,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
               const hasStitching = outfit.stitching && outfit.stitching.length > 0;
               const outfitName = outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`;
 
-              return (
-                              const isEnquiry = order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST';
+              const isEnquiry = order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST';
               const isConfigured = !isEnquiry;
               const isExpanded = expandedOutfits[outfit.id || index];
 
@@ -831,9 +830,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                               >
                                 <Text style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}>X</Text>
                               </TouchableOpacity>
-                    </>
-                  )}
-                </View>
+                            </View>
               ); })}
                         </ScrollView>
                       </View>
@@ -882,10 +879,9 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                   <Text style={styles.notesText}>{outfit.notes}</Text>
                 </View>
               ) : null}
-
-              
-
-            </View>
+            </>
+          )}
+          </View>
               );
             })()}
           </View>

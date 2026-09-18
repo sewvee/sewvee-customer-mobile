@@ -96,7 +96,7 @@ const CustomerChatListScreen = ({ navigation }) => {
         const forced = await AsyncStorage.getItem('chat_forced_unread');
         const forcedMap = forced ? JSON.parse(forced) : {};
 
-        const unreadCount = allThreads.filter(t => {
+        const unreadCount = activeThreads.filter(t => {
           const isForced = forcedMap[String(t.boutique_id)];
           const lvTime = lvMap[String(t.boutique_id)];
           const isBizSender = t.latest_message_sender === 'BUSINESS' || t.latest_message_sender === 'STAFF';
