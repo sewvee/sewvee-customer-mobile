@@ -140,24 +140,35 @@ export const DataProvider = ({ children }) => {
         try {
             const mobile = user?.mobile;
             console.log('DEBUG: fetchOrders mobile:', mobile);
-            if (!mobile) return [];
+            if (!mobile) return null;
             const cleanPhone = String(mobile).replace(/[^0-9]/g, '').slice(-10);
             console.log('DEBUG: fetchOrders cleanPhone:', cleanPhone);
-            if (!cleanPhone || cleanPhone.length < 10) return [];
+            if (!cleanPhone || cleanPhone.length < 10) return null;
 
-            console.log(`DEBUG: fetch URL: ${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
-            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=100`);
+            console.log(`DEBUG: fetch URL: ${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=500`);
+            let token = userToken;
+            token = token ? (token.startsWith('Bearer ') ? token : `Bearer ${token}`) : '';
+            const response = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}?phone=${cleanPhone}&limit=500&_t=${Date.now()}`, {
+                headers: {
+                    'Authorization': token,
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
             console.log('DEBUG: fetch status:', response.status);
-            if (!response.ok) return [];
+            if (!response.ok) {
+                console.log('DEBUG: fetch failed with status:', response.status);
+                return null;
+            }
             const json = await response.json();
             console.log('DEBUG: fetch json success:', json.success, 'data length:', json.data?.length);
-            if (!json.success || !Array.isArray(json.data)) return [];
+            if (!json.success || !Array.isArray(json.data)) return null;
             return json.data;
         } catch (err) {
             console.log('DEBUG: fetchOrdersFromBackend error:', err?.message || err);
-            return [];
+            return null;
         }
-    }, [user]);
+    }, [user, userToken]);
 
     /* -------------------- LOAD FROM STORAGE -------------------- */
 
@@ -175,37 +186,63 @@ export const DataProvider = ({ children }) => {
             let loadedPayments = [];
 
             if (ordersJson) {
-                try { loadedOrders = JSON.parse(ordersJson); } catch {}
+                try {
+                    const parsed = JSON.parse(ordersJson);
+                    if (Array.isArray(parsed)) {
+                        loadedOrders = parsed;
+                        // Bulletproof check: Ensure cached orders belong to the current user
+                        if (loadedOrders.length > 0 && user?.mobile) {
+                            const userPhone = String(user.mobile).replace(/[^0-9]/g, '').slice(-10);
+                            const order = loadedOrders[0];
+                            const orderMobile = String(order.customerMobile || order.customer_mobile || order.phone || order.customer?.mobile || '').replace(/[^0-9]/g, '').slice(-10);
+                            
+                            if (userPhone && (!orderMobile || userPhone !== orderMobile)) {
+                                console.log('DEBUG: Discarding leaked cached orders. Cache belongs to:', orderMobile, 'Current user:', userPhone);
+                                loadedOrders = [];
+                                AsyncStorage.removeItem(STORAGE_KEYS.ORDERS);
+                            }
+                        }
+                    }
+                } catch (e) { }
             }
             if (customersJson) {
-                try { loadedCustomers = JSON.parse(customersJson); } catch {}
+                try {
+                    const parsed = JSON.parse(customersJson);
+                    if (Array.isArray(parsed)) loadedCustomers = parsed;
+                } catch (e) { }
             }
             if (paymentsJson) {
-                try { loadedPayments = JSON.parse(paymentsJson); } catch {}
+                try {
+                    const parsed = JSON.parse(paymentsJson);
+                    if (Array.isArray(parsed)) loadedPayments = parsed;
+                } catch (e) { }
             }
 
             setCustomers(Array.isArray(loadedCustomers) ? loadedCustomers : []);
             setPayments(Array.isArray(loadedPayments) ? loadedPayments : []);
 
             const needsReSeed = seedVersion !== FORCE_SEED_VERSION;
+
             if (needsReSeed) {
                 await AsyncStorage.setItem(STORAGE_KEYS.DATA_SEED_VERSION, FORCE_SEED_VERSION);
             }
 
             // Fetch live orders from backend by phone number
             const liveOrders = await fetchOrdersFromBackend();
-            if (liveOrders && liveOrders.length > 0) {
+            if (liveOrders !== null) {
+                // The fetch succeeded! Even if it's empty, use it and overwrite cache.
                 setOrders(liveOrders);
-                // Cache them locally for offline access
                 await AsyncStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(liveOrders));
                 
-                // Update Guest Customer name from backend
-                const realName = liveOrders[0].customerName;
-                if (realName && realName !== 'Customer' && user?.name === 'Guest Customer') {
-                    // Only update if not already updated to avoid infinite loop
-                    saveUser({ ...user, name: realName });
+                if (liveOrders.length > 0) {
+                    // Update Guest Customer name from backend
+                    const realName = liveOrders[0].customerName;
+                    if (realName && realName !== 'Customer' && user?.name === 'Guest Customer') {
+                        saveUser({ ...user, name: realName });
+                    }
                 }
             } else {
+                // Fetch failed (network error), fallback to cached data
                 setOrders(Array.isArray(loadedOrders) ? loadedOrders : []);
             }
         } catch (e) {

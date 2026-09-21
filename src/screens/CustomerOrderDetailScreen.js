@@ -13,9 +13,10 @@ import {
   Platform,
   Alert,
   Modal,
+  Linking,
 } from 'react-native';
-import CustomerRequestsTab from '../components/CustomerRequestsTab';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Sound from 'react-native-sound';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Spacing, Shadow } from '../constants/theme';
 import { 
@@ -38,6 +39,7 @@ import {
   FileText,
   Download,
   ChevronDown,
+  ChevronRight,
   PenTool,
   ClipboardList,
   Plus,
@@ -46,6 +48,11 @@ import {
   Type,
   X,
   Check,
+  Mic,
+  CheckCircle2,
+  Play,
+  Pause,
+  ChevronUp,
 } from 'lucide-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import ImageCropPicker from 'react-native-image-crop-picker';
@@ -59,6 +66,67 @@ import { formatOrderNumber } from '../utils/orderIdFormatter';
 import { URL_CUSTOMER_PORTAL_ORDERS } from '../config/env';
 import CollageMaker from '../components/CollageMaker';
 
+
+
+const VoiceNotePlayer = ({ uri }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const soundRef = React.useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.release();
+      }
+    };
+  }, []);
+
+  const togglePlay = () => {
+    if (isPlaying) {
+      if (soundRef.current) {
+        soundRef.current.pause();
+        setIsPlaying(false);
+      }
+    } else {
+      if (soundRef.current) {
+        soundRef.current.play((success) => {
+          setIsPlaying(false);
+          if (success) soundRef.current.setCurrentTime(0);
+        });
+        setIsPlaying(true);
+      } else {
+        Sound.setCategory('Playback');
+        const sound = new Sound(uri, '', (error) => {
+          if (error) {
+            console.warn('failed to load the sound', error);
+            return;
+          }
+          soundRef.current = sound;
+          setIsPlaying(true);
+          sound.play((success) => {
+            setIsPlaying(false);
+            if (success) sound.setCurrentTime(0);
+          });
+        });
+      }
+    }
+  };
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 8, paddingRight: 16, borderRadius: 24, marginVertical: 4, width: '100%', borderWidth: 1, borderColor: '#E2E8F0' }}>
+      <TouchableOpacity onPress={togglePlay} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', marginRight: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
+        {isPlaying ? <Pause size={20} color="#1E293B" /> : <Play size={20} color="#1E293B" style={{ marginLeft: 3 }} />}
+      </TouchableOpacity>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flex: 1, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, marginRight: 12 }}>
+           <View style={{ width: '30%', height: '100%', backgroundColor: '#64748B', borderRadius: 2 }} />
+        </View>
+        <TouchableOpacity onPress={() => Linking.openURL(uri)}>
+          <Mic size={20} color="#64748B" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
 const resolveImageUrl = (url) => {
   if (!url) return url;
@@ -78,10 +146,11 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const { user } = useAuth();
-  const { orders, updateOrder, refreshData } = useData();
+  const { orders, updateOrder, refreshData, loading: dataLoading } = useData();
 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+  const isOutfitChatActive = false;
   const [uploadingOutfitId, setUploadingOutfitId] = useState(null);
   const [submittingOutfitId, setSubmittingOutfitId] = useState(null);
   const [showCollageMaker, setShowCollageMaker] = useState(false);
@@ -93,15 +162,59 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   const [editingPhoto, setEditingPhoto] = useState(null); // { file_url, outfitId }
   const [editDrawerVisible, setEditDrawerVisible] = useState(false);
   const [activeOutfitIndex, setActiveOutfitIndex] = useState(0);
+  const [expandedOutfits, setExpandedOutfits] = useState({});
+  const toggleOutfit = (id) => setExpandedOutfits(prev => ({ ...prev, [id]: !prev[id] }));
 
   const [confirmDrawerVisible, setConfirmDrawerVisible] = useState(false);
   const [confirmOutfitId, setConfirmOutfitId] = useState(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // Cancel sheet state
+  const [cancelSheetVisible, setCancelSheetVisible] = useState(false);
+  const [cancelSheetMode, setCancelSheetMode] = useState('order'); // 'order' | 'outfit'
+  const [cancelTargetOutfitId, setCancelTargetOutfitId] = useState(null);
+  const [cancelTargetOutfitName, setCancelTargetOutfitName] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelConfirm = async () => {
+    setIsCancelling(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const authHeader = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      const headers = { Authorization: authHeader, 'Content-Type': 'application/json' };
+
+      if (cancelSheetMode === 'order') {
+        // Use the new dedicated /cancel endpoint — no hardcoded status_id
+        const res = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/cancel`, {
+          method: 'POST',
+          headers,
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.message || `Server error ${res.status}`);
+      } else {
+        // Cancel a single outfit
+        const res = await fetch(`${URL_CUSTOMER_PORTAL_ORDERS}/${order.id}/cancel`, {
+          method: 'POST',
+          headers,
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.message || `Server error ${res.status}`);
+      }
+
+      setCancelSheetVisible(false);
+      await refreshData();
+      navigation.goBack();
+    } catch (e) {
+      setCancelSheetVisible(false);
+      Alert.alert('Error', e.message || 'Failed to cancel. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const [customerAddedRefPhotos, setCustomerAddedRefPhotos] = useState([]);
   const [galleryFolders, setGalleryFolders] = useState([]);
-  const [isOutfitChatActive, setIsOutfitChatActive] = useState(false);
-
+  
   // Fetch Sewvee gallery folders so customer can pick from their saved photos
   useEffect(() => {
     const fetchGallery = async () => {
@@ -129,6 +242,12 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   }, [orders, orderId]);
 
   useEffect(() => {
+    if (!order) {
+      refreshData();
+    }
+  }, [order, orderId]);
+
+  useEffect(() => {
     if (order) {
       setCourierName(order.courierService || '');
       setTrackingId(order.courierTrackingId || '');
@@ -138,10 +257,16 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   if (!order) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Order not found</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>Back to Dashboard</Text>
-        </TouchableOpacity>
+        {dataLoading ? (
+           <ActivityIndicator size="large" color="#5B43EE" />
+        ) : (
+          <>
+            <Text style={styles.errorText}>Order not found</Text>
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Text style={styles.backBtnText}>Back to Dashboard</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     );
   }
@@ -398,51 +523,48 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
   };
 
 
+  const isOrderCancelled = (order.status || '').toUpperCase() === 'CANCELLED' || (order.status || '').toUpperCase() === 'CANCELED' || order.status_id === 4;
   return (
     <SafeAreaView style={styles.container}>
       {!isOutfitChatActive && (
         <>
           {/* Navbar */}
-          <View style={styles.navbar}>
+          <View style={[styles.navbar, { alignItems: 'center' }]}>
             <TouchableOpacity style={styles.backIconBtn} onPress={() => navigation.goBack()}>
               <ArrowLeft size={22} color={Colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.navbarTitle}>
-              {order.order_type === 'SALE_ORDER' ? 'Invoice' : 'Order'} #{order.billNo || order.id}
-            </Text>
+            <View style={{ flex: 1, alignItems: 'flex-start', paddingLeft: 8 }}>
+              <Text style={styles.navbarTitle}>
+                {order.order_type === 'SALE_ORDER' ? 'Invoice ' : ((order.billNo || '').startsWith('ENQ') || order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST') ? '' : 'Order '}#{order.billNo || order.id}
+              </Text>
+              {(order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST') && (
+                <Text style={{ fontSize: 10, fontFamily: 'Inter-Bold', color: '#94A3B8', marginTop: 2 }}>PRE-ORDER INQUIRY</Text>
+              )}
+            </View>
             <View style={{ width: 22 }} />
           </View>
 
           {/* TABS */}
-          <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
-            <TouchableOpacity 
-              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
-              onPress={() => setActiveTab('details')}
-            >
-              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Details</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', borderBottomWidth: 2, borderColor: activeTab === 'requests' ? Colors.primary : 'transparent' }}
-              onPress={() => setActiveTab('requests')}
-            >
-              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'requests' ? Colors.primary : '#64748B' }}>Requests</Text>
-              {order?.has_unread_messages ? (
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', marginLeft: 6 }} />
-              ) : null}
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'payment' ? Colors.primary : 'transparent' }}
-              onPress={() => setActiveTab('payment')}
-            >
-              <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'payment' ? Colors.primary : '#64748B' }}>Payments</Text>
-            </TouchableOpacity>
-          </View>
+          {(!order.order_type || (order.order_type !== 'ENQUIRY' && order.order_type !== 'STITCHING_REQUEST')) && (
+            <View style={{ flexDirection: 'row', backgroundColor: '#FFF', borderBottomWidth: 1, borderColor: '#E2E8F0' }}>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'details' ? Colors.primary : 'transparent' }}
+                onPress={() => setActiveTab('details')}
+              >
+                <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'details' ? Colors.primary : '#64748B' }}>Details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderColor: activeTab === 'payment' ? Colors.primary : 'transparent' }}
+                onPress={() => setActiveTab('payment')}
+              >
+                <Text style={{ fontSize: 13, fontFamily: 'Inter-Bold', color: activeTab === 'payment' ? Colors.primary : '#64748B' }}>Payments</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </>
       )}
 
-      {activeTab === 'requests' ? (
-        <CustomerRequestsTab order={order} onUpdateStatus={refreshData} onChatActive={setIsOutfitChatActive} />
-      ) : activeTab === 'payment' ? (
+      {activeTab === 'payment' ? (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionHeading, { marginTop: 16 }]}>ORDER BILLING SUMMARY</Text>
         <View style={styles.pricingCard}>
@@ -563,11 +685,13 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           </>
         )}
 
-        <TouchableOpacity 
-          style={[styles.invoiceBtn, { paddingVertical: 14, justifyContent: 'center', marginBottom: 32, backgroundColor: '#FFF' }]}
-          onPress={() => navigation.navigate('InvoicePreview', { 
-            order, 
-            orderId: order.id,
+        {(order.order_type !== 'ENQUIRY' && order.order_type !== 'STITCHING_REQUEST') && (
+          <TouchableOpacity 
+            style={[styles.invoiceBtn, { paddingVertical: 14, justifyContent: 'center', marginBottom: 32, backgroundColor: '#FFF' }]}
+            onPress={() => navigation.navigate('InvoicePreview', { 
+              order, 
+              orderId: order.id,
+            isCustomerPortal: true,
             allowedCopyTypes: ['customer'],
             initialCopyType: 'customer',
             company: {
@@ -578,8 +702,9 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           })}
         >
           <Download size={16} color={Colors.textPrimary} style={{marginRight: 6}} />
-          <Text style={[styles.invoiceBtnText, { fontSize: 14 }]}>Download Invoice</Text>
-        </TouchableOpacity>
+            <Text style={[styles.invoiceBtnText, { fontSize: 14 }]}>Download Invoice</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       ) : (
@@ -606,7 +731,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
           </View>
         ) : (
           <View>
-            {outfits.length > 1 && (
+            {(order.order_type === 'STITCHING_REQUEST' || order.order_type === 'ENQUIRY' || outfits.length > 1) && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.outfitTabsContainer} contentContainerStyle={styles.outfitTabsContent}>
                 {outfits.map((o, idx) => (
                   <TouchableOpacity 
@@ -615,7 +740,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                     onPress={() => setActiveOutfitIndex(idx)}
                   >
                     <Text style={[styles.outfitTabItemText, activeOutfitIndex === idx && styles.activeOutfitTabItemText]}>
-                      {o.name ? o.name.toUpperCase() : `OUTFIT ${idx + 1}`}
+                      {o.name ? `Outfit ${idx + 1}: ${o.name}` : `Outfit ${idx + 1}`}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -633,10 +758,146 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
               const hasStitching = outfit.stitching && outfit.stitching.length > 0;
               const outfitName = outfit.name ? outfit.name.toUpperCase() : `OUTFIT ${index + 1}`;
 
+              const isEnquiry = order.order_type === 'ENQUIRY' || order.order_type === 'STITCHING_REQUEST';
+              const isConfigured = !isEnquiry;
+              const isExpanded = expandedOutfits[outfit.id || index];
+
+              let cat = outfit.name || 'Outfit';
+              let desc = '-';
+              let meas = '-';
+              let expDate = '-';
+              if (outfit.notes) {
+                const lines = outfit.notes.split('\n');
+                lines.forEach(l => {
+                  if (l.startsWith('Category:')) cat = l.replace('Category:', '').trim();
+                  else if (l.startsWith('Description:')) desc = l.replace('Description:', '').trim();
+                  else if (l.startsWith('Measurement:')) meas = l.replace('Measurement:', '').trim();
+                  else if (l.startsWith('Expected Date:')) expDate = l.replace('Expected Date:', '').trim();
+                });
+              }
+
               return (
                 <View key={outfit.id || index} style={styles.outfitBlock}>
+                  {isEnquiry && (
+                    <>
+                      <View style={styles.card}>
+                        <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Shirt size={14} color={Colors.primary} />
+                            <Text style={styles.cardTitle}>REQUEST SUMMARY</Text>
+                            {isOrderCancelled && (
+                              <View style={{ marginLeft: 12, backgroundColor: '#FEF2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FECACA' }}>
+                                <Text style={{ fontSize: 10, fontFamily: 'Inter-Bold', color: '#EF4444' }}>CANCELLED</Text>
+                              </View>
+                            )}
+                          </View>
+                          {outfits.length > 1 && (
+                            <TouchableOpacity
+                              onPress={() => {
+                                setCancelTargetOutfitId(outfit.id);
+                                setCancelTargetOutfitName(outfitName);
+                                setCancelSheetMode('outfit');
+                                setCancelSheetVisible(true);
+                              }}
+                              style={{ borderWidth: 1.5, borderColor: '#EF4444', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}
+                            >
+                              <Text style={{ fontSize: 11, fontFamily: 'Inter-Bold', color: '#EF4444' }}>CANCEL OUTFIT</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        <View style={{ padding: 16 }}>
+                          <View style={{ marginBottom: 16 }}><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>CATEGORY</Text><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium' }}>{cat}</Text></View>
+                          <View style={{ marginBottom: 16 }}><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>DESCRIPTION / NOTES</Text><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium' }}>{desc}</Text></View>
+                          <View style={{ marginBottom: 16 }}><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>MEASUREMENT</Text><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium' }}>{meas}</Text></View>
+                          <View><Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', marginBottom: 4 }}>EXPECTED DELIVERY</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}><Calendar size={14} color={Colors.primary} /><Text style={{ fontSize: 14, color: '#1E293B', fontFamily: 'Inter-Medium', marginLeft: 6 }}>{expDate}</Text></View>
+                          </View>
+                        </View>
+                      </View>
+                      
+                      {(() => {
+                        const allPhotos = outfit.photos || [];
+                        const images = allPhotos.filter(p => {
+                          const u = (p.file_url || p.url || '').toLowerCase();
+                          return !(u.endsWith('.wav') || u.endsWith('.mp3') || u.endsWith('.m4a'));
+                        });
+                        const audios = allPhotos.filter(p => {
+                          const u = (p.file_url || p.url || '').toLowerCase();
+                          return u.endsWith('.wav') || u.endsWith('.mp3') || u.endsWith('.m4a');
+                        });
 
-              {/* OUTFIT DETAILS Card */}
+                        return (
+                          <>
+                            <View style={styles.card}>
+                              <View style={styles.cardHeader}>
+                                <ImageIcon size={14} color={Colors.primary} />
+                                <Text style={styles.cardTitle}>REFERENCE PHOTOS</Text>
+                              </View>
+                              <View style={{ padding: 16, flexDirection: 'row', flexWrap: 'wrap' }}>
+                                {images.length > 0 ? images.map((p, i) => (
+                                  <TouchableOpacity key={i} onPress={() => Linking.openURL(resolveImageUrl(p.file_url || p.url || ''))}>
+                                    <Image source={{ uri: resolveImageUrl(p.file_url || p.url || '') }} style={{ width: 100, height: 100, borderRadius: 8, marginRight: 8, marginBottom: 8, backgroundColor: '#F1F5F9' }} />
+                                  </TouchableOpacity>
+                                )) : <Text style={{ fontSize: 13, color: '#94A3B8', fontStyle: 'italic' }}>No reference photos provided.</Text>}
+                              </View>
+                            </View>
+                            
+                            {audios.length > 0 && (
+                              <View style={styles.card}>
+                                <View style={styles.cardHeader}>
+                                  <Mic size={14} color={Colors.primary} />
+                                  <Text style={styles.cardTitle}>VOICE NOTES</Text>
+                                </View>
+                                <View style={{ padding: 16 }}>
+                                  {audios.map((a, i) => (
+                                    <VoiceNotePlayer key={i} uri={resolveImageUrl(a.file_url || a.url || '')} />
+                                  ))}
+                                </View>
+                              </View>
+                            )}
+                          </>
+                        );
+                      })()}
+                      {/* Cancel Entire Request */}
+                      {!isOrderCancelled && (
+                        <TouchableOpacity
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 16, paddingVertical: 16, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1.5, borderColor: '#FECACA' }}
+                          onPress={() => {
+                            setCancelSheetMode('order');
+                            setCancelSheetVisible(true);
+                          }}
+                        >
+                          <X size={16} color="#EF4444" style={{ marginRight: 8 }} />
+                          <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: '#EF4444' }}>Cancel Entire Request</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
+
+                  {isConfigured && (
+                    <TouchableOpacity 
+                      activeOpacity={0.7} 
+                      onPress={() => toggleOutfit(outfit.id || index)}
+                      style={{ backgroundColor: '#ECFDF5', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#10B981', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#D1FAE5', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                          <CheckCircle2 size={20} color="#059669" />
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#065F46', marginBottom: 2 }}>{outfitName}</Text>
+                          <Text style={{ fontSize: 13, fontFamily: 'Inter-Regular', color: '#059669' }}>Configured • Tap to {isExpanded ? 'hide' : 'edit'}</Text>
+                        </View>
+                      </View>
+                      <View>
+                        {isExpanded ? <ChevronUp size={20} color="#059669" /> : <ChevronRight size={20} color="#059669" />}
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
+                  {isConfigured && isExpanded && (
+                    <>
+{/* OUTFIT DETAILS Card */}
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
                   <Shirt size={14} color={Colors.primary} />
@@ -753,7 +1014,7 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                                 <Text style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}>X</Text>
                               </TouchableOpacity>
                             </View>
-                          ); })}
+              ); })}
                         </ScrollView>
                       </View>
                     )}
@@ -801,10 +1062,9 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                   <Text style={styles.notesText}>{outfit.notes}</Text>
                 </View>
               ) : null}
-
-              
-
-            </View>
+            </>
+          )}
+          </View>
               );
             })()}
           </View>
@@ -823,6 +1083,55 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
       />
 
       
+      {/* ── Cancel Sheet ── */}
+      <Modal visible={cancelSheetVisible} transparent animationType="slide" onRequestClose={() => !isCancelling && setCancelSheetVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => !isCancelling && setCancelSheetVisible(false)} />
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+              <X size={22} color="#EF4444" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 17, fontFamily: 'Inter-Bold', color: '#1E293B' }}>
+                {cancelSheetMode === 'order' ? 'Cancel Entire Request' : `Cancel ${cancelTargetOutfitName}`}
+              </Text>
+              <Text style={{ fontSize: 13, color: '#EF4444', fontFamily: 'Inter-Medium', marginTop: 2 }}>This cannot be undone</Text>
+            </View>
+          </View>
+
+          <Text style={{ fontSize: 14, fontFamily: 'Inter-Regular', color: '#475569', lineHeight: 22, marginBottom: 24 }}>
+            {cancelSheetMode === 'order'
+              ? 'Are you sure you want to cancel this entire enquiry? The boutique will be notified and all associated outfit requests will be marked as cancelled.'
+              : `Are you sure you want to cancel ${cancelTargetOutfitName}? You can still keep other outfits in this request active.`}
+          </Text>
+
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EF4444', paddingVertical: 14, borderRadius: 12, marginBottom: 12, opacity: isCancelling ? 0.7 : 1 }}
+            onPress={handleCancelConfirm}
+            disabled={isCancelling}
+          >
+            {isCancelling ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <>
+                <X size={16} color="#FFF" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 15 }}>
+                  {cancelSheetMode === 'order' ? 'Yes, Cancel Request' : 'Yes, Cancel Outfit'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: '#E2E8F0' }}
+            onPress={() => setCancelSheetVisible(false)}
+            disabled={isCancelling}
+          >
+            <Text style={{ color: '#475569', fontFamily: 'Inter-SemiBold', fontSize: 15 }}>No, Keep It</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       {/* ── Confirm Photos Drawer ── */}
       <Modal visible={confirmDrawerVisible} transparent animationType="slide" onRequestClose={() => setConfirmDrawerVisible(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setConfirmDrawerVisible(false)} />

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
+import { View, Platform,
   Text,
   StyleSheet,
   FlatList,
@@ -14,6 +13,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Shadow } from '../constants/theme';
 import { 
@@ -48,6 +48,16 @@ const DEFAULT_FOLDERS = [
 ];
 
 const CustomerGalleryScreen = () => {
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBarStyle('dark-content');
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('#F5F3FF');
+      }
+    }, [])
+  );
+
+  const navigation = useNavigation();
   const dispatch = useDispatch();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -304,6 +314,9 @@ const CustomerGalleryScreen = () => {
           </>
         ) : (
           <>
+            <TouchableOpacity style={[styles.iconBtn, { marginRight: 12 }]} onPress={() => navigation.goBack()}>
+              <ArrowLeft size={24} color="#0F172A" />
+            </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>My Gallery</Text>
             </View>

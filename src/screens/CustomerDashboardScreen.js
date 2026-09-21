@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Platform,
   View,
@@ -39,6 +40,7 @@ import {
 import axios from 'axios';
 import { URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 import { formatDate } from '../utils/dateUtils';
 import { formatOrderNumber } from '../utils/orderIdFormatter';
@@ -51,14 +53,29 @@ const API_DOMAIN = BASE_URL.replace('/mobile/', '');
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CustomerDashboardScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBarStyle('dark-content');
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('#F5F3FF');
+      }
+    }, [])
+  );
+  const { user, userToken, logout } = useAuth();
   const { orders, refreshData, loading } = useData();
   const [refreshing, setRefreshing] = useState(false);
   
   const [shopItems, setShopItems] = useState([]);
   const [loadingShop, setLoadingShop] = useState(false);
+  const [availableBoutiques, setAvailableBoutiques] = useState([]);
+  const [isBoutiqueModalVisible, setIsBoutiqueModalVisible] = useState(false);
+  const [selectedBoutique, setSelectedBoutique] = useState(null);
   const [banners, setBanners] = useState([]);
   const [stripIndex, setStripIndex] = useState(0);
+  const bannerListRef = useRef(null);
+  const [bannerIndex, setBannerIndex] = useState(0);
+
+
 
   // Fetch banners from marketing API
   useEffect(() => {
@@ -89,6 +106,32 @@ const CustomerDashboardScreen = ({ navigation }) => {
   const stripBanners = React.useMemo(() => banners.filter(b => b.type === 'STRIP'), [banners]);
   const inlineBanners = React.useMemo(() => banners.filter(b => b.type !== 'STRIP'), [banners]);
 
+  const infiniteBanners = React.useMemo(() => {
+    if (inlineBanners.length <= 1) return inlineBanners;
+    const copies = [];
+    for (let i = 0; i < 200; i++) {
+      copies.push(...inlineBanners.map((b, idx) => ({ ...b, uniqueId: `${b.id}-${i}-${idx}` })));
+    }
+    return copies;
+  }, [inlineBanners]);
+
+  useEffect(() => {
+    if (inlineBanners.length <= 1) return;
+    const interval = setInterval(() => {
+      setBannerIndex(prev => {
+        const next = prev + 1;
+        if (next >= infiniteBanners.length) return 0;
+        if (bannerListRef.current) {
+          try {
+            bannerListRef.current.scrollToIndex({ index: next, animated: true });
+          } catch(e) {}
+        }
+        return next;
+      });
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [inlineBanners.length]);
+
   useEffect(() => {
     if (stripBanners.length <= 1) return;
     const interval = setInterval(() => {
@@ -97,34 +140,53 @@ const CustomerDashboardScreen = ({ navigation }) => {
     return () => clearInterval(interval);
   }, [stripBanners.length]);
 
-  useEffect(() => {
-    fetchInitialShopItems();
-  }, [user, orders]);
-
-  const fetchInitialShopItems = async () => {
+  const fetchBoutiquesAndShopItems = async () => {
     try {
-      if (orders && orders.length > 0) {
-        const boutiqueId = orders[0].boutiqueId || orders[0].company_id;
-        if (boutiqueId) {
-          await fetchShopItems(boutiqueId);
-          return;
-        }
-      }
-      const res = await fetch(`${BASE_URL}marketing/customer/store/catalogue`);
+      let token = userToken || '';
+      token = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      const res = await fetch(`${BASE_URL}customer-portal/all-boutiques?_t=${Date.now()}`, {
+        headers: { Authorization: token }
+      });
       const data = await res.json();
-      if (data) {
-        const items = data.data || data.products || (Array.isArray(data) ? data : []);
-        setShopItems(items.slice(0, 5));
+      let boutiques = [];
+      if (data && data.success && Array.isArray(data.data)) {
+        boutiques = data.data.map(b => ({ id: b.id, name: b.boutique_name || b.name, ...b }));
+      }
+      
+      setAvailableBoutiques(boutiques);
+
+      if (!selectedBoutique && boutiques.length > 0) {
+        setIsBoutiqueModalVisible(true);
+        setSelectedBoutique(boutiques[0]);
+        fetchShopItems(boutiques[0]);
+      } else if (boutiques.length === 0) {
+        setIsBoutiqueModalVisible(true);
       }
     } catch (err) {
-      console.warn('Failed to fetch initial shop items', err.message);
+      console.warn('Failed to fetch boutiques', err.message);
+      setAvailableBoutiques([]);
     }
   };
 
-  const fetchShopItems = async (companyId) => {
+  useEffect(() => {
+    if (userToken) {
+      fetchBoutiquesAndShopItems();
+    }
+  }, [user, userToken]);
+
+  const fetchShopItems = async (boutique) => {
     try {
       setLoadingShop(true);
-      const res = await fetch(`${URL_CUSTOMER_PORTAL_SHOP}?companyId=${companyId}`);
+      let url;
+      if (boutique) {
+        url = `${URL_CUSTOMER_PORTAL_SHOP}?companyId=${boutique.id}`;
+      } else {
+        setShopItems([]);
+        setLoadingShop(false);
+        return;
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
       if (data) {
         const items = data.data || data.products || (Array.isArray(data) ? data : []);
@@ -144,6 +206,15 @@ const CustomerDashboardScreen = ({ navigation }) => {
   // Filter orders matching logged in customer's mobile
 
   
+
+  const handleScrollEnd = (e) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const itemWidth = SCREEN_WIDTH * 0.85 + 16;
+    const newIndex = Math.round(offsetX / itemWidth);
+    if (newIndex >= 0 && newIndex < infiniteBanners.length) {
+      setBannerIndex(newIndex);
+    }
+  };
 
   const renderBanner = ({ item }) => {
     if (item.image_url || item.mobile_image_url) {
@@ -176,8 +247,12 @@ const CustomerDashboardScreen = ({ navigation }) => {
   };
   const customerOrders = React.useMemo(() => {
     if (!orders || orders.length === 0) return [];
-    return [...orders].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).slice(0, 5);
-  }, [orders]);
+    let filtered = orders;
+    if (selectedBoutique) {
+      filtered = orders.filter(o => String(o.boutiqueId || o.company_id) === String(selectedBoutique.id));
+    }
+    return [...filtered].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).slice(0, 5);
+  }, [orders, selectedBoutique]);
 
   // Metrics
   
@@ -306,7 +381,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
         )}
         <View style={styles.dashShopInfo}>
           <Text style={styles.dashShopName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.dashShopPrice}>₹{item.price}</Text>
+          <Text style={styles.dashShopPrice}>₹{item.selling_price || item.price}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -403,20 +478,15 @@ const CustomerDashboardScreen = ({ navigation }) => {
     );
   };
 
-  const selectedBoutiqueName = React.useMemo(() => {
-    if (orders && orders.length > 0 && orders[0].boutiqueName) {
-      return orders[0].boutiqueName;
-    }
-    return 'Techno Genesis';
-  }, [orders]);
+  const selectedBoutiqueName = selectedBoutique ? selectedBoutique.name : 'All Boutiques';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F3FF" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      
       <View style={styles.header}>
-        <TouchableOpacity style={[styles.boutiqueSelector, {flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', flex: 1, marginRight: 16}]}>
+        <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(true)} style={[styles.boutiqueSelector, {flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', flex: 1, marginRight: 16}]}>
           <View style={{width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginRight: 12}}>
-            <ShoppingBag size={18} color="#5B43EE" />
+            <Ionicons name="home" size={18} color="#5B43EE" />
           </View>
           <View style={{flex: 1}}>
             <Text style={[styles.shoppingAtText, {fontSize: 10, textTransform: 'uppercase', color: '#64748B', fontFamily: 'Inter-Bold', marginBottom: 0}]}>SHOPPING AT</Text>
@@ -487,13 +557,16 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
         {/* INLINE BANNERS */}
         {inlineBanners.length > 0 && (
-          <View style={{ marginBottom: 8, marginTop: 16, marginHorizontal: -4 }}>
+          <View style={{ marginBottom: 8, marginTop: 0, marginHorizontal: -4 }}>
             <FlatList
+              ref={bannerListRef}
+              getItemLayout={(_, index) => ({ length: SCREEN_WIDTH * 0.85 + 16, offset: (SCREEN_WIDTH * 0.85 + 16) * index, index })}
               horizontal
               showsHorizontalScrollIndicator={false}
-              data={inlineBanners}
-              keyExtractor={item => item.id?.toString() || Math.random().toString()}
+              data={infiniteBanners}
+              keyExtractor={item => item.uniqueId || item.id?.toString() || Math.random().toString()}
               renderItem={renderBanner}
+              onMomentumScrollEnd={handleScrollEnd}
               snapToInterval={SCREEN_WIDTH * 0.85 + 16}
               decelerationRate="fast"
               contentContainerStyle={{ paddingRight: 20 }}
@@ -502,24 +575,24 @@ const CustomerDashboardScreen = ({ navigation }) => {
         )}
 
         {/* QUICK ACTIONS */}
-        <Text style={styles.sectionTitle}>Quick Actions (Banners: {banners.length}, Shop: {shopItems.length}, Orders: {orders?.length})</Text>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, marginHorizontal: -4 }}>
+        <Text style={[styles.sectionTitle, {marginTop: 24, marginBottom: 12}]}>Quick Actions</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 0, marginHorizontal: -4, marginTop: 4 }}>
           <QuickActionCard
-            title="Stitching"
-            icon={<Scissors size={20} color={Colors.primary} />}
-            primary={true}
-            onPress={() => navigation.navigate('NewStitchRequest')}
+            title="Stitching Order"
+            subtitle="Online stitching"
+            badge="Online Order"
+            icon={<Scissors size={24} color={'#4F46E5'} />}
+            customBg={'#EEF2FF'}
+            onPress={() => navigation.navigate('NewStitchRequest', { selectedBoutique })}
           />
           <QuickActionCard
             title="Readymade"
-            icon={<ShoppingBag size={20} color={Colors.primary} />}
+            subtitle="Shop readymades"
+            icon={<ShoppingBag size={24} color={'#D97706'} />}
+            customBg={'#FEF3C7'}
             onPress={() => navigation.navigate('CustomerShop')}
           />
-          <QuickActionCard
-            title="My Designs"
-            icon={<Camera size={20} color={Colors.primary} />}
-            onPress={() => navigation.navigate('CustomerGallery')}
-          />
+
         </View>
 
         
@@ -528,7 +601,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
             <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop: 24, marginBottom: 16}}>
               <Text style={[styles.sectionTitle, {marginBottom:0, marginTop:0}]}>Featured in Shop</Text>
               <TouchableOpacity onPress={() => navigation.navigate('CustomerShop')}>
-                <Text style={{color:Colors.primary, fontFamily:'Inter-SemiBold', fontSize:13}}>View All</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}><Text style={{color:Colors.primary, fontFamily:'Inter-SemiBold', fontSize:13}}>View All</Text><Ionicons name="arrow-forward" size={14} color={Colors.primary} style={{marginLeft: 4}} /></View>
               </TouchableOpacity>
             </View>
             <FlatList
@@ -558,18 +631,16 @@ const CustomerDashboardScreen = ({ navigation }) => {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Image
-              source={require('../assets/lightBlue.png')}
-              style={styles.emptyImg}
-              resizeMode="contain"
-            />
+            <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
+              <Package color="#94A3B8" size={40} />
+            </View>
             <Text style={styles.emptyTitle}>Welcome 👋</Text>
             <Text style={styles.emptySubtitle}>
               Start your first stitching order.
             </Text>
             <TouchableOpacity 
               style={styles.newOrderButton}
-              onPress={() => { /* Navigate to new stitch order flow */ }}
+              onPress={() => navigation.navigate('NewStitchRequest', { selectedBoutique })}
             >
               <Text style={styles.newOrderButtonText}>New Stitch Order</Text>
             </TouchableOpacity>
@@ -577,17 +648,6 @@ const CustomerDashboardScreen = ({ navigation }) => {
         )}
 
         {/* OFFERS / RECOMMENDED COLLECTIONS SECTION */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Recommended For You</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-          <View style={[styles.offerCard, { backgroundColor: '#FEF3C7' }]}>
-            <Text style={styles.offerTitle}>Flat 20% Off</Text>
-            <Text style={styles.offerSubtitle}>On Bridal Lehengas</Text>
-          </View>
-          <View style={[styles.offerCard, { backgroundColor: '#E0E7FF' }]}>
-            <Text style={styles.offerTitle}>New Arrivals</Text>
-            <Text style={styles.offerSubtitle}>Check out the latest blouses</Text>
-          </View>
-        </ScrollView>
       </ScrollView>
       </View>
 
@@ -651,6 +711,41 @@ const CustomerDashboardScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+    
+      {/* BOUTIQUE SELECTION MODAL */}
+      <Modal visible={isBoutiqueModalVisible} transparent={true} animationType="fade">
+        <View style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end'}}>
+          <View style={{backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: Dimensions.get('window').height * 0.7}}>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20}}>
+              <Text style={{fontSize: 18, fontFamily: 'Inter-Bold', color: '#0F172A'}}>Select Boutique</Text>
+              <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(false)} style={{padding: 4}}>
+                <Text style={{fontSize: 16, fontFamily: 'Inter-Bold', color: '#64748B'}}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {availableBoutiques.length > 0 ? availableBoutiques.map((b) => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={{padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}
+                  onPress={() => {
+                    setSelectedBoutique(b);
+                    fetchShopItems(b);
+                    setIsBoutiqueModalVisible(false);
+                  }}
+                >
+                  <Text style={{fontSize: 16, fontFamily: selectedBoutique?.id === b.id ? 'Inter-Bold' : 'Inter-Medium', color: selectedBoutique?.id === b.id ? '#4F46E5' : '#1E293B'}}>
+                    {b.name}
+                  </Text>
+                  {selectedBoutique?.id === b.id && <Ionicons name="checkmark-circle" size={24} color="#4F46E5" />}
+                </TouchableOpacity>
+              )) : (
+                <Text style={{textAlign: 'center', color: '#64748B', fontFamily: 'Inter-Medium', padding: 20}}>No boutiques available</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -704,7 +799,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   statsRow: {
     flexDirection: 'row',

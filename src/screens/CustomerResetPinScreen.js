@@ -19,6 +19,7 @@ export default function CustomerResetPinScreen({ route, navigation }) {
   const [confirmPin, setConfirmPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [focusedField, setFocusedField] = useState(null);
 
   const handleReset = async () => {
     Keyboard.dismiss();
@@ -50,10 +51,14 @@ export default function CustomerResetPinScreen({ route, navigation }) {
     }
   };
 
-  const renderPinBoxes = (value, setValue, maxLength = 4) => (
+  const renderPinBoxes = (value, setValue, maxLength = 4, fieldName) => (
     <View style={styles.pinBoxRow}>
       {Array.from({ length: maxLength }).map((_, i) => (
-        <View key={i} style={[styles.pinBox, value.length > i && styles.pinBoxFilled, value.length === i && styles.pinBoxActive]}>
+        <View key={i} style={[
+          styles.pinBox, 
+          value.length > i && styles.pinBoxFilled, 
+          (value.length === i && focusedField === fieldName) && styles.pinBoxActive
+        ]}>
           <Text style={styles.pinBoxText}>{value.length > i ? (maxLength === 4 ? '●' : value[i]) : ''}</Text>
         </View>
       ))}
@@ -62,6 +67,8 @@ export default function CustomerResetPinScreen({ route, navigation }) {
         keyboardType="number-pad"
         maxLength={maxLength}
         value={value}
+        onFocus={() => setFocusedField(fieldName)}
+        onBlur={() => setFocusedField(null)}
         onChangeText={(val) => {
           setValue(val.replace(/[^0-9]/g, ''));
           setErrorMsg('');
@@ -89,13 +96,13 @@ export default function CustomerResetPinScreen({ route, navigation }) {
 
           <View style={styles.formSection}>
             <Text style={styles.label}>ENTER OTP</Text>
-            <View style={styles.pinContainer}>{renderPinBoxes(otp, setOtp, 6)}</View>
+            <View style={styles.pinContainer}>{renderPinBoxes(otp, setOtp, 4, 'otp')}</View>
 
             <Text style={styles.label}>NEW 4-DIGIT PIN</Text>
-            <View style={styles.pinContainer}>{renderPinBoxes(newPin, setNewPin, 4)}</View>
+            <View style={styles.pinContainer}>{renderPinBoxes(newPin, setNewPin, 4, 'newPin')}</View>
 
             <Text style={styles.label}>CONFIRM NEW PIN</Text>
-            <View style={styles.pinContainer}>{renderPinBoxes(confirmPin, setConfirmPin, 4)}</View>
+            <View style={styles.pinContainer}>{renderPinBoxes(confirmPin, setConfirmPin, 4, 'confirmPin')}</View>
 
             {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 

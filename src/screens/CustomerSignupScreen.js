@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Image, ScrollView, Dimensions, Keyboard, Animated } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Image, ScrollView, Dimensions, Keyboard, Animated, KeyboardAvoidingView, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,13 +54,14 @@ export default function CustomerSignupScreen({ navigation }) {
       const response = await fetch(`${API_DOMAIN}/mobile/customer-auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, mobile: countryCode === '+91' ? phone : countryCode + phone, email, pin })
+        body: JSON.stringify({ name, mobile: countryCode === '+91' ? phone : countryCode + phone, email, pin, state: '', city: '' })
       });
       const data = await response.json();
       
       if (!response.ok || !data.success) {
         setLoading(false);
-        return setErrorMsg(data.message || 'Failed to create account');
+        const errStr = Array.isArray(data.message) ? data.message.join(', ') : (data.message || 'Failed to create account');
+        return setErrorMsg(errStr);
       }
 
       setLoading(false);
@@ -133,7 +134,8 @@ export default function CustomerSignupScreen({ navigation }) {
       <Image source={require('../assets/login_bg.png')} style={styles.bgImage} resizeMode="cover" />
       <View style={styles.bgOverlay} />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView style={styles.scroll} contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           
           <View style={styles.header}>
@@ -154,7 +156,7 @@ export default function CustomerSignupScreen({ navigation }) {
               <View style={styles.inputRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <TouchableOpacity 
-                      style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10 }}
+                      style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10, minWidth: 85 }}
                       onPress={() => setShowCountryPicker(true)}
                   >
                       <Text style={{ fontSize: 16, color: '#0F172A', marginRight: 4 }}>
@@ -206,7 +208,17 @@ export default function CustomerSignupScreen({ navigation }) {
 
         </View>
       </ScrollView>
-    </View>
+      </KeyboardAvoidingView>
+
+      <CountryPickerBottomSheet
+          visible={showCountryPicker}
+          onClose={() => setShowCountryPicker(false)}
+          onSelect={(code) => {
+              setCountryCode(code);
+              setShowCountryPicker(false);
+          }}
+      />
+      </View>
   );
 }
 

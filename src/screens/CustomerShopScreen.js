@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import { View, Text, StyleSheet, StatusBar, 
   FlatList, 
   TouchableOpacity, 
   Image, 
@@ -32,10 +29,11 @@ import {
 } from 'lucide-react-native';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 import { URL_CUSTOMER_PORTAL_ORDERS, URL_CUSTOMER_PORTAL_SHOP, BASE_URL } from '../config/env';
 import axios from 'axios';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -43,13 +41,12 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CustomerShopScreen = () => {
   const { showToast } = useToast();
   const navigation = useNavigation();
-  const { user, getAuthToken } = useAuth();
+  const { user, userToken, getAuthToken } = useAuth();
   const { orders, refreshData } = useData();
 
   const [selectedBoutique, setSelectedBoutique] = useState(null);
   const [boutiques, setBoutique] = useState([]);
-  const [activeTab, setActiveTab] = useState('sewvee'); // 'sewvee' | 'boutique'
-  
+    
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -75,45 +72,46 @@ const CustomerShopScreen = () => {
     phone: user?.mobile || user?.phone || ''
   });
 
-  const SEWVEE_DIRECT = {
-    id: 'sewvee_direct',
-    name: 'Sewvee Originals',
-    isSewveeDirect: true,
+  const fetchBoutiquesAndShopItems = async () => {
+    try {
+      let token = userToken || '';
+      token = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      const res = await fetch(`${BASE_URL}customer-portal/all-boutiques?_t=${Date.now()}`, {
+        headers: { Authorization: token }
+      });
+      const data = await res.json();
+      let boutiques = [];
+      if (data && data.success && Array.isArray(data.data)) {
+        boutiques = data.data.map(b => ({ id: b.id, name: b.boutique_name || b.name, mobile: b.phone || '', ...b }));
+      }
+      
+      setBoutique(boutiques);
+
+      if (!selectedBoutique && boutiques.length > 0) {
+        setSelectedBoutique(boutiques[0]);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch boutiques in Shop', err.message);
+      setBoutique([]);
+    }
   };
 
   useEffect(() => {
-    if (orders && orders.length > 0) {
-      const uniqueBoutique = [];
-      const map = new Map();
-      orders.forEach(o => {
-        if (o.boutiqueId && !map.has(o.boutiqueId)) {
-          map.set(o.boutiqueId, true);
-          uniqueBoutique.push({ id: o.boutiqueId, name: o.boutiqueName, mobile: o.boutiqueMobile || '' });
-        }
-      });
-      setBoutique(uniqueBoutique);
-      if (uniqueBoutique.length > 0 && !selectedBoutique) {
-        setSelectedBoutique(SEWVEE_DIRECT);
-      }
-    } else if (!selectedBoutique) {
-      setSelectedBoutique(SEWVEE_DIRECT);
+    if (userToken) {
+      fetchBoutiquesAndShopItems();
     }
-  }, [orders]);
+  }, [userToken]);
 
   useEffect(() => {
     fetchProducts(selectedBoutique);
-  }, [selectedBoutique, activeTab]);
+  }, [selectedBoutique]);
 
   const fetchProducts = async (boutique) => {
     try {
       setLoadingProducts(true);
       let url;
-      if (activeTab === 'sewvee') {
-        url = `${BASE_URL}customer/store/catalogue`;
-      } else if (boutique && !boutique.isSewveeDirect) {
+      if (boutique) {
         url = `${URL_CUSTOMER_PORTAL_SHOP}?companyId=${boutique.id}`;
-      } else if (boutique && boutique.isSewveeDirect) {
-        url = `${BASE_URL}customer/store/catalogue`;
       } else {
         setProducts([]);
         setLoadingProducts(false);
@@ -171,7 +169,7 @@ const CustomerShopScreen = () => {
       }
     } catch (err) {
       console.log('Error fetching shop products:', err);
-      showToast('Failed to load products', 'error');
+      showToast(`Failed to load products: ${err.message}`, 'error');
     } finally {
       setLoadingProducts(false);
     }
@@ -180,7 +178,7 @@ const CustomerShopScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       if (selectedBoutique) {
-        fetchProducts(selectedBoutique.id);
+        fetchProducts(selectedBoutique);
       }
     }, [selectedBoutique])
   );
@@ -188,7 +186,7 @@ const CustomerShopScreen = () => {
   const onRefresh = async () => {
     if (selectedBoutique) {
       setRefreshing(true);
-      await fetchProducts(selectedBoutique.id);
+      await fetchProducts(selectedBoutique);
       setRefreshing(false);
     }
   };
@@ -353,86 +351,55 @@ const CustomerShopScreen = () => {
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#fff' }}>
         {/* Shop Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, backgroundColor: '#fff' }}>
-          <Text style={{ fontSize: 22, fontFamily: 'Inter-Bold', color: '#0F172A' }}>Shop</Text>
-          <TouchableOpacity style={styles.cartIconBtn} onPress={() => setIsCartVisible(true)}>
-            <ShoppingBag size={24} color={Colors.textPrimary} />
-            {cart.length > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{cart.reduce((a, c) => a + (c.quantity || 1), 0)}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Tab Bar */}
-        <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 10, backgroundColor: '#fff' }}>
-          <TouchableOpacity
-            onPress={() => setActiveTab('sewvee')}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              borderRadius: 10,
-              borderWidth: 1.5,
-              borderColor: activeTab === 'sewvee' ? Colors.primary : '#E2E8F0',
-              backgroundColor: activeTab === 'sewvee' ? '#F5F3FF' : '#F8FAFC',
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'sewvee' ? Colors.primary : '#64748B' }}>
-              Sewvee Originals
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('boutique')}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              borderRadius: 10,
-              borderWidth: 1.5,
-              borderColor: activeTab === 'boutique' ? Colors.primary : '#E2E8F0',
-              backgroundColor: activeTab === 'boutique' ? '#F5F3FF' : '#F8FAFC',
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 14, fontFamily: 'Inter-Bold', color: activeTab === 'boutique' ? Colors.primary : '#64748B' }}>
-              Boutique
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Boutique selector — only shown under Boutique tab */}
-        {activeTab === 'boutique' && (
           <TouchableOpacity
             onPress={() => setIsBoutiqueModalVisible(true)}
             activeOpacity={0.7}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginHorizontal: 16,
-              marginBottom: 12,
-              padding: 12,
-              backgroundColor: '#F8FAFC',
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: '#E2E8F0',
-            }}
+            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
           >
             <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
               <Store size={18} color={Colors.primary} />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter-Bold', letterSpacing: 0.5, marginBottom: 1 }}>SHOPPING AT</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 15, fontFamily: 'Inter-Bold', color: '#0F172A', marginRight: 4 }} numberOfLines={1}>
+                <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#0F172A', marginRight: 4 }} numberOfLines={1}>
                   {selectedBoutique ? selectedBoutique.name : 'Select Boutique'}
                 </Text>
-                <ChevronDown size={14} color="#64748B" />
+                <ChevronDown size={16} color="#64748B" />
               </View>
             </View>
           </TouchableOpacity>
-        )}
-      </SafeAreaView>
+          <TouchableOpacity 
+            style={[
+              styles.cartIconBtn, 
+              cart.length > 0 && { 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: Colors.primary, 
+                paddingHorizontal: 16, 
+                paddingVertical: 10, 
+                borderRadius: 24,
+                elevation: 3,
+                shadowColor: Colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+              }
+            ]} 
+            onPress={() => setIsCartVisible(true)}
+          >
+            <ShoppingBag size={cart.length > 0 ? 18 : 24} color={cart.length > 0 ? '#FFF' : Colors.textPrimary} />
+            {cart.length > 0 && (
+              <Text style={{ color: '#FFF', fontFamily: 'Inter-Bold', fontSize: 13, marginLeft: 8 }}>
+                Cart ({cart.reduce((a, c) => a + (c.quantity || 1), 0)})
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
+        </SafeAreaView>
+
+      {categories.length > 1 && (
       <View style={styles.categoriesWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
           {categories.map(cat => {
@@ -451,6 +418,7 @@ const CustomerShopScreen = () => {
           })}
         </ScrollView>
       </View>
+      )}
 
       {loadingProducts ? (
         <View style={styles.emptyContainer}>
@@ -469,11 +437,13 @@ const CustomerShopScreen = () => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <ShoppingBag size={48} color={Colors.textSecondary} />
-              <Text style={styles.emptyTitle}>Coming Soon</Text>
-              <Text style={styles.emptySubtitle}>
-                {selectedBoutique ? 'This boutique has not added any products yet.' : 'Please select a boutique first.'}
+            <View style={[styles.emptyContainer, { backgroundColor: Colors.white, borderRadius: 20, margin: 16, padding: 32, ...Shadow.subtle }]}>
+              <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
+                <ShoppingBag color="#4F46E5" size={40} />
+              </View>
+              <Text style={[styles.emptyTitle, { marginTop: 0, fontSize: 18 }]}>{selectedBoutique ? 'No Products Found' : 'Select a Boutique'}</Text>
+              <Text style={[styles.emptySubtitle, { paddingHorizontal: 0 }]}>
+                {selectedBoutique ? "This boutique hasn't added any products to their shop yet." : "Please select a boutique to view their readymade collections."}
               </Text>
             </View>
           }
@@ -487,50 +457,35 @@ const CustomerShopScreen = () => {
           activeOpacity={1} 
           onPress={() => setIsBoutiqueModalVisible(false)}
         >
-          <View style={[styles.modalCard, { height: 'auto', maxHeight: '50%', marginTop: 'auto', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Boutique</Text>
+          <View style={[styles.modalCard, { height: 'auto', maxHeight: '70%', marginTop: 'auto', marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: 0, paddingBottom: Platform.OS === 'ios' ? 34 : 20 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
               <TouchableOpacity onPress={() => setIsBoutiqueModalVisible(false)} style={{ padding: 4 }}>
                 <X size={24} color={Colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ padding: 20 }}>
-              <Text style={{ fontSize: 13, color: Colors.textSecondary, fontFamily: 'Inter-Bold', marginBottom: 12, marginTop: 8 }}>SEWVEE DIRECT</Text>
-              <TouchableOpacity
-                style={[styles.boutiqueOption, selectedBoutique?.id === 'sewvee_direct' && styles.boutiqueOptionActive]}
-                onPress={() => {
-                  setSelectedBoutique(SEWVEE_DIRECT);
-                  setIsBoutiqueModalVisible(false);
-                }}
-              >
-                <Sparkles size={20} color={selectedBoutique?.id === 'sewvee_direct' ? Colors.primary : Colors.textSecondary} />
-                <Text style={[styles.boutiqueOptionText, selectedBoutique?.id === 'sewvee_direct' && { color: Colors.primary, fontFamily: 'Inter-Bold' }]}>
-                  Sewvee Originals
-                </Text>
-                {selectedBoutique?.id === 'sewvee_direct' && <Check size={18} color={Colors.primary} />}
-              </TouchableOpacity>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+              {/* Redesigned Boutique List */}
 
-              {boutiques.length > 0 && (
-                <>
-                  <Text style={{ fontSize: 13, color: Colors.textSecondary, fontFamily: 'Inter-Bold', marginBottom: 12, marginTop: 16 }}>MY BOUTIQUES</Text>
-                  {boutiques.map(b => (
-                    <TouchableOpacity
-                      key={b.id}
-                      style={[styles.boutiqueOption, selectedBoutique?.id === b.id && styles.boutiqueOptionActive]}
-                      onPress={() => {
-                        setSelectedBoutique(b);
-                        setIsBoutiqueModalVisible(false);
-                      }}
-                    >
-                      <Store size={20} color={selectedBoutique?.id === b.id ? Colors.primary : Colors.textSecondary} />
-                      <Text style={[styles.boutiqueOptionText, selectedBoutique?.id === b.id && { color: Colors.primary, fontFamily: 'Inter-Bold' }]}>
-                        {b.name}
-                      </Text>
-                      {selectedBoutique?.id === b.id && <Check size={18} color={Colors.primary} />}
-                    </TouchableOpacity>
-                  ))}
-                </>
-              )}
+              {boutiques.map(b => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                  onPress={() => {
+                    setSelectedBoutique(b);
+                    setIsBoutiqueModalVisible(false);
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: selectedBoutique?.id === b.id ? '#EEF2FF' : '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <Store size={18} color={selectedBoutique?.id === b.id ? '#4F46E5' : '#64748B'} />
+                    </View>
+                    <Text style={{ fontSize: 16, fontFamily: selectedBoutique?.id === b.id ? 'Inter-Bold' : 'Inter-Medium', color: selectedBoutique?.id === b.id ? '#4F46E5' : '#1E293B' }}>
+                      {b.name}
+                    </Text>
+                  </View>
+                  {selectedBoutique?.id === b.id && <Check size={20} color="#4F46E5" />}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </TouchableOpacity>
@@ -944,7 +899,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   productCard: {
     width: (SCREEN_WIDTH - 44) / 2,

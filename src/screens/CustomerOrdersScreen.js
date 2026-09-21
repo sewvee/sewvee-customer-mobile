@@ -33,6 +33,7 @@ import {
   Scissors,
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../context/DataContext';
 import { formatDate } from '../utils/dateUtils';
 import { formatOrderNumber } from '../utils/orderIdFormatter';
@@ -41,6 +42,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CustomerOrdersScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBackgroundColor('#FFF');
+      StatusBar.setBarStyle('dark-content');
+    }, [])
+  );
   const { orders, refreshData, loading } = useData();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTab, setSelectedTab] = useState('stitching');
@@ -57,12 +65,12 @@ const CustomerOrdersScreen = ({ navigation }) => {
         new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt),
     );
     return sorted.filter(order => {
-      const type = (order.type || '').toUpperCase();
+      const type = (order.order_type || order.type || '').toUpperCase();
       if (selectedTab === 'stitching') {
-        return type === 'STITCHING' || type === 'CUSTOM';
+        return type === 'TAILORING' || type === 'STITCHING' || type === 'STITCHING_REQUEST' || type === 'CUSTOM' || type === 'ENQUIRY';
       } else {
         return (
-          type === 'READY-MADE' || type === 'READYMADE' || type === 'PRODUCT'
+          type === 'SALE_ORDER' || type === 'READY-MADE' || type === 'READYMADE' || type === 'PRODUCT'
         );
       }
     });
@@ -445,8 +453,14 @@ const CustomerOrdersScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F3FF" />
+    <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]} edges={['top']}>
+      
+      
+      {/* Header */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, backgroundColor: '#fff' }}>
+        <Text style={{ fontSize: 22, fontFamily: 'Inter-Bold', color: '#0F172A' }}>My Orders</Text>
+      </View>
+      
       {/* Welcome Banner */}
 
       <View
@@ -530,23 +544,23 @@ const CustomerOrdersScreen = ({ navigation }) => {
             />
           ) : (
             <View style={styles.emptyContainer}>
-              <Image
-                source={require('../assets/lightBlue.png')}
-                style={styles.emptyImg}
-                resizeMode="contain"
-              />
-              <Text style={styles.emptyTitle}>Welcome 👋</Text>
+              <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
+                {selectedTab === 'stitching' ? <Scissors color="#4F46E5" size={40} /> : <ShoppingBag color="#4F46E5" size={40} />}
+              </View>
+              <Text style={styles.emptyTitle}>{selectedTab === 'stitching' ? 'No Stitching Orders' : 'No Readymade Orders'}</Text>
               <Text style={styles.emptySubtitle}>
-                Start your first stitching order.
+                {selectedTab === 'stitching' ? "You haven't placed any custom stitching orders yet." : "Your readymade fashion purchases will appear here."}
               </Text>
-              <TouchableOpacity
-                style={styles.newOrderButton}
-                onPress={() => {
-                  /* Navigate to new stitch order flow */
-                }}
-              >
-                <Text style={styles.newOrderButtonText}>New Stitch Order</Text>
-              </TouchableOpacity>
+              {selectedTab === 'stitching' && (
+                <TouchableOpacity
+                  style={styles.newOrderButton}
+                  onPress={() => {
+                    navigation.navigate('NewStitchRequest');
+                  }}
+                >
+                  <Text style={styles.newOrderButtonText}>New Stitch Order</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </ScrollView>
@@ -635,7 +649,7 @@ export default CustomerOrdersScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#FFF',
   },
   header: {
     flexDirection: 'row',
@@ -675,7 +689,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   statsRow: {
     flexDirection: 'row',

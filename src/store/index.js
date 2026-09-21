@@ -28,6 +28,7 @@ import paymentReducer from './paymentSlice';
 import dashboardReducer from './dashboardSlice';
 import salesOrderReducer from './salesOrderSlice';
 import notificationReducer from './notificationSlice';
+import chatReducer from './chatSlice';
 
 export const store = configureStore({
   reducer: {
@@ -61,5 +62,6 @@ export const store = configureStore({
     payment: paymentReducer,
     salesOrder: salesOrderReducer,
     notifications: notificationReducer,
+    chat: chatReducer,
   },
 });

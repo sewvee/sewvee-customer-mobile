@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   StatusBar,
   Image,
@@ -36,6 +37,7 @@ const LoginScreen = ({ navigation }) => {
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isPinFocused, setIsPinFocused] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   const handleContinue = async () => {
@@ -49,7 +51,7 @@ const LoginScreen = ({ navigation }) => {
       const response = await fetch(`${API_DOMAIN}/mobile/customer-auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: phone, pin })
+        body: JSON.stringify({ mobile: countryCode === '+91' ? phone : countryCode + phone, pin })
       });
       const data = await response.json();
 
@@ -72,7 +74,7 @@ const LoginScreen = ({ navigation }) => {
   const renderPinBoxes = () => (
     <View style={styles.pinBoxRow}>
       {[0, 1, 2, 3].map((i) => (
-        <View key={i} style={[styles.pinBox, pin.length > i && styles.pinBoxFilled, pin.length === i && styles.pinBoxActive]}>
+        <View key={i} style={[styles.pinBox, pin.length > i && styles.pinBoxFilled, isPinFocused && pin.length === i && styles.pinBoxActive]}>
           <Text style={styles.pinBoxText}>{pin.length > i ? '●' : ''}</Text>
         </View>
       ))}
@@ -80,6 +82,8 @@ const LoginScreen = ({ navigation }) => {
         style={styles.hiddenInput}
         keyboardType="number-pad"
         maxLength={4}
+        onFocus={() => setIsPinFocused(true)}
+        onBlur={() => setIsPinFocused(false)}
         value={pin}
         onChangeText={(val) => {
           setPin(val.replace(/[^0-9]/g, ''));
@@ -91,7 +95,7 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <View style={styles.root}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <StatusBar backgroundColor="#5B43EE" barStyle="light-content" />
 
       {/* Background */}
       <Image
@@ -101,6 +105,7 @@ const LoginScreen = ({ navigation }) => {
       />
       <View style={styles.bgOverlay} />
 
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
@@ -125,7 +130,7 @@ const LoginScreen = ({ navigation }) => {
             <View style={[styles.inputRow, errorMsg.includes('number') && styles.inputRowError]}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity 
-                    style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 10, minWidth: 85 }}
                     onPress={() => setShowCountryPicker(true)}
                 >
                     <Text style={{ fontSize: 16, color: '#0F172A', marginRight: 4 }}>
@@ -177,7 +182,7 @@ const LoginScreen = ({ navigation }) => {
 
             <View style={styles.footerRow}>
               <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => showToast('Enter your mobile and a new PIN above to sign up', 'info')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
                 <Text style={styles.footerLink}>Sign up now</Text>
               </TouchableOpacity>
             </View>
@@ -185,7 +190,17 @@ const LoginScreen = ({ navigation }) => {
 
         </View>
       </ScrollView>
-    </View>
+      </KeyboardAvoidingView>
+
+      <CountryPickerBottomSheet
+          visible={showCountryPicker}
+          onClose={() => setShowCountryPicker(false)}
+          onSelect={(code) => {
+              setCountryCode(code);
+              setShowCountryPicker(false);
+          }}
+      />
+      </View>
   );
 };
 

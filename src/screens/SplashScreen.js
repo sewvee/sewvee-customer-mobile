@@ -47,30 +47,12 @@ const SplashScreen = ({ navigation }) => {
   };
 
   const fetchSubscriptionCurrent = async () => {
-    try {
-      const response = await dispatch(fetchSubscriptionCurrentAction()).unwrap();
-
-      if (response?.message == 'Company has no subscription') {
-        navigation.replace('TrialActiveScreen');
-        return;
-      }
-
-      if (response.data?.status === 'expired') {
-        if (response.data?.planId === 1) {
-          navigation.replace('TrialEndedScreen');
-        } else if (response.data?.planId === null) {
-          navigation.replace('TrialActiveScreen');
-        }
-        else {
-          navigation.replace('TrialExpiredScreen');
-        }
-      } else {
-        navigation.replace('Signup');
-      }
-    } catch (error) {
-      console.log('SplashScreen: fetchSubscriptionCurrent error:', error);
-      navigation.replace('Signup');
-    }
+    // For Customer app, we skip company subscription checks.
+    // In a real flow, you would check AsyncStorage for a token.
+    // For now, we will route to Login directly or whatever the default auth is.
+    setTimeout(() => {
+      navigation.replace('Login');
+    }, 1000);
   };
 
 
