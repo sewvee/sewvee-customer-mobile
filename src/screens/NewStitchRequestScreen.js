@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, Image, Alert, Platform, KeyboardAvoidingView, Modal, Keyboard,
-  StatusBar
+  StatusBar, BackHandler
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus, Minus, Camera, ImageIcon, Calendar, X, ChevronRight, ChevronDown, Mic, Image as ImageIconLucide, CheckCircle2, Square, Trash2, Check } from 'lucide-react-native';
@@ -136,13 +136,52 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
     }
   };
 
+  const hasUnsavedChanges = () => {
+    return Object.keys(categoryCounts).length > 0 || outfits.length > 0;
+  };
+
   const handleBack = () => {
     if (step === 1) {
-      navigation.goBack();
+      if (hasUnsavedChanges()) {
+        Alert.alert(
+          'Discard Request?',
+          'You have unsaved items. Are you sure you want to close this?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
+          ]
+        );
+      } else {
+        navigation.goBack();
+      }
     } else {
       setStep(prev => prev - 1);
     }
   };
+
+  useEffect(() => {
+    const backAction = () => {
+      if (step > 1) {
+        setStep(prev => prev - 1);
+        return true;
+      }
+      if (hasUnsavedChanges()) {
+        Alert.alert(
+          'Discard Request?',
+          'You have unsaved items. Are you sure you want to close this?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
+          ]
+        );
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [step, categoryCounts, outfits]);
 
   const updateCount = (cat, delta) => {
     setCategoryCounts(prev => {
