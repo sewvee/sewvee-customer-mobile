@@ -875,27 +875,6 @@ const CustomerOrderDetailScreen = ({ route, navigation }) => {
                   )}
 
                   {isConfigured && (
-                    <TouchableOpacity 
-                      activeOpacity={0.7} 
-                      onPress={() => toggleOutfit(outfit.id || index)}
-                      style={{ backgroundColor: '#ECFDF5', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#10B981', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#D1FAE5', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                          <CheckCircle2 size={20} color="#059669" />
-                        </View>
-                        <View>
-                          <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: '#065F46', marginBottom: 2 }}>{outfitName}</Text>
-                          <Text style={{ fontSize: 13, fontFamily: 'Inter-Regular', color: '#059669' }}>Configured • Tap to {isExpanded ? 'hide' : 'edit'}</Text>
-                        </View>
-                      </View>
-                      <View>
-                        {isExpanded ? <ChevronUp size={20} color="#059669" /> : <ChevronRight size={20} color="#059669" />}
-                      </View>
-                    </TouchableOpacity>
-                  )}
-
-                  {isConfigured && isExpanded && (
                     <>
 {/* OUTFIT DETAILS Card */}
               <View style={styles.card}>
