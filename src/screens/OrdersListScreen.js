@@ -254,7 +254,10 @@ const OrdersListScreen = ({ navigation }) => {
         setActiveOrderMenu(null);
     }, []);
 
-    const baseOrders = listLoaded ? apiOrders : orders;
+    const baseOrders = React.useMemo(() => {
+        const rawOrders = listLoaded ? apiOrders : orders;
+        return (rawOrders || []).filter(o => !(o.order_notes || '').startsWith('CONVERTED_TO_'));
+    }, [listLoaded, apiOrders, orders]);
 
     const insets = useSafeAreaInsets();
 

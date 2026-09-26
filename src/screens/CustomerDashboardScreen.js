@@ -247,7 +247,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
   };
   const customerOrders = React.useMemo(() => {
     if (!orders || orders.length === 0) return [];
-    let filtered = orders;
+    let filtered = orders.filter(o => !(o.order_notes || '').startsWith('CONVERTED_TO_'));
     if (selectedBoutique) {
       filtered = orders.filter(o => String(o.boutiqueId || o.company_id) === String(selectedBoutique.id));
     }
