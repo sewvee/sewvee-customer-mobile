@@ -51,7 +51,7 @@ const SplashScreen = ({ navigation }) => {
     // In a real flow, you would check AsyncStorage for a token.
     // For now, we will route to Login directly or whatever the default auth is.
     setTimeout(() => {
-      navigation.replace('Login');
+      navigation.replace('Signup');
     }, 1000);
   };
 
