@@ -136,6 +136,44 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
     }
   };
 
+  const DRAFT_KEY = `stitch_draft_${companyId}`;
+
+  useEffect(() => {
+    const checkDraft = async () => {
+      try {
+        const draftStr = await AsyncStorage.getItem(DRAFT_KEY);
+        if (draftStr) {
+          Alert.alert(
+            'Unsaved Draft Found',
+            'You have an unfinished stitching request for this boutique. Would you like to resume where you left off?',
+            [
+              { text: 'Discard', style: 'destructive', onPress: () => AsyncStorage.removeItem(DRAFT_KEY) },
+              { 
+                text: 'Resume', 
+                onPress: () => {
+                  const draft = JSON.parse(draftStr);
+                  if (draft.categoryCounts) setCategoryCounts(draft.categoryCounts);
+                  if (draft.outfits) setOutfits(draft.outfits);
+                  if (draft.step) setStep(draft.step);
+                  if (draft.deliveryDate) setDeliveryDate(draft.deliveryDate);
+                }
+              }
+            ]
+          );
+        }
+      } catch (err) {}
+    };
+    checkDraft();
+  }, []);
+
+  // Auto-save draft on every change
+  useEffect(() => {
+    if (Object.keys(categoryCounts).length > 0 || outfits.length > 0) {
+      const draft = { step, categoryCounts, outfits, deliveryDate };
+      AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft)).catch(() => {});
+    }
+  }, [step, categoryCounts, outfits, deliveryDate]);
+
   const hasUnsavedChanges = () => {
     return Object.keys(categoryCounts).length > 0 || outfits.length > 0;
   };
@@ -144,11 +182,15 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
     if (step === 1) {
       if (hasUnsavedChanges()) {
         Alert.alert(
-          'Discard Request?',
-          'You have unsaved items. Are you sure you want to close this?',
+          'Save Draft?',
+          'You have unsaved items. Would you like to save this as a draft?',
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
+            { text: 'Discard', style: 'destructive', onPress: async () => {
+                await AsyncStorage.removeItem(DRAFT_KEY);
+                navigation.goBack();
+              }
+            },
+            { text: 'Save Draft', onPress: () => navigation.goBack() }
           ]
         );
       } else {
@@ -167,11 +209,15 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       }
       if (hasUnsavedChanges()) {
         Alert.alert(
-          'Discard Request?',
-          'You have unsaved items. Are you sure you want to close this?',
+          'Save Draft?',
+          'You have unsaved items. Would you like to save this as a draft?',
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
+            { text: 'Discard', style: 'destructive', onPress: async () => {
+                await AsyncStorage.removeItem(DRAFT_KEY);
+                navigation.goBack();
+              }
+            },
+            { text: 'Save Draft', onPress: () => navigation.goBack() }
           ]
         );
         return true;
@@ -345,6 +391,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
         }
       });
       
+      await AsyncStorage.removeItem(DRAFT_KEY);
       showToast('Stitch Request Sent Successfully!', 'success');
       await refreshData();
       navigation.navigate('Main', { screen: 'CustomerOrders' });
