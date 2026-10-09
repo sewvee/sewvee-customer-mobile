@@ -145,7 +145,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
         if (draftStr) {
           Alert.alert(
             'Unsaved Draft Found',
-            'You have an unfinished stitching request for this boutique. Would you like to resume where you left off?',
+            'You have an unsaved draft. Would you like to resume where you left off?',
             [
               { text: 'Discard', style: 'destructive', onPress: () => AsyncStorage.removeItem(DRAFT_KEY) },
               { 
@@ -182,15 +182,16 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
     if (step === 1) {
       if (hasUnsavedChanges()) {
         Alert.alert(
-          'Save Draft?',
-          'You have unsaved items. Would you like to save this as a draft?',
+          'Do you want to exit?',
+          'This has unsaved items. If you want to exit, you will lose the data.',
           [
-            { text: 'Discard', style: 'destructive', onPress: async () => {
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Save as Draft', onPress: () => navigation.goBack() },
+            { text: 'Continue to Exit (Lose Data)', style: 'destructive', onPress: async () => {
                 await AsyncStorage.removeItem(DRAFT_KEY);
                 navigation.goBack();
               }
-            },
-            { text: 'Save Draft', onPress: () => navigation.goBack() }
+            }
           ]
         );
       } else {
@@ -209,15 +210,16 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
       }
       if (hasUnsavedChanges()) {
         Alert.alert(
-          'Save Draft?',
-          'You have unsaved items. Would you like to save this as a draft?',
+          'Do you want to exit?',
+          'This has unsaved items. If you want to exit, you will lose the data.',
           [
-            { text: 'Discard', style: 'destructive', onPress: async () => {
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Save as Draft', onPress: () => navigation.goBack() },
+            { text: 'Continue to Exit (Lose Data)', style: 'destructive', onPress: async () => {
                 await AsyncStorage.removeItem(DRAFT_KEY);
                 navigation.goBack();
               }
-            },
-            { text: 'Save Draft', onPress: () => navigation.goBack() }
+            }
           ]
         );
         return true;
