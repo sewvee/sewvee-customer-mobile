@@ -62,14 +62,13 @@ const CustomerDashboardScreen = ({ navigation }) => {
     }, [])
   );
   const { user, userToken, logout } = useAuth();
-  const { orders, refreshData, loading } = useData();
+  const { orders, refreshData, loading, selectedBoutique, setSelectedBoutique } = useData();
   const [refreshing, setRefreshing] = useState(false);
   
   const [shopItems, setShopItems] = useState([]);
   const [loadingShop, setLoadingShop] = useState(false);
   const [availableBoutiques, setAvailableBoutiques] = useState([]);
   const [isBoutiqueModalVisible, setIsBoutiqueModalVisible] = useState(false);
-  const [selectedBoutique, setSelectedBoutique] = useState(null);
   const [banners, setBanners] = useState([]);
   const [stripIndex, setStripIndex] = useState(0);
   const bannerListRef = useRef(null);
@@ -159,6 +158,8 @@ const CustomerDashboardScreen = ({ navigation }) => {
         setIsBoutiqueModalVisible(true);
         setSelectedBoutique(boutiques[0]);
         fetchShopItems(boutiques[0]);
+      } else if (selectedBoutique) {
+        fetchShopItems(selectedBoutique);
       } else if (boutiques.length === 0) {
         setIsBoutiqueModalVisible(true);
       }
