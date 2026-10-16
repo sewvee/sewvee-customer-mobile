@@ -92,4 +92,3 @@ yarn-error.log
 dist/
 web-build/
 # Firebase configuration
-android/app/google-services.json

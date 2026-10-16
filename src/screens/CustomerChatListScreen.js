@@ -7,12 +7,47 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
-import { BASE_URL } from '../config/env';
+import { BASE_URL, API_DOMAIN } from '../config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatChatMessage } from '../utils/chatUtils';
 import { useDispatch } from 'react-redux';
 import { markAsRead } from '../store/chatSlice';
 import { setChatUnread } from '../store/chatSlice';
+
+const getFullImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  const cleanUrl = url.trim();
+  if (!cleanUrl) return null;
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    return cleanUrl.replace(/http:\/\/localhost:\d+/, API_DOMAIN);
+  }
+  return `${API_DOMAIN}${cleanUrl.startsWith('/') ? '' : '/'}${cleanUrl}`;
+};
+
+const ChatAvatar = ({ profileIconUrl, isUnread }) => {
+  const [imageError, setImageError] = useState(false);
+  const fullUrl = getFullImageUrl(profileIconUrl);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [profileIconUrl]);
+
+  return (
+    <View style={styles.avatar}>
+      {fullUrl && !imageError ? (
+        <Image
+          source={{ uri: fullUrl }}
+          style={styles.avatarImg}
+          onError={() => setImageError(true)}
+          resizeMode="cover"
+        />
+      ) : (
+        <Store size={22} color="#6366F1" />
+      )}
+      {isUnread && <View style={styles.unreadDot} />}
+    </View>
+  );
+};
 
 const CustomerChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -123,10 +158,10 @@ const CustomerChatListScreen = ({ navigation }) => {
   };
 
   const getBadgeStyle = (orderNumber) => {
-    if (!orderNumber) return { bg: '#F1F5F9', text: '#475569' };
+    if (!orderNumber) return { bg: '#EEF2FF', text: '#4F46E5' };
     if (orderNumber.startsWith('INV')) return { bg: '#F1F5F9', text: '#475569' };
     if (orderNumber.startsWith('ENQ')) return { bg: '#FFF7ED', text: '#EA580C' };
-    return { bg: '#F1F5F9', text: '#475569' }; 
+    return { bg: '#EEF2FF', text: '#4F46E5' }; 
   };
 
   const renderItem = ({ item }) => {
@@ -139,59 +174,56 @@ const CustomerChatListScreen = ({ navigation }) => {
     const isUnread = isForcedUnread || (isBizSender && isNewMessage);
 
     return (
-    <TouchableOpacity 
-      style={styles.chatItem}
-      onPress={() => navigation.navigate('CustomerChat', { 
-        boutiqueId: item.boutique_id, 
-        boutiqueName: item.boutique_name,
-        orderId: item.order_id,
-        orderNumber: item.order_number
-      })}
-    >
-      <View style={styles.avatar}>
-        {item.profile_icon_url ? (
-          <Image source={{ uri: item.profile_icon_url }} style={styles.avatarImg} />
-        ) : (
-          <Store size={24} color="#6366F1" />
-        )}
-        {isUnread && <View style={styles.unreadDot} />}
-      
-      
-    </View>
+      <TouchableOpacity 
+        style={styles.chatItem}
+        onPress={() => navigation.navigate('CustomerChat', { 
+          boutiqueId: item.boutique_id, 
+          boutiqueName: item.boutique_name,
+          orderId: item.order_id,
+          orderNumber: item.order_number
+        })}
+      >
+        <ChatAvatar profileIconUrl={item.profile_icon_url} isUnread={isUnread} />
 
-      <View style={styles.chatInfo}>
-        <View style={styles.chatHeaderRow}>
-          <View style={{flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8}}>
-            <Text style={[styles.boutiqueName, isUnread && styles.boutiqueNameUnread]} numberOfLines={1}>
-              {item.boutique_name}
+        <View style={styles.chatInfo}>
+          <View style={styles.chatHeaderRow}>
+            <View style={styles.boutiqueNameContainer}>
+              <Text style={[styles.boutiqueName, isUnread && styles.boutiqueNameUnread]} numberOfLines={1}>
+                {item.boutique_name}
+              </Text>
+              {isFav ? (
+                <Ionicons name="star" size={14} color="#FBBF24" style={{ marginLeft: 4 }} />
+              ) : null}
+            </View>
+            <Text style={[styles.timeText, isUnread && styles.timeTextUnread]}>
+              {formatTime(item.latest_message_timestamp)}
             </Text>
-            {isFav ? (
-              <Ionicons name="star" size={14} color="#FBBF24" style={{ marginLeft: 4, marginRight: 4 }} />
-            ) : null}
-            {item.order_number ? (
-              <View style={[styles.badge, { backgroundColor: getBadgeStyle(item.order_number).bg }]}>
-                <Text style={[styles.badgeText, { color: getBadgeStyle(item.order_number).text }]}>
-                  #{item.order_number}
-                </Text>
-              </View>
-            ) : null}
           </View>
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <Text style={[styles.timeText, isUnread && styles.timeTextUnread]}>{formatTime(item.latest_message_timestamp)}</Text>
+
+          <View style={styles.chatSubRow}>
+            <View style={styles.messagePreviewContainer}>
+              {item.latest_message_attachment && (
+                <Ionicons name="camera" size={14} color="#64748B" style={{ marginRight: 4 }} />
+              )}
+              <Text style={[styles.lastMessage, isUnread && styles.lastMessageUnread]} numberOfLines={1}>
+                {item.latest_message_text ? formatChatMessage(item.latest_message_text) : (item.latest_message_attachment ? 'Image' : 'Started a conversation')}
+              </Text>
+            </View>
+
+            <View style={styles.rightMetaContainer}>
+              {item.order_number ? (
+                <View style={[styles.badge, { backgroundColor: getBadgeStyle(item.order_number).bg }]}>
+                  <Text style={[styles.badgeText, { color: getBadgeStyle(item.order_number).text }]}>
+                    #{item.order_number}
+                  </Text>
+                </View>
+              ) : null}
+              {isUnread && <View style={styles.unreadCountDot} />}
+            </View>
           </View>
         </View>
-        <View style={{flexDirection: 'row', alignItems: 'center'}}>
-          {item.latest_message_attachment && (
-             <Ionicons name="camera" size={14} color="#64748B" style={{marginRight: 4}} />
-          )}
-          <Text style={[styles.lastMessage, isUnread && styles.lastMessageUnread]} numberOfLines={1}>
-            {item.latest_message_text ? formatChatMessage(item.latest_message_text) : (item.latest_message_attachment ? 'Image' : 'Started a conversation')}
-          </Text>
-          {isUnread && <View style={styles.unreadCountDot} />}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -222,7 +254,7 @@ const CustomerChatListScreen = ({ navigation }) => {
             contentContainerStyle={{ paddingBottom: 24 }}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
-          <TouchableOpacity style={styles.fab}>
+          <TouchableOpacity style={styles.fab} onPress={() => setIsBoutiqueModalVisible(true)}>
             <MessageSquarePlus size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -312,12 +344,12 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
     overflow: 'hidden',
   },
   avatarImg: {
@@ -334,28 +366,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  boutiqueNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
   boutiqueName: {
     fontSize: 15,
     fontFamily: 'Inter-SemiBold',
     color: '#1E293B',
-    marginRight: 8,
-  },
-  badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'Inter-Bold',
+    flexShrink: 1,
   },
   timeText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
     color: '#94A3B8',
+    flexShrink: 0,
   },
   timeTextUnread: {
     color: '#6366F1',
+    fontFamily: 'Inter-SemiBold',
+  },
+  chatSubRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  messagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  rightMetaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  badge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 11,
     fontFamily: 'Inter-SemiBold',
   },
   lastMessage: {

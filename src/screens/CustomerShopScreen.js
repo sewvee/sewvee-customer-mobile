@@ -13,6 +13,7 @@ import { View, Text, StyleSheet, StatusBar,
   RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
 import { Colors, Spacing, Shadow } from '../constants/theme';
 import { 
   ShoppingBag, 
@@ -102,21 +103,37 @@ const CustomerShopScreen = () => {
     }
   }, [userToken]);
 
+  const isInba = Boolean(
+    selectedBoutique && (
+      selectedBoutique.id === 6 ||
+      (typeof selectedBoutique.name === 'string' && selectedBoutique.name.toLowerCase().includes('inba')) ||
+      (typeof selectedBoutique.boutique_name === 'string' && selectedBoutique.boutique_name.toLowerCase().includes('inba'))
+    )
+  );
+
+  const boutiqueWebsite = isInba ? 'https://theinba.com' : (selectedBoutique?.website || null);
+
   useEffect(() => {
     fetchProducts(selectedBoutique);
   }, [selectedBoutique]);
 
   const fetchProducts = async (boutique) => {
+    if (!boutique) {
+      setProducts([]);
+      setLoadingProducts(false);
+      return;
+    }
+    const isBoutiqueInba = boutique.id === 6 ||
+      (typeof boutique.name === 'string' && boutique.name.toLowerCase().includes('inba')) ||
+      (typeof boutique.boutique_name === 'string' && boutique.boutique_name.toLowerCase().includes('inba'));
+    if (isBoutiqueInba || boutique.website) {
+      setProducts([]);
+      setLoadingProducts(false);
+      return;
+    }
     try {
       setLoadingProducts(true);
-      let url;
-      if (boutique) {
-        url = `${URL_CUSTOMER_PORTAL_SHOP}?companyId=${boutique.id}`;
-      } else {
-        setProducts([]);
-        setLoadingProducts(false);
-        return;
-      }
+      const url = `${URL_CUSTOMER_PORTAL_SHOP}?companyId=${boutique.id}`;
       const res = await axios.get(url);
       if (res.data && res.data.success) {
         const rootUrl = BASE_URL.replace('/mobile/', '/');
@@ -399,55 +416,76 @@ const CustomerShopScreen = () => {
 
         </SafeAreaView>
 
-      {categories.length > 1 && (
-      <View style={styles.categoriesWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {categories.map(cat => {
-            const isActive = selectedCategory === cat;
-            return (
-              <TouchableOpacity
-                key={cat}
-                style={[styles.categoryTab, isActive && styles.categoryTabActive]}
-                onPress={() => setSelectedCategory(cat)}
-              >
-                <Text style={[styles.categoryTabText, isActive && styles.categoryTabTextActive]}>
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-      )}
-
-      {loadingProducts ? (
-        <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.emptySubtitle}>Loading catalog...</Text>
+      {boutiqueWebsite ? (
+        <View style={{ flex: 1, backgroundColor: '#fff' }}>
+          <WebView
+            source={{ uri: boutiqueWebsite }}
+            style={{ flex: 1 }}
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={[styles.emptyContainer, { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: '#fff', zIndex: 10 }]}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>Loading {selectedBoutique?.name || 'Shop'}...</Text>
+              </View>
+            )}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            showsVerticalScrollIndicator={false}
+          />
         </View>
       ) : (
-        <FlatList
-          data={filteredProducts}
-          renderItem={renderProductItem}
-          keyExtractor={item => item.id?.toString() || Math.random().toString()}
-          numColumns={2}
-          contentContainerStyle={styles.listContent}
-          columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
-          }
-          ListEmptyComponent={
-            <View style={[styles.emptyContainer, { backgroundColor: Colors.white, borderRadius: 20, margin: 16, padding: 32, ...Shadow.subtle }]}>
-              <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
-                <ShoppingBag color="#4F46E5" size={40} />
-              </View>
-              <Text style={[styles.emptyTitle, { marginTop: 0, fontSize: 18 }]}>{selectedBoutique ? 'No Products Found' : 'Select a Boutique'}</Text>
-              <Text style={[styles.emptySubtitle, { paddingHorizontal: 0 }]}>
-                {selectedBoutique ? "This boutique hasn't added any products to their shop yet." : "Please select a boutique to view their readymade collections."}
-              </Text>
+        <>
+          {categories.length > 1 && (
+            <View style={styles.categoriesWrapper}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+                {categories.map(cat => {
+                  const isActive = selectedCategory === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[styles.categoryTab, isActive && styles.categoryTabActive]}
+                      onPress={() => setSelectedCategory(cat)}
+                    >
+                      <Text style={[styles.categoryTabText, isActive && styles.categoryTabTextActive]}>
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
-          }
-        />
+          )}
+
+          {loadingProducts ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.emptySubtitle}>Loading catalog...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              renderItem={renderProductItem}
+              keyExtractor={item => item.id?.toString() || Math.random().toString()}
+              numColumns={2}
+              contentContainerStyle={styles.listContent}
+              columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 16 }}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+              }
+              ListEmptyComponent={
+                <View style={[styles.emptyContainer, { backgroundColor: Colors.white, borderRadius: 20, margin: 16, padding: 32, ...Shadow.subtle }]}>
+                  <View style={{height: 80, width: 80, borderRadius: 40, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center', marginBottom: 16}}>
+                    <ShoppingBag color="#4F46E5" size={40} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { marginTop: 0, fontSize: 18 }]}>{selectedBoutique ? 'No Products Found' : 'Select a Boutique'}</Text>
+                  <Text style={[styles.emptySubtitle, { paddingHorizontal: 0 }]}>
+                    {selectedBoutique ? "This boutique hasn't added any products to their shop yet." : "Please select a boutique to view their readymade collections."}
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </>
       )}
 
       {/* BOUTIQUE SELECTOR MODAL */}
