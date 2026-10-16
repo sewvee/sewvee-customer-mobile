@@ -130,9 +130,32 @@ export const DataProvider = ({ children }) => {
     const [payments, setPayments] = useState([]);
     const [outfits, setOutfits] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedBoutique, setSelectedBoutiqueState] = useState(null);
 
     const { userToken, user, saveUser } = useAuth();
     const persistTimeoutRef = useRef(null);
+
+    useEffect(() => {
+        AsyncStorage.getItem('selected_boutique').then(saved => {
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && typeof parsed === 'object') {
+                        setSelectedBoutiqueState(parsed);
+                    }
+                } catch (e) {}
+            }
+        });
+    }, []);
+
+    const setSelectedBoutique = useCallback((boutique) => {
+        setSelectedBoutiqueState(boutique);
+        if (boutique) {
+            AsyncStorage.setItem('selected_boutique', JSON.stringify(boutique)).catch(() => {});
+        } else {
+            AsyncStorage.removeItem('selected_boutique').catch(() => {});
+        }
+    }, []);
 
     /* -------------------- FETCH LIVE ORDERS FROM BACKEND -------------------- */
 
@@ -479,6 +502,8 @@ export const DataProvider = ({ children }) => {
                 payments,
                 outfits,
                 loading,
+                selectedBoutique,
+                setSelectedBoutique,
                 getCustomerOrders,
                 resetEnvironment,
                 addOrder,

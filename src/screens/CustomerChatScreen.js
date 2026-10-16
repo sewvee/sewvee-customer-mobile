@@ -23,7 +23,7 @@ import Sound from 'react-native-sound';
 import { TouchableWithoutFeedback, Modal, ActionSheetIOS, Alert, Image, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
-import { resetChatUnread, setChatUnread } from '../store/chatSlice';
+import { resetChatUnread, setChatUnread, decrementChatUnread } from '../store/chatSlice';
 import io from 'socket.io-client';
 import chatSocketService from '../utils/chatSocketService';
 
@@ -131,6 +131,7 @@ const CustomerChatScreen = ({ route, navigation }) => {
           delete forcedMap[String(boutiqueId)];
           await AsyncStorage.setItem('chat_forced_unread', JSON.stringify(forcedMap));
         }
+        dispatch(decrementChatUnread());
       } catch (e) {
         console.warn('Failed to save lastVisited', e);
       }

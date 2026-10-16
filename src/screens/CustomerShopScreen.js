@@ -39,13 +39,59 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+const INJECTED_WEBVIEW_SCRIPT = `
+  (function() {
+    try {
+      localStorage.setItem('inba_cookie_consent', 'true');
+    } catch(e) {}
+
+    function applyInjectedStyles() {
+      if (document.getElementById('sewvee-app-overrides')) return;
+
+      const style = document.createElement('style');
+      style.id = 'sewvee-app-overrides';
+      style.innerHTML = \`
+        /* Remove extra safe-area padding that creates white space below the web menu */
+        nav[aria-label="Mobile Navigation"],
+        nav.fixed.bottom-0 {
+          padding-bottom: 0px !important;
+        }
+
+        /* Hide cookie consent / privacy banner completely inside mobile app */
+        div[class*="fixed bottom-0"][class*="border-t"],
+        div[class*="fixed bottom-[60px]"][class*="border-t"],
+        .cookie-banner,
+        [class*="CookieBanner"] {
+          display: none !important;
+        }
+      \`;
+      document.head.appendChild(style);
+
+      try {
+        const banners = document.querySelectorAll('div.fixed.bottom-0.left-0.right-0.z-50.p-4');
+        banners.forEach(b => {
+          if (b.innerText && (b.innerText.includes('privacy') || b.innerText.includes('cookies'))) {
+            b.style.display = 'none';
+          }
+        });
+      } catch (e) {}
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyInjectedStyles);
+    } else {
+      applyInjectedStyles();
+    }
+  })();
+  true;
+`;
+
 const CustomerShopScreen = () => {
   const { showToast } = useToast();
   const navigation = useNavigation();
   const { user, userToken, getAuthToken } = useAuth();
-  const { orders, refreshData } = useData();
+  const { orders, refreshData, selectedBoutique, setSelectedBoutique } = useData();
 
-  const [selectedBoutique, setSelectedBoutique] = useState(null);
   const [boutiques, setBoutique] = useState([]);
     
   const [products, setProducts] = useState([]);
@@ -428,6 +474,9 @@ const CustomerShopScreen = () => {
                 <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>Loading {selectedBoutique?.name || 'Shop'}...</Text>
               </View>
             )}
+            injectedJavaScriptBeforeContentLoaded={INJECTED_WEBVIEW_SCRIPT}
+            injectedJavaScript={INJECTED_WEBVIEW_SCRIPT}
+            onMessage={() => {}}
             javaScriptEnabled={true}
             domStorageEnabled={true}
             showsVerticalScrollIndicator={false}

@@ -12,11 +12,14 @@ const chatSlice = createSlice({
     resetChatUnread: (state) => {
       state.unreadChatCount = 0;
     },
+    decrementChatUnread: (state) => {
+      state.unreadChatCount = Math.max(0, state.unreadChatCount - 1);
+    },
     setChatUnread: (state, action) => {
       state.unreadChatCount = action.payload;
     },
   },
 });
 
-export const { incrementChatUnread, resetChatUnread, setChatUnread } = chatSlice.actions;
+export const { incrementChatUnread, resetChatUnread, decrementChatUnread, setChatUnread } = chatSlice.actions;
 export default chatSlice.reducer;
