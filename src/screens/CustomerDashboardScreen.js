@@ -74,7 +74,14 @@ const CustomerDashboardScreen = ({ navigation }) => {
   const bannerListRef = useRef(null);
   const [bannerIndex, setBannerIndex] = useState(0);
 
-
+  const recordBannerInteraction = (bannerId, action) => {
+    if (!bannerId) return;
+    fetch(`${BASE_URL}marketing/banners/interaction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ banner_id: Number(bannerId), action, platform: 'MOBILE' })
+    }).catch(() => {});
+  };
 
   // Fetch banners from marketing API
   useEffect(() => {
@@ -95,6 +102,11 @@ const CustomerDashboardScreen = ({ navigation }) => {
         );
         
         setBanners(validBanners);
+        validBanners.forEach(b => {
+          if (b.id) {
+            recordBannerInteraction(b.id, 'SEEN');
+          }
+        });
       })
       .catch((err) => {
         console.warn('Banner fetch error:', err.message);
@@ -218,11 +230,20 @@ const CustomerDashboardScreen = ({ navigation }) => {
   };
 
   const renderBanner = ({ item }) => {
+    const handlePress = () => {
+      if (item?.id) {
+        recordBannerInteraction(item.id, 'CTA_CLICKED');
+      }
+      if (item?.cta_action_value) {
+        Linking.openURL(item.cta_action_value).catch(() => {});
+      }
+    };
+
     if (item.image_url || item.mobile_image_url) {
       const imgUrl = item.mobile_image_url || item.image_url;
       const fullUrl = imgUrl.startsWith('http') ? imgUrl : `${API_DOMAIN}/${imgUrl}`;
       return (
-        <TouchableOpacity activeOpacity={0.9} style={{ width: SCREEN_WIDTH * 0.85, marginRight: 16 }} onPress={() => item.cta_action_value && Linking.openURL(item.cta_action_value).catch(()=>{})}>
+        <TouchableOpacity activeOpacity={0.9} style={{ width: SCREEN_WIDTH * 0.85, marginRight: 16 }} onPress={handlePress}>
           <View style={{ height: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E2E8F0' }}>
             <Image source={{ uri: fullUrl }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
           </View>
@@ -231,7 +252,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
     }
     // Fallback for strip/text
     return (
-      <TouchableOpacity activeOpacity={0.9} style={{ width: SCREEN_WIDTH * 0.85, marginRight: 16 }} onPress={() => item.cta_action_value && Linking.openURL(item.cta_action_value).catch(()=>{})}>
+      <TouchableOpacity activeOpacity={0.9} style={{ width: SCREEN_WIDTH * 0.85, marginRight: 16 }} onPress={handlePress}>
         <View style={{ height: 140, borderRadius: 16, padding: 20, justifyContent: 'space-between', backgroundColor: item.bg_color || '#5B43EE' }}>
           <View>
             <Text style={{ fontSize: 20, fontFamily: 'Inter-Bold', color: item.text_color || '#FFF', marginBottom: 4 }}>{item.title}</Text>
@@ -520,7 +541,14 @@ const CustomerDashboardScreen = ({ navigation }) => {
           return (
             <TouchableOpacity
               activeOpacity={0.9}
-              onPress={() => active.cta_action_value && Linking.openURL(active.cta_action_value).catch(() => {})}
+              onPress={() => {
+                if (active?.id) {
+                  recordBannerInteraction(active.id, 'CTA_CLICKED');
+                }
+                if (active?.cta_action_value) {
+                  Linking.openURL(active.cta_action_value).catch(() => {});
+                }
+              }}
               style={{
                 backgroundColor: active.bg_color || '#4F46E5',
                 flexDirection: 'row',
