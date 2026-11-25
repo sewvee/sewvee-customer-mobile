@@ -52,7 +52,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
         const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
       }
-      const options = { sampleRate: 16000, channels: 1, bitsPerSample: 16, audioSource: 6, wavFile: 'recorded_audio.wav' };
+      const options = { sampleRate: 16000, channels: 1, bitsPerSample: 16, audioSource: 6, wavFile: `voice_note_${editingOutfitId || 'outfit'}_${Date.now()}.wav` };
       AudioRecord.init(options);
       AudioRecord.start();
       setIsRecording(true);
@@ -318,9 +318,11 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
               }
             });
             const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
-            if (url) uploadedUrls.push(url);
+            if (!url) throw new Error('Photo upload did not return a URL');
+            uploadedUrls.push(url);
           } catch (err) {
             console.warn('Failed to upload image', err);
+            throw new Error('Failed to upload reference photo. Please check your connection and try again.');
           }
         }
         
@@ -329,21 +331,25 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
           formData.append('file', {
             uri: Platform.OS === 'ios' ? outfit.audioUrl.replace('file://', '') : outfit.audioUrl,
             type: 'audio/wav',
-            name: 'voice_note.wav'
+            name: `voice_note_${Date.now()}.wav`
           });
           formData.append('key_name', 'order_audios');
           try {
             const uploadRes = await axios.post(URL_UPLOAD, formData, { headers: { Authorization: formattedToken, 'Content-Type': 'multipart/form-data' }});
             const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
-            if (url) uploadedUrls.push(url);
-          } catch (err) { console.warn('Failed to upload audio', err); }
+            if (!url) throw new Error('Audio upload did not return a URL');
+            uploadedUrls.push(url);
+          } catch (err) {
+            console.warn('Failed to upload audio', err);
+            throw new Error('Failed to upload voice note. Please check your connection and try again.');
+          }
         }
         if (outfit.collageUrl) {
           const formData = new FormData();
           formData.append('file', {
             uri: Platform.OS === 'ios' ? outfit.collageUrl.replace('file://', '') : outfit.collageUrl,
             type: 'image/jpeg',
-            name: 'collage.jpg'
+            name: `collage_${Date.now()}.jpg`
           });
           formData.append('key_name', 'order_photos');
           
@@ -355,9 +361,11 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
               }
             });
             const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
-            if (url) uploadedUrls.push(url);
+            if (!url) throw new Error('Collage upload did not return a URL');
+            uploadedUrls.push(url);
           } catch (err) {
             console.warn('Failed to upload collage', err);
+            throw new Error('Failed to upload collage photo. Please check your connection and try again.');
           }
         }
         

@@ -3932,7 +3932,7 @@ const Step3Media = ({ state, onChange, onShowAlert }) => {
                 channels: 1,
                 bitsPerSample: 16,
                 audioSource: 6,
-                wavFile: 'recorded_audio.wav'
+                wavFile: `voice_note_${Date.now()}.wav`
             };
 
             AudioRecord.init(options);
