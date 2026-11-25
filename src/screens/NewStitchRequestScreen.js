@@ -17,7 +17,7 @@ import AudioRecord from 'react-native-audio-record';
 import CollageMaker from '../components/CollageMaker';
 import CalendarModal from '../components/CalendarModal';
 
-const CATEGORIES = ['Blouse', 'Chudithar', 'Kurta / Kurti', 'Lehenga', 'Suit / Salwar', 'Dress / Gown', 'Pants / Trousers', 'Other'];
+const CATEGORIES = ['Blouse', 'Chudithar', 'Kurta / Kurti', 'Lehenga', 'Suit / Salwar', 'Dress / Gown', 'Pants / Trousers', 'Co-ord Set', 'Other'];
 const MEASUREMENT_OPTIONS = ['Use Previous Measurements', 'I will provide later', 'Take measurements at store', 'Send sample dress via courier', 'Measurement dress given'];
 
 const NewStitchRequestScreen = ({ navigation, route }) => {
@@ -52,7 +52,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
         const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
       }
-      const options = { sampleRate: 16000, channels: 1, bitsPerSample: 16, audioSource: 6, wavFile: 'recorded_audio.wav' };
+      const options = { sampleRate: 16000, channels: 1, bitsPerSample: 16, audioSource: 6, wavFile: `voice_note_${editingOutfitId || 'outfit'}_${Date.now()}.wav` };
       AudioRecord.init(options);
       AudioRecord.start();
       setIsRecording(true);
@@ -83,6 +83,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
   
   // Step 1 State
   const [categoryCounts, setCategoryCounts] = useState({});
+  const [otherOutfitName, setOtherOutfitName] = useState('');
   
   // Step 2 State
   const [outfits, setOutfits] = useState([]);
@@ -112,10 +113,13 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
           if (existing) {
             newOutfits.push(existing);
           } else {
+            const displayName = (cat === 'Other' && otherOutfitName?.trim())
+              ? `${otherOutfitName.trim()}${count > 1 ? ` ${i + 1}` : ''}`
+              : `${cat}${count > 1 ? ` ${i + 1}` : ''}`;
             newOutfits.push({
               id,
               category: cat,
-              name: `${cat}${count > 1 ? ` ${i + 1}` : ''}`,
+              name: displayName,
               description: '',
               measurement: '',
               images: []
@@ -156,6 +160,7 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
                   if (draft.outfits) setOutfits(draft.outfits);
                   if (draft.step) setStep(draft.step);
                   if (draft.deliveryDate) setDeliveryDate(draft.deliveryDate);
+                  if (draft.otherOutfitName) setOtherOutfitName(draft.otherOutfitName);
                 }
               }
             ]
@@ -169,10 +174,10 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
   // Auto-save draft on every change
   useEffect(() => {
     if (Object.keys(categoryCounts).length > 0 || outfits.length > 0) {
-      const draft = { step, categoryCounts, outfits, deliveryDate };
+      const draft = { step, categoryCounts, outfits, deliveryDate, otherOutfitName };
       AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft)).catch(() => {});
     }
-  }, [step, categoryCounts, outfits, deliveryDate]);
+  }, [step, categoryCounts, outfits, deliveryDate, otherOutfitName]);
 
   const hasUnsavedChanges = () => {
     return Object.keys(categoryCounts).length > 0 || outfits.length > 0;
@@ -313,9 +318,11 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
               }
             });
             const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
-            if (url) uploadedUrls.push(url);
+            if (!url) throw new Error('Photo upload did not return a URL');
+            uploadedUrls.push(url);
           } catch (err) {
             console.warn('Failed to upload image', err);
+            throw new Error('Failed to upload reference photo. Please check your connection and try again.');
           }
         }
         
@@ -324,21 +331,25 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
           formData.append('file', {
             uri: Platform.OS === 'ios' ? outfit.audioUrl.replace('file://', '') : outfit.audioUrl,
             type: 'audio/wav',
-            name: 'voice_note.wav'
+            name: `voice_note_${Date.now()}.wav`
           });
           formData.append('key_name', 'order_audios');
           try {
             const uploadRes = await axios.post(URL_UPLOAD, formData, { headers: { Authorization: formattedToken, 'Content-Type': 'multipart/form-data' }});
             const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
-            if (url) uploadedUrls.push(url);
-          } catch (err) { console.warn('Failed to upload audio', err); }
+            if (!url) throw new Error('Audio upload did not return a URL');
+            uploadedUrls.push(url);
+          } catch (err) {
+            console.warn('Failed to upload audio', err);
+            throw new Error('Failed to upload voice note. Please check your connection and try again.');
+          }
         }
         if (outfit.collageUrl) {
           const formData = new FormData();
           formData.append('file', {
             uri: Platform.OS === 'ios' ? outfit.collageUrl.replace('file://', '') : outfit.collageUrl,
             type: 'image/jpeg',
-            name: 'collage.jpg'
+            name: `collage_${Date.now()}.jpg`
           });
           formData.append('key_name', 'order_photos');
           
@@ -350,9 +361,11 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
               }
             });
             const url = uploadRes.data?.data?.full_url || uploadRes.data?.data?.url || uploadRes.data?.file_url || uploadRes.data?.url;
-            if (url) uploadedUrls.push(url);
+            if (!url) throw new Error('Collage upload did not return a URL');
+            uploadedUrls.push(url);
           } catch (err) {
             console.warn('Failed to upload collage', err);
+            throw new Error('Failed to upload collage photo. Please check your connection and try again.');
           }
         }
         
@@ -415,16 +428,30 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
         const isActive = count > 0;
         return (
           <View key={cat} style={[styles.categoryCard, isActive && styles.categoryCardActive]}>
-            <Text style={[styles.categoryName, isActive && styles.categoryNameActive]}>{cat}</Text>
-            <View style={styles.counterBox}>
-              <TouchableOpacity style={[styles.counterBtn, isActive && styles.counterBtnActive]} onPress={() => updateCount(cat, -1)}>
-                <Minus size={16} color={isActive ? "#5B43EE" : "#64748B"} />
-              </TouchableOpacity>
-              <Text style={styles.counterText}>{count}</Text>
-              <TouchableOpacity style={[styles.counterBtn, isActive && styles.counterBtnActive]} onPress={() => updateCount(cat, 1)}>
-                <Plus size={16} color={isActive ? "#5B43EE" : "#64748B"} />
-              </TouchableOpacity>
+            <View style={styles.categoryCardRow}>
+              <Text style={[styles.categoryName, isActive && styles.categoryNameActive]}>{cat}</Text>
+              <View style={styles.counterBox}>
+                <TouchableOpacity style={[styles.counterBtn, isActive && styles.counterBtnActive]} onPress={() => updateCount(cat, -1)}>
+                  <Minus size={16} color={isActive ? "#5B43EE" : "#64748B"} />
+                </TouchableOpacity>
+                <Text style={styles.counterText}>{count}</Text>
+                <TouchableOpacity style={[styles.counterBtn, isActive && styles.counterBtnActive]} onPress={() => updateCount(cat, 1)}>
+                  <Plus size={16} color={isActive ? "#5B43EE" : "#64748B"} />
+                </TouchableOpacity>
+              </View>
             </View>
+
+            {cat === 'Other' && isActive && (
+              <View style={styles.otherInputWrapper}>
+                <TextInput
+                  style={styles.otherInput}
+                  placeholder="Enter outfit name (e.g. Jumpsuit)"
+                  placeholderTextColor="#94A3B8"
+                  value={otherOutfitName}
+                  onChangeText={setOtherOutfitName}
+                />
+              </View>
+            )}
           </View>
         );
       })}
@@ -589,13 +616,21 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
                 if (!activeOutfit) return null;
                 return (
                   <View style={styles.modalContent}>
+                    <View style={styles.drawerHandle} />
                     <View style={styles.modalHeader}>
-                      <Text style={styles.modalTitle}>{activeOutfit.name}</Text>
+                      <Text style={styles.modalTitle}>Configure {activeOutfit.name}</Text>
                       <TouchableOpacity onPress={() => setEditingOutfitId(null)} style={styles.closeBtn}>
                         <X size={24} color="#0F172A" />
                       </TouchableOpacity>
                     </View>
-                    <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 40 }}>
+                    <ScrollView 
+                      style={styles.modalScroll} 
+                      contentContainerStyle={styles.modalScrollContent}
+                      showsVerticalScrollIndicator={true}
+                      nestedScrollEnabled={true}
+                      keyboardShouldPersistTaps="handled"
+                      bounces={true}
+                    >
                       
                       {/* 1. Reference Photos (Collage) */}
                       <Text style={styles.sectionHeading}>1. Reference Photos</Text>
@@ -723,12 +758,13 @@ const NewStitchRequestScreen = ({ navigation, route }) => {
                           </TouchableOpacity>
                         );
                       })}
+                    </ScrollView>
 
+                    <View style={styles.drawerFooter}>
                       <TouchableOpacity style={styles.btnSaveDrawer} onPress={() => setEditingOutfitId(null)}>
                         <Text style={styles.btnSaveDrawerText}>Done</Text>
                       </TouchableOpacity>
-
-                    </ScrollView>
+                    </View>
                   </View>
                 );
               })()}
@@ -810,14 +846,31 @@ const styles = StyleSheet.create({
   
   // Step 1
   categoryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     marginBottom: 12,
+    backgroundColor: '#FFF',
+  },
+  categoryCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  otherInputWrapper: {
+    marginTop: 12,
+  },
+  otherInput: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#0F172A',
   },
   categoryName: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#1E293B' },
   counterBox: { flexDirection: 'row', alignItems: 'center' },
@@ -962,14 +1015,48 @@ const styles = StyleSheet.create({
   
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject },
-  modalContainer: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
-  modalContent: { padding: 20, flexShrink: 1 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  modalContainer: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '90%',
+    maxHeight: '92%',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+  },
+  drawerHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   modalTitle: { fontSize: 20, fontFamily: 'Inter-Bold', color: '#0F172A' },
   closeBtn: { padding: 4 },
-  modalScroll: { flexGrow: 0 },
+  modalScroll: { flex: 1 },
+  modalScrollContent: { paddingBottom: 24 },
+  drawerFooter: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#FFF',
+  },
   btnSaveDrawer: {
-    backgroundColor: '#5B43EE', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 20
+    backgroundColor: '#5B43EE',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
   },
   btnSaveDrawerText: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#FFF' },
   
